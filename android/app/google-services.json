@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "476023993370",
+    "project_id": "rishuden-1",
+    "storage_bucket": "rishuden-1.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:476023993370:android:e628d0f7e0b4c048fa4da3",
+        "android_client_info": {
+          "package_name": "com.example.rishuden"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAM8cY9IX06_ZQaUA0s0jj904Yv900tuAc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
