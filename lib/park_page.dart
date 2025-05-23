@@ -6,6 +6,8 @@ import 'ranking_page.dart';
 import 'time_schdule_page.dart';
 
 class ParkPage extends StatelessWidget {
+  const ParkPage({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(

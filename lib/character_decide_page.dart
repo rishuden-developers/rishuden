@@ -7,6 +7,8 @@ class CharacterDecidePage extends StatelessWidget {
   final List<String> skills = ["必修スラッシュ", "オンデマンドブースト"];
   final List<String> items = ["GPAの刃", "タイムマネジメントの書"];
 
+  CharacterDecidePage({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(

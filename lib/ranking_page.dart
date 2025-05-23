@@ -4,6 +4,8 @@ import 'ranking_explore_page.dart';
 import 'ranking_vote_page.dart';
 
 class RankingPage extends StatelessWidget {
+  const RankingPage({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(

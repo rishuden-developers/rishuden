@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 class PlayerLogPage extends StatelessWidget {
+  const PlayerLogPage({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(

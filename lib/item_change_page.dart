@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 class ItemChangePage extends StatelessWidget {
+  const ItemChangePage({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(

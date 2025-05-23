@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 class TimeSchduleAddPage extends StatelessWidget {
+  const TimeSchduleAddPage({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(

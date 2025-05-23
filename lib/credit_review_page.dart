@@ -4,6 +4,8 @@ import 'credit_input_page.dart';
 import 'credit_senior_page.dart';
 
 class CreditReviewPage extends StatelessWidget {
+  const CreditReviewPage({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(

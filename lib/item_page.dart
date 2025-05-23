@@ -3,6 +3,8 @@ import 'item_change_page.dart';
 import 'item_shop_page.dart';
 
 class ItemPage extends StatelessWidget {
+  const ItemPage({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(

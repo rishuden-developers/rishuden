@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'character_decide_page.dart';
 
 class CharacterQuestionPage extends StatelessWidget {
+  const CharacterQuestionPage({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(

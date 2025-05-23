@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 class RankingTrendingPage extends StatelessWidget {
+  const RankingTrendingPage({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(

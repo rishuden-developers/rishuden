@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'time_schdule_add_page.dart'; // Adjust the import according to your file structure
 
 class TimeSchdulePage extends StatelessWidget {
+  const TimeSchdulePage({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(

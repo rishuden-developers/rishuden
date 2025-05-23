@@ -4,6 +4,8 @@ import 'player_log_page.dart';
 import 'setting_page.dart';
 
 class MenuPage extends StatelessWidget {
+  const MenuPage({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
