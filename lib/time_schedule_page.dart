@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
-import 'time_schdule_add_page.dart'; // Adjust the import according to your file structure
+import 'time_schedule_add_page.dart';
 
-class TimeSchdulePage extends StatelessWidget {
-  const TimeSchdulePage({super.key});
+class TimeSchedulePage extends StatelessWidget {
+  const TimeSchedulePage({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Login Page')),
+      appBar: AppBar(title: Text('Time Schedule Page')),
       body: Center(
         child: Column(
           children: [
@@ -17,7 +17,9 @@ class TimeSchdulePage extends StatelessWidget {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => TimeSchduleAddPage()),
+                  MaterialPageRoute(
+                    builder: (context) => TimeScheduleAddPage(),
+                  ),
                 );
               },
             ),

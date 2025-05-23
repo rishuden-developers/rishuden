@@ -3,7 +3,7 @@ import 'menu_page.dart';
 import 'credit_review_page.dart';
 import 'item_page.dart';
 import 'ranking_page.dart';
-import 'time_schdule_page.dart';
+import 'time_schedule_page.dart';
 
 class ParkPage extends StatelessWidget {
   const ParkPage({super.key});
@@ -57,7 +57,7 @@ class ParkPage extends StatelessWidget {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => TimeSchdulePage()),
+                  MaterialPageRoute(builder: (context) => TimeSchedulePage()),
                 );
               },
             ),
