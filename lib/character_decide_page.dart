@@ -2,13 +2,36 @@ import 'package:flutter/material.dart';
 import 'park_page.dart';
 
 class CharacterDecidePage extends StatelessWidget {
-  final String character = "履修剣士";
-  final String personality = "努力タイプ、朝が強い、1限多め";
-  final List<String> skills = ["必修スラッシュ", "オンデマンドブースト"];
-  final List<String> items = ["GPAの刃", "タイムマネジメントの書"];
+  final List<int> answers;
+
+  CharacterDecidePage({Key? key, required this.answers}) : super(key: key);
+
+  late final String character;
+  late final String personality;
+  late final List<String> skills;
+  late final List<String> items;
+
+  void decideCharacter() {
+    // 仮のロジック：今は常に「履修剣士」
+    character = "履修剣士";
+    personality = "努力タイプ、朝が強い、1限多め";
+    skills = ["必修スラッシュ", "オンデマンドブースト"];
+    items = ["GPAの刃", "タイムマネジメントの書"];
+
+    // 将来は answers を使って判定するように追加できます
+    // 例：
+    // if (answers[0] >= 20 && answers[6] >= 8) {
+    //   character = "神（全能型）";
+    //   personality = "...";
+    //   skills = [...];
+    //   items = [...];
+    // }
+  }
 
   @override
   Widget build(BuildContext context) {
+    decideCharacter(); // キャラクター情報を決定
+
     return Scaffold(
       backgroundColor: Colors.brown[50],
       appBar: AppBar(title: Text('診断結果'), backgroundColor: Colors.brown),
@@ -22,7 +45,7 @@ class CharacterDecidePage extends StatelessWidget {
             ),
             SizedBox(height: 20),
 
-            // キャラクター画像（assets/swordsman.png を用意し、pubspec.yaml に登録する）
+            // キャラクター画像（assets/swordsman.jpg を使う前提）
             CircleAvatar(
               radius: 150,
               backgroundImage: AssetImage('assets/swordsman.jpg'),
@@ -56,7 +79,6 @@ class CharacterDecidePage extends StatelessWidget {
 
             ElevatedButton.icon(
               onPressed: () {
-                // 再診断（仮：popして戻る）
                 Navigator.pop(context);
               },
               icon: Icon(Icons.refresh),
@@ -72,11 +94,10 @@ class CharacterDecidePage extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder:
-                        (context) => Scaffold(
-                          appBar: AppBar(title: Text("冒険画面")),
-                          body: Center(child: Text("ここに冒険スタート画面を作ってね！")),
-                        ),
+                    builder: (context) => Scaffold(
+                      appBar: AppBar(title: Text("冒険画面")),
+                      body: Center(child: Text("ここに冒険スタート画面を作ってね！")),
+                    ),
                   ),
                 );
               },
@@ -86,7 +107,6 @@ class CharacterDecidePage extends StatelessWidget {
             ),
             SizedBox(height: 10),
 
-            // 本物の冒険画面へ
             ElevatedButton.icon(
               onPressed: () {
                 Navigator.push(
