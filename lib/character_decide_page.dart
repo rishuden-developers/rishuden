@@ -4,7 +4,7 @@ import 'park_page.dart';
 class CharacterDecidePage extends StatelessWidget {
   final List<int> answers;
 
-  CharacterDecidePage({Key? key, required this.answers}) : super(key: key);
+  CharacterDecidePage({super.key, required this.answers});
 
   late final String character;
   late final String personality;
@@ -27,8 +27,6 @@ class CharacterDecidePage extends StatelessWidget {
     //   items = [...];
     // }
   }
-
-  CharacterDecidePage({super.key});
 
   @override
   Widget build(BuildContext context) {
