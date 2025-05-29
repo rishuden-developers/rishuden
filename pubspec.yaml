@@ -1,6 +1,6 @@
 name: rishuden
 description: "A new Flutter project."
-publish_to: 'none'
+publish_to: "none"
 version: 0.1.0
 
 environment:
@@ -20,6 +20,17 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/background_plaza.png
+    - assets/character.png
+    - assets/icon_takoyaki.png
+    - assets/button_unit_review.png
+    - assets/button_ranking.png
+    - assets/button_dressup.png
+    - assets/button_timetable.png
+    # - assets/character_swordsman.png
+    # - assets/character_witch.png
+    # ...
 
   fonts:
     - family: Noto Sans JP
