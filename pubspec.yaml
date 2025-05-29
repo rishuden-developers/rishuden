@@ -21,6 +21,7 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
+<<<<<<< HEAD
     - assets/background_plaza.png
     - assets/character.png
     - assets/icon_takoyaki.png
@@ -32,6 +33,10 @@ flutter:
     # - assets/character_witch.png
     # ...
 
+=======
+    - assets/swordman.jpg
+    
+>>>>>>> 342534e210bddccd4c264114524211dee527a219
   fonts:
     - family: Noto Sans JP
       fonts:
