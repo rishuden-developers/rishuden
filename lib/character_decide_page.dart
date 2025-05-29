@@ -4,33 +4,64 @@ import 'park_page.dart';
 class CharacterDecidePage extends StatelessWidget {
   final List<int> answers;
 
-  CharacterDecidePage({super.key, required this.answers});
+  CharacterDecidePage({required this.answers});
 
-  late final String character;
-  late final String personality;
-  late final List<String> skills;
-  late final List<String> items;
+  // 仮の診断ロジック（answersに応じて条件分岐で変更可）
+  String getCharacter() {
+    if (answers[1] >= 3 && answers[0] >= 15) {
+      return "履修剣士";
+    } else if (answers[2] >= 4) {
+      return "バイト戦士";
+    } else {
+      return "気ままな旅人";
+    }
+  }
 
-  void decideCharacter() {
-    // 仮のロジック：今は常に「履修剣士」
-    character = "履修剣士";
-    personality = "努力タイプ、朝が強い、1限多め";
-    skills = ["必修スラッシュ", "オンデマンドブースト"];
-    items = ["GPAの刃", "タイムマネジメントの書"];
+  String getPersonality(String character) {
+    switch (character) {
+      case "履修剣士":
+        return "努力タイプ、朝が強い、1限多め";
+      case "バイト戦士":
+        return "実践派、時間管理が鍵、金欠とは無縁";
+      case "気ままな旅人":
+        return "自由人、マイペースに生きるタイプ";
+      default:
+        return "";
+    }
+  }
 
-    // 将来は answers を使って判定するように追加できます
-    // 例：
-    // if (answers[0] >= 20 && answers[6] >= 8) {
-    //   character = "神（全能型）";
-    //   personality = "...";
-    //   skills = [...];
-    //   items = [...];
-    // }
+  List<String> getSkills(String character) {
+    switch (character) {
+      case "履修剣士":
+        return ["必修スラッシュ", "オンデマンドブースト"];
+      case "バイト戦士":
+        return ["深夜テンション", "時間分身術"];
+      case "気ままな旅人":
+        return ["遅刻無効", "リラックスオーラ"];
+      default:
+        return [];
+    }
+  }
+
+  List<String> getItems(String character) {
+    switch (character) {
+      case "履修剣士":
+        return ["GPAの刃", "タイムマネジメントの書"];
+      case "バイト戦士":
+        return ["バイトシフト表", "エナジードリンク"];
+      case "気ままな旅人":
+        return ["気分転換の杖", "自由な時間"];
+      default:
+        return [];
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    decideCharacter(); // キャラクター情報を決定
+    final String character = getCharacter();
+    final String personality = getPersonality(character);
+    final List<String> skills = getSkills(character);
+    final List<String> items = getItems(character);
 
     return Scaffold(
       backgroundColor: Colors.brown[50],
@@ -45,10 +76,9 @@ class CharacterDecidePage extends StatelessWidget {
             ),
             SizedBox(height: 20),
 
-            // キャラクター画像（assets/swordsman.jpg を使う前提）
             CircleAvatar(
               radius: 150,
-              backgroundImage: AssetImage('assets/swordsman.jpg'),
+              backgroundImage: AssetImage('assets/swordsman.jpg'), // 仮画像（キャラごとに切り替えたい場合は条件追加）
             ),
             SizedBox(height: 20),
 
@@ -124,3 +154,4 @@ class CharacterDecidePage extends StatelessWidget {
     );
   }
 }
+

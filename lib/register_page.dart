@@ -1,20 +1,20 @@
 import 'package:flutter/material.dart';
-import 'character_question_page.dart';
+import 'character_question_page.dart'; // 👈 これを追加！
 
 class RegisterPage extends StatelessWidget {
-  const RegisterPage({super.key});
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Register Page')),
+      appBar: AppBar(title: Text('登録ページ')),
       body: Center(
         child: ElevatedButton(
-          child: Text('新規登録'),
+          child: Text('キャラ診断へ'),
           onPressed: () {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => CharacterQuestionPage()),
+              MaterialPageRoute(
+                builder: (context) => CharacterQuestionPage(),
+              ),
             );
           },
         ),
@@ -22,3 +22,4 @@ class RegisterPage extends StatelessWidget {
     );
   }
 }
+
