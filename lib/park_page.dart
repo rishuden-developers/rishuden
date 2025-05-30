@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-// 他の画面へのインポート（既存のものを維持）
-import 'menu_page.dart'; // メニューページ
+// 他の画面へのインポート（既存のものを維持）// メニューページ
 import 'credit_review_page.dart'; // 単位レビューページ
 import 'item_page.dart'; // アイテム/着せ替えページ
 import 'ranking_page.dart'; // ランキングページ
@@ -171,11 +170,11 @@ class ParkPage extends StatelessWidget {
           Positioned(
             left: 0,
             right: 0,
-            top: 0,
+            top: 100,
             bottom: 0,
             child: Center(
               child: Image.asset(
-                'assets/character.png', // ★中央に表示するキャラクターの画像パス★
+                'assets/character_swordman.png', // ★中央に表示するキャラクターの画像パス★
                 width: screenWidth * 0.5, // キャラクターの幅を画面幅の50%に調整 (適宜変更)
                 fit: BoxFit.contain, // 画像が収まるように調整
               ),

@@ -11,7 +11,6 @@ dependencies:
     sdk: flutter
   firebase_core: ^2.32.0
   cloud_firestore: ^4.17.5
-  cloud_functions: ^4.5.3
 
 dev_dependencies:
   flutter_test:
@@ -21,22 +20,22 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
-<<<<<<< HEAD
     - assets/background_plaza.png
-    - assets/character.png
     - assets/icon_takoyaki.png
     - assets/button_unit_review.png
     - assets/button_ranking.png
     - assets/button_dressup.png
     - assets/button_timetable.png
-    # - assets/character_swordsman.png
-    # - assets/character_witch.png
-    # ...
+    - assets/character_swordman.png
+    - assets/character_wizard.png
+    - assets/character_gorilla.png
+    - assets/character_marchant.png
+    - assets/character_adventurer.png
+    - assets/character_god.png
+    - assets/character_takuji.png
 
-=======
-    - assets/swordman.jpg
-    
->>>>>>> 342534e210bddccd4c264114524211dee527a219
+    - assets/ranking_guild_background.png
+
   fonts:
     - family: Noto Sans JP
       fonts:
