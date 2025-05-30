@@ -232,7 +232,7 @@ class _MyHomePageState extends State<MyHomePage> {
             List<String> charImagePaths = [
               'assets/character_swordman.png',
               'assets/character_wizard.png',
-              'assets/character_marchant.png', // ★修正後のパス★
+              'assets/character_merchant.png', // ★修正後のパス★
               'assets/character_adventurer.png',
               'assets/character_gorilla.png',
               'assets/character_takuji.png',
