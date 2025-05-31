@@ -33,6 +33,7 @@ flutter:
     - assets/character_adventurer.png
     - assets/character_god.png
     - assets/character_takuji.png
+    - assets/question_background_image.png
 
     - assets/ranking_guild_background.png
 

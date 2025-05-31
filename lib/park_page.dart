@@ -1,13 +1,165 @@
 import 'package:flutter/material.dart';
-// 他の画面へのインポート（既存のものを維持）// メニューページ
-import 'credit_review_page.dart'; // 単位レビューページ
-import 'item_page.dart'; // アイテム/着せ替えページ
-import 'ranking_page.dart'; // ランキングページ
-import 'time_schedule_page.dart'; // 時間割ページ
-import 'news_page.dart'; // ニュースページ
+import 'menu_page.dart';
+import 'credit_review_page.dart';
+import 'item_page.dart';
+import 'ranking_page.dart';
+import 'time_schedule_page.dart';
+import 'news_page.dart';
 
-class ParkPage extends StatelessWidget {
+class ParkPage extends StatefulWidget {
+  // ★StatefulWidgetに変更★
   const ParkPage({super.key});
+
+  @override
+  State<ParkPage> createState() => _ParkPageState();
+}
+
+class _ParkPageState extends State<ParkPage> {
+  // ★StatefulWidgetのStateクラス★
+  String _currentParkCharacterImage =
+      'assets/character_swordman.png'; // デフォルト画像
+  String _currentParkCharacterName = '勇者'; // デフォルト名
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // 画面が描画される前にRouteSettingsからargumentsを受け取る
+    final args = ModalRoute.of(context)?.settings.arguments;
+    if (args != null && args is Map<String, dynamic>) {
+      setState(() {
+        _currentParkCharacterImage = args['characterImage'] as String;
+        _currentParkCharacterName = args['characterName'] as String;
+      });
+    }
+  }
+
+  // === ヘルパー関数: お知らせダイアログを表示する (変更なし) ===
+  void _showNoticeDialog(BuildContext context) {
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
+      barrierColor: Colors.black54,
+      transitionDuration: const Duration(milliseconds: 300),
+      pageBuilder: (
+        BuildContext buildContext,
+        Animation<double> animation,
+        Animation<double> secondaryAnimation,
+      ) {
+        // ダイアログのコンテンツ
+        return Align(
+          alignment: Alignment.topLeft,
+          child: Material(
+            type: MaterialType.transparency,
+            child: FadeTransition(
+              opacity: animation,
+              child: ScaleTransition(
+                scale: animation,
+                alignment: Alignment.topLeft,
+                child: Container(
+                  margin: const EdgeInsets.only(top: 20, left: 20),
+                  width: MediaQuery.of(context).size.width * 0.7,
+                  height: MediaQuery.of(context).size.height * 0.5,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.blueAccent, width: 3),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Colors.black26,
+                        blurRadius: 10,
+                        offset: Offset(0, 5),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        decoration: const BoxDecoration(
+                          color: Colors.blueAccent,
+                          borderRadius: BorderRadius.vertical(
+                            top: Radius.circular(8),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Padding(
+                              padding: EdgeInsets.only(left: 15.0),
+                              child: Text(
+                                'お知らせ',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(
+                                Icons.close,
+                                color: Colors.white,
+                              ),
+                              onPressed: () {
+                                Navigator.of(context).pop();
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                      Expanded(
+                        child: SingleChildScrollView(
+                          padding: const EdgeInsets.all(15),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: const [
+                              Text(
+                                '【重要】履修伝説Ver.1.1.0アップデートのお知らせ',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              SizedBox(height: 10),
+                              Text(
+                                'いつもご利用ありがとうございます。\nVer.1.1.0にアップデートしました。\n\n'
+                                '新機能：\n'
+                                '・新キャラクター「神」の追加\n'
+                                '・「楽単ランキング」の強化\n\n'
+                                '不具合修正：\n'
+                                '・一部UIの表示崩れを修正\n\n'
+                                '引き続き「履修伝説」をお楽しみください！',
+                              ),
+                              SizedBox(height: 20),
+                              Text(
+                                'イベント「GPAチャレンジ」開催！',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              SizedBox(height: 10),
+                              Text(
+                                '期間：2025年5月10日〜5月31日\n\n'
+                                '期間中に指定された課題をクリアし、高GPAを目指しましょう！\n'
+                                '豪華報酬をゲットするチャンス！',
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -25,7 +177,6 @@ class ParkPage extends StatelessWidget {
         screenHeight * 0.02; // 下部ボタン群のbottom位置
 
     return Scaffold(
-      // AppBarはゲームUI要素で置き換えるため、ここでは使用しない
       body: Stack(
         children: [
           // === 1. 背景画像 ===
@@ -130,7 +281,6 @@ class ParkPage extends StatelessWidget {
                         GestureDetector(
                           onTap: () {
                             print('たこ焼きプラスボタンが押されました');
-                            // 例: Navigator.push(context, MaterialPageRoute(builder: (context) => const ShopPage()));
                           },
                           child: Image.asset(
                             'assets/icon_plus.png', // ★プラスアイコン画像パス★
@@ -170,11 +320,12 @@ class ParkPage extends StatelessWidget {
           Positioned(
             left: 0,
             right: 0,
-            top: 100,
+            top: 0,
             bottom: 0,
             child: Center(
+              // キャラクター画像は_currentParkCharacterImage変数で動的に設定
               child: Image.asset(
-                'assets/character_swordman.png', // ★中央に表示するキャラクターの画像パス★
+                _currentParkCharacterImage, // ★ここを修正★
                 width: screenWidth * 0.5, // キャラクターの幅を画面幅の50%に調整 (適宜変更)
                 fit: BoxFit.contain, // 画像が収まるように調整
               ),
@@ -212,6 +363,21 @@ class ParkPage extends StatelessWidget {
                       ),
                     ),
                     alignment: Alignment.center,
+                    child: const Text(
+                      '単位レビュー',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        shadows: [
+                          Shadow(
+                            blurRadius: 2.0,
+                            color: Colors.black,
+                            offset: Offset(1.0, 1.0),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
 
@@ -237,6 +403,21 @@ class ParkPage extends StatelessWidget {
                       ),
                     ),
                     alignment: Alignment.center,
+                    child: const Text(
+                      'ランキング',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        shadows: [
+                          Shadow(
+                            blurRadius: 2.0,
+                            color: Colors.black,
+                            offset: Offset(1.0, 1.0),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
 
@@ -260,6 +441,21 @@ class ParkPage extends StatelessWidget {
                       ),
                     ),
                     alignment: Alignment.center,
+                    child: const Text(
+                      '着せ替え',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        shadows: [
+                          Shadow(
+                            blurRadius: 2.0,
+                            color: Colors.black,
+                            offset: Offset(1.0, 1.0),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
 
@@ -285,6 +481,21 @@ class ParkPage extends StatelessWidget {
                       ),
                     ),
                     alignment: Alignment.center,
+                    child: const Text(
+                      '時間割',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        shadows: [
+                          Shadow(
+                            blurRadius: 2.0,
+                            color: Colors.black,
+                            offset: Offset(1.0, 1.0),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ],
@@ -308,145 +519,6 @@ class ParkPage extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-
-  // === ヘルパー関数: お知らせダイアログを表示する ===
-  void _showNoticeDialog(BuildContext context) {
-    showGeneralDialog(
-      context: context,
-      barrierDismissible: true, // ダイアログの外をタップで閉じられるようにする
-      barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
-      barrierColor: Colors.black54, // 背景の透過色
-      transitionDuration: const Duration(milliseconds: 300), // アニメーション時間
-      pageBuilder: (
-        BuildContext buildContext,
-        Animation<double> animation,
-        Animation<double> secondaryAnimation,
-      ) {
-        // ダイアログのコンテンツ
-        return Align(
-          alignment: Alignment.topLeft, // ★左上に配置★
-          child: Material(
-            type: MaterialType.transparency, // 背景透過
-            child: FadeTransition(
-              // フェードイン/アウトのアニメーション
-              opacity: animation,
-              child: ScaleTransition(
-                // スケール（拡大縮小）アニメーション
-                scale: animation,
-                alignment: Alignment.topLeft, // 左上を基準にスケール
-                child: Container(
-                  margin: const EdgeInsets.only(
-                    top: 20,
-                    left: 20,
-                  ), // 画面端からのマージン
-                  width: MediaQuery.of(context).size.width * 0.7, // 画面幅の70%
-                  height: MediaQuery.of(context).size.height * 0.5, // 画面高さの50%
-                  decoration: BoxDecoration(
-                    color: Colors.white, // お知らせページの背景色
-                    borderRadius: BorderRadius.circular(10), // 角を丸く
-                    border: Border.all(
-                      color: Colors.blueAccent,
-                      width: 3,
-                    ), // 枠線
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Colors.black26,
-                        blurRadius: 10,
-                        offset: Offset(0, 5),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    children: [
-                      // ダイアログのヘッダー
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(vertical: 10),
-                        decoration: const BoxDecoration(
-                          color: Colors.blueAccent,
-                          borderRadius: BorderRadius.vertical(
-                            top: Radius.circular(8),
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Padding(
-                              padding: EdgeInsets.only(left: 15.0),
-                              child: Text(
-                                'お知らせ',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                            IconButton(
-                              icon: const Icon(
-                                Icons.close,
-                                color: Colors.white,
-                              ),
-                              onPressed: () {
-                                Navigator.of(context).pop(); // ダイアログを閉じる
-                              },
-                            ),
-                          ],
-                        ),
-                      ),
-                      // お知らせコンテンツ（スクロール可能）
-                      Expanded(
-                        child: SingleChildScrollView(
-                          padding: const EdgeInsets.all(15),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: const [
-                              Text(
-                                '【重要】履修伝説Ver.1.1.0アップデートのお知らせ',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              SizedBox(height: 10),
-                              Text(
-                                'いつもご利用ありがとうございます。\nVer.1.1.0にアップデートしました。\n\n'
-                                '新機能：\n'
-                                '・新キャラクター「神」の追加\n'
-                                '・「楽単ランキング」の強化\n\n'
-                                '不具合修正：\n'
-                                '・一部UIの表示崩れを修正\n\n'
-                                '引き続き「履修伝説」をお楽しみください！',
-                              ),
-                              SizedBox(height: 20),
-                              Text(
-                                'イベント「GPAチャレンジ」開催！',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              SizedBox(height: 10),
-                              Text(
-                                '期間：2025年5月10日〜5月31日\n\n'
-                                '期間中に指定された課題をクリアし、高GPAを目指しましょう！\n'
-                                '豪華報酬をゲットするチャンス！',
-                              ),
-                              // もっとお知らせを追加
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-        );
-      },
     );
   }
 }
