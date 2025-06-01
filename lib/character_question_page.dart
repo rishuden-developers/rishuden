@@ -140,9 +140,8 @@ class _CharacterQuestionPageState extends State<CharacterQuestionPage> {
 
   void _updateAnsweredCount() {
     setState(() {
-      _answeredQuestionsCount = _isQuestionAnswered
-          .where((answered) => answered)
-          .length;
+      _answeredQuestionsCount =
+          _isQuestionAnswered.where((answered) => answered).length;
     });
   }
 
@@ -150,12 +149,18 @@ class _CharacterQuestionPageState extends State<CharacterQuestionPage> {
     List<int> userAnswers,
     String diagnosedCharacter,
   ) async {
+    String userID = 'u245319i'; // ユーザーIDを適切に取得する必要があります
     print('--- Firestoreへの保存処理を開始します (QuestionPageから) ---');
     try {
-      await FirebaseFirestore.instance.collection('diagnostics').add({
-        'answers': userAnswers,
+      var usersData =
+          await FirebaseFirestore.instance.collection('users').get();
+      var userDoc = usersData.docs.firstWhere(
+        (doc) => doc.id == userID,
+        orElse: () => throw Exception('ユーザーが見つかりません'),
+      );
+      await userDoc.reference.update({
         'character': diagnosedCharacter,
-        'timestamp': FieldValue.serverTimestamp(),
+        'diagnostics': answers,
       });
       print('診断結果をFirestoreに保存しました。');
     } catch (e) {
@@ -309,12 +314,13 @@ class _CharacterQuestionPageState extends State<CharacterQuestionPage> {
     );
 
     double totalClasses = currentAnswersNonNull[0].toDouble();
-    double skippedOrDaipitsuRaw = currentAnswersNonNull[2]
-        .toDouble(); // ★ Q3の生の値 (飛んだ/代筆)
+    double skippedOrDaipitsuRaw =
+        currentAnswersNonNull[2].toDouble(); // ★ Q3の生の値 (飛んだ/代筆)
 
-    double effectiveSkippedPercentage = (totalClasses > 0)
-        ? (skippedOrDaipitsuRaw / totalClasses)
-        : (skippedOrDaipitsuRaw > 0 ? 1.0 : 0.0);
+    double effectiveSkippedPercentage =
+        (totalClasses > 0)
+            ? (skippedOrDaipitsuRaw / totalClasses)
+            : (skippedOrDaipitsuRaw > 0 ? 1.0 : 0.0);
 
     double nonAttendanceScore; // 高いほど良い (欠席/代筆が少ない)
     if (effectiveSkippedPercentage == 0)
@@ -487,14 +493,12 @@ class _CharacterQuestionPageState extends State<CharacterQuestionPage> {
     reCalclulatedLoserScore +=
         _normalizeInverse(6, currentAnswersNonNull[6]) * 1.2;
     reCalclulatedLoserScore += _normalizeInverse(7, currentAnswersNonNull[7]);
-    reCalclulatedLoserScore += (currentAnswersNonNull[11] == 3
-        ? 5.0
-        : (norm[11] <= 2.0 ? 3.0 : 1.0));
+    reCalclulatedLoserScore +=
+        (currentAnswersNonNull[11] == 3 ? 5.0 : (norm[11] <= 2.0 ? 3.0 : 1.0));
     reCalclulatedLoserScore +=
         _normalizeInverse(8, currentAnswersNonNull[8]) * 1.5;
-    reCalclulatedLoserScore += (currentAnswersNonNull[13] == 3
-        ? 5.0
-        : (norm[13] <= 2.0 ? 3.0 : 1.0));
+    reCalclulatedLoserScore +=
+        (currentAnswersNonNull[13] == 3 ? 5.0 : (norm[13] <= 2.0 ? 3.0 : 1.0));
     if (currentAnswersNonNull[15] == 1 || currentAnswersNonNull[15] == 3)
       reCalclulatedLoserScore += 5.0;
     if (currentAnswersNonNull[16] == 5)
@@ -612,15 +616,16 @@ class _CharacterQuestionPageState extends State<CharacterQuestionPage> {
             ),
             dropdownColor: Colors.brown[700],
             isExpanded: true,
-            items: options.asMap().entries.map((entry) {
-              return DropdownMenuItem<int>(
-                value: entry.key,
-                child: Text(
-                  entry.value,
-                  style: TextStyle(fontSize: 14, color: Colors.white),
-                ),
-              );
-            }).toList(),
+            items:
+                options.asMap().entries.map((entry) {
+                  return DropdownMenuItem<int>(
+                    value: entry.key,
+                    child: Text(
+                      entry.value,
+                      style: TextStyle(fontSize: 14, color: Colors.white),
+                    ),
+                  );
+                }).toList(),
             onChanged: (int? newValue) {
               setState(() {
                 answers[index] = newValue;
@@ -641,9 +646,8 @@ class _CharacterQuestionPageState extends State<CharacterQuestionPage> {
 
   @override
   Widget build(BuildContext context) {
-    double progress = (_totalQuestions > 0)
-        ? _answeredQuestionsCount / _totalQuestions
-        : 0;
+    double progress =
+        (_totalQuestions > 0) ? _answeredQuestionsCount / _totalQuestions : 0;
     bool allAnswered = _answeredQuestionsCount == _totalQuestions;
 
     return Scaffold(
@@ -728,9 +732,10 @@ class _CharacterQuestionPageState extends State<CharacterQuestionPage> {
                           style: TextStyle(fontSize: 16, color: Colors.white),
                         ),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: allAnswered
-                              ? Colors.orange[700]
-                              : Colors.grey[600],
+                          backgroundColor:
+                              allAnswered
+                                  ? Colors.orange[700]
+                                  : Colors.grey[600],
                           padding: EdgeInsets.symmetric(
                             horizontal: 32,
                             vertical: 16,
@@ -740,36 +745,37 @@ class _CharacterQuestionPageState extends State<CharacterQuestionPage> {
                             borderRadius: BorderRadius.circular(30.0),
                           ),
                         ),
-                        onPressed: allAnswered
-                            ? () async {
-                                final List<int> finalAnswers = answers
-                                    .map((ans) => ans ?? 0)
-                                    .toList();
+                        onPressed:
+                            allAnswered
+                                ? () async {
+                                  final List<int> finalAnswers =
+                                      answers.map((ans) => ans ?? 0).toList();
 
-                                final String characterName = _diagnoseCharacter(
-                                  finalAnswers,
-                                );
-                                if (characterName != "エラー：回答数が不足しています") {
-                                  await _saveDiagnosisToFirestore(
-                                    finalAnswers,
-                                    characterName,
-                                  );
-                                } else {
-                                  print("診断エラーのため、Firestoreへの保存はスキップされました。");
-                                }
-                                if (mounted) {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => CharacterDecidePage(
-                                        answers: finalAnswers,
-                                        diagnosedCharacterName: characterName,
+                                  final String characterName =
+                                      _diagnoseCharacter(finalAnswers);
+                                  if (characterName != "エラー：回答数が不足しています") {
+                                    await _saveDiagnosisToFirestore(
+                                      finalAnswers,
+                                      characterName,
+                                    );
+                                  } else {
+                                    print("診断エラーのため、Firestoreへの保存はスキップされました。");
+                                  }
+                                  if (mounted) {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder:
+                                            (context) => CharacterDecidePage(
+                                              answers: finalAnswers,
+                                              diagnosedCharacterName:
+                                                  characterName,
+                                            ),
                                       ),
-                                    ),
-                                  );
+                                    );
+                                  }
                                 }
-                              }
-                            : null,
+                                : null,
                       ),
                       SizedBox(height: 20),
                     ],
