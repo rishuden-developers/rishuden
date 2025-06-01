@@ -5,7 +5,7 @@ import 'item_page.dart';
 import 'ranking_page.dart';
 import 'time_schedule_page.dart';
 import 'news_page.dart';
-import 'common_bottom_navigation.dart'; // ★ 共通フッターをインポート
+import 'common_bottom_navigation.dart'; // 共通フッターをインポート
 
 class ParkPage extends StatefulWidget {
   const ParkPage({super.key});
@@ -31,15 +31,16 @@ class _ParkPageState extends State<ParkPage> {
           setState(() {
             _currentParkCharacterImage =
                 args['characterImage'] as String? ??
-                'assets/character_unknown.png'; // nullチェック強化
+                'assets/character_unknown.png';
             _currentParkCharacterName =
-                args['characterName'] as String? ?? 'キャラクター'; // nullチェック強化
+                args['characterName'] as String? ?? 'キャラクター';
           });
         }
       });
     }
   }
 
+  // === ヘルパー関数: お知らせダイアログを表示する ===
   void _showNoticeDialog(BuildContext context) {
     showGeneralDialog(
       context: context,
@@ -52,6 +53,7 @@ class _ParkPageState extends State<ParkPage> {
         Animation<double> animation,
         Animation<double> secondaryAnimation,
       ) {
+        // ダイアログのコンテンツ
         return Align(
           alignment: Alignment.topLeft,
           child: Material(
@@ -99,6 +101,7 @@ class _ParkPageState extends State<ParkPage> {
                                   color: Colors.white,
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,
+                                  fontFamily: 'NotoSansJP', // フォント指定例
                                 ),
                               ),
                             ),
@@ -125,6 +128,7 @@ class _ParkPageState extends State<ParkPage> {
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
+                                  fontFamily: 'NotoSansJP',
                                 ),
                               ),
                               SizedBox(height: 10),
@@ -136,6 +140,7 @@ class _ParkPageState extends State<ParkPage> {
                                 '不具合修正：\n'
                                 '・一部UIの表示崩れを修正\n\n'
                                 '引き続き「履修伝説」をお楽しみください！',
+                                style: TextStyle(fontFamily: 'NotoSansJP'),
                               ),
                               SizedBox(height: 20),
                               Text(
@@ -143,6 +148,7 @@ class _ParkPageState extends State<ParkPage> {
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
+                                  fontFamily: 'NotoSansJP',
                                 ),
                               ),
                               SizedBox(height: 10),
@@ -150,6 +156,7 @@ class _ParkPageState extends State<ParkPage> {
                                 '期間：2025年5月10日〜5月31日\n\n'
                                 '期間中に指定された課題をクリアし、高GPAを目指しましょう！\n'
                                 '豪華報酬をゲットするチャンス！',
+                                style: TextStyle(fontFamily: 'NotoSansJP'),
                               ),
                             ],
                           ),
@@ -173,37 +180,31 @@ class _ParkPageState extends State<ParkPage> {
     final double topBarHeight = screenHeight * 0.1;
     final double bannerTopOffset = topBarHeight + 10;
     final double bannerWidth = screenWidth * 0.30;
-    final double bottomNavBarHeight =
-        75.0; // ★ CommonBottomNavigationの高さに合わせて調整
+    final double bottomNavBarHeight = 75.0; // CommonBottomNavigationの高さ
 
     return Scaffold(
-      extendBodyBehindAppBar: true, // ★ AppBarの背後にbodyを拡張
-      extendBody: true, // ★ bottomNavigationBarの背後にもbodyを拡張
-      // ★★★ bottomNavigationBar プロパティに共通フッターを設定 ★★★
+      extendBodyBehindAppBar: true,
+      extendBody: true,
       bottomNavigationBar: CommonBottomNavigation(
         currentPage: AppPage.park,
-        parkIconAsset:
-            'assets/button_park_icon.png', // ★★★ "アクティブ用"ではない、通常のアイコンパスに変更 ★★★
+        parkIconAsset: 'assets/button_park_icon.png', // 通常アイコン
         timetableIconAsset: 'assets/button_timetable.png',
         creditReviewIconAsset: 'assets/button_unit_review.png',
         rankingIconAsset: 'assets/button_ranking.png',
         itemIconAsset: 'assets/button_dressup.png',
-
         onParkTap: () {
           print("Already on Park Page");
         },
         onTimetableTap: () {
           Navigator.pushReplacement(
-            // ★ PageRouteBuilder に変更
             context,
             PageRouteBuilder(
               pageBuilder:
                   (context, animation, secondaryAnimation) =>
                       const TimeSchedulePage(),
-              transitionDuration: Duration.zero, // ★ アニメーション時間をゼロに
-              reverseTransitionDuration: Duration.zero, // ★ 戻る時のアニメーション時間もゼロに
+              transitionDuration: Duration.zero,
+              reverseTransitionDuration: Duration.zero,
               settings: RouteSettings(
-                // 引数は PageRouteBuilder の settings で渡す
                 arguments: {
                   'characterName': _currentParkCharacterName,
                   'characterImage': _currentParkCharacterImage,
@@ -214,7 +215,6 @@ class _ParkPageState extends State<ParkPage> {
         },
         onCreditReviewTap: () {
           Navigator.pushReplacement(
-            // ★ PageRouteBuilder に変更
             context,
             PageRouteBuilder(
               pageBuilder:
@@ -227,7 +227,6 @@ class _ParkPageState extends State<ParkPage> {
         },
         onRankingTap: () {
           Navigator.pushReplacement(
-            // ★ PageRouteBuilder に変更
             context,
             PageRouteBuilder(
               pageBuilder:
@@ -240,7 +239,6 @@ class _ParkPageState extends State<ParkPage> {
         },
         onItemTap: () {
           Navigator.pushReplacement(
-            // ★ PageRouteBuilder に変更
             context,
             PageRouteBuilder(
               pageBuilder:
@@ -252,40 +250,78 @@ class _ParkPageState extends State<ParkPage> {
         },
       ),
       body: Stack(
-        // bodyのルートはStackで、背景画像と他のUIを重ねる
         children: [
-          // === 1. 背景画像 (Stackの一番下) ===
+          // === 1. 背景画像 (一番奥) ===
           Positioned.fill(
             child: Image.asset(
-              'assets/background_plaza.png',
+              'assets/background_plaza.png', // ★広場全体の背景画像パス★
               fit: BoxFit.cover,
             ),
           ),
 
-          // === メインコンテンツ (背景画像の上、フッターの下に隠れないようにPadding調整) ===
-          // ... (ParkPageのbuildメソッド内) ...
-          // === メインコンテンツ (背景画像の上、フッターの下に隠れないようにPadding調整) ===
+          // === メインコンテンツエリア ===
+          // SafeAreaで囲み、フッター分のPaddingはメインのStack内コンテンツに適用
           Positioned.fill(
             child: SafeArea(
-              bottom: false, // 下方向のSafeAreaはbottomNavigationBarが考慮するため不要
+              bottom: false, // 下はbottomNavigationBarがあるのでfalse
               child: Padding(
-                // ★★★ padding プロパティを追加 ★★★
-                padding: EdgeInsets.only(
-                  bottom: bottomNavBarHeight,
-                ), // bottomNavBarHeightは事前に定義
+                // このPaddingがメインコンテンツエリア全体をフッターから保護
+                padding: EdgeInsets.only(bottom: bottomNavBarHeight),
                 child: Stack(
-                  // 既存のUI要素をそのままStackで配置
+                  alignment: Alignment.center,
                   children: [
-                    // === 2. 上部のゲームUIバー ===
+                    // === 2. 電子掲示板 (キャラクターの背後、かなり上) ===
+                    Positioned(
+                      top:
+                          -(screenHeight *
+                              0.15), // ★掲示板の上部が画面外に出るように調整 (例: 高さの約1/3程度)
+                      // screenHeight * 1.20 (掲示板の高さ) に対して
+                      left: screenWidth * 0.02, // 画面幅の2%の位置から
+                      right: screenWidth * 0.02, // 画面幅の2%の位置まで (これで横幅96%)
+                      height: screenHeight * 1.20, // 掲示板の高さは維持 (画面高さの120%)
+                      child: Opacity(
+                        // ★★★ Opacityウィジェットで囲む ★★★
+                        opacity: 0.5, // ★★★ 50%の透明度を指定 ★★★
+                        child: Image.asset(
+                          'assets/countdown.png',
+                          fit: BoxFit.fill,
+                        ),
+                      ),
+                    ),
+
+                    // === 3. 中央のキャラクター (掲示板の手前、少し下) ===
+                    Positioned(
+                      // Stack全体の中央を基準に、PaddingでY軸を調整
+                      // top, bottom, left, right を指定しないことで、子のサイズに依存しつつalignment: Alignment.centerで中央に
+                      child: Center(
+                        child: Padding(
+                          padding: EdgeInsets.only(
+                            top:
+                                screenHeight *
+                                0.30, // ★キャラクターのY位置調整 (例: 上から30%)
+                          ), // ★掲示板とのバランスを見てY位置調整 (例: 上から25%)
+                          child: Image.asset(
+                            _currentParkCharacterImage,
+                            width: screenWidth * 0.50, // キャラクターの幅
+                            height: screenHeight * 0.40, // キャラクターの高さ
+                            fit: BoxFit.contain,
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    // === 上部UIバー (キャラクターや掲示板より手前) ===
                     Positioned(
                       top: 0,
                       left: 0,
                       right: 0,
                       child: Container(
-                        height: topBarHeight, // topBarHeightは事前に定義
+                        height: topBarHeight,
                         decoration: const BoxDecoration(
                           image: DecorationImage(
-                            image: AssetImage('assets/ui_top_bar.png'),
+                            image: AssetImage(
+                              'assets/ui_top_bar.png',
+                            ), // ★上部UIバーの背景画像パス★
                             fit: BoxFit.fill,
                           ),
                         ),
@@ -294,23 +330,93 @@ class _ParkPageState extends State<ParkPage> {
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              // ... (レベル表示など)
+                              // --- レベルとHP情報ボックス ---
                               Container(
-                                width: screenWidth * 0.25, // screenWidthは事前に定義
-                                // ...
+                                width: screenWidth * 0.25,
+                                height: double.infinity, // 親の高さに合わせる
+                                decoration: const BoxDecoration(
+                                  image: DecorationImage(
+                                    image: AssetImage(
+                                      'assets/ui_level_hp_bg.png',
+                                    ), // ★レベル/HP背景画像パス★
+                                    fit: BoxFit.fill,
+                                  ),
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 5,
+                                ),
+                                child: const Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      '16',
+                                      style: TextStyle(
+                                        color: Colors.black,
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        fontFamily: 'NotoSansJP',
+                                      ),
+                                    ),
+                                    SizedBox(width: 5),
+                                    Text(
+                                      '52/52',
+                                      style: TextStyle(
+                                        color: Colors.black54,
+                                        fontSize: 14,
+                                        fontFamily: 'NotoSansJP',
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
-                              // ... (たこ焼き表示など)
+                              // --- たこ焼き表示とプラスボタンのグループ ---
                               Row(
                                 children: [
                                   Container(
-                                    width: screenWidth * 0.35 /* ... */,
+                                    width: screenWidth * 0.35,
+                                    height: double.infinity, // 親の高さに合わせる
+                                    decoration: const BoxDecoration(
+                                      image: DecorationImage(
+                                        image: AssetImage(
+                                          'assets/ui_takoyaki_bg.png',
+                                        ), // ★たこ焼き表示の背景画像パス★
+                                        fit: BoxFit.fill,
+                                      ),
+                                    ),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 5,
+                                    ),
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Image.asset(
+                                          'assets/icon_takoyaki.png',
+                                          width: 25,
+                                          height: 25,
+                                        ), // ★たこ焼きアイコンパス★
+                                        const SizedBox(width: 5),
+                                        const Text(
+                                          '13,800',
+                                          style: TextStyle(
+                                            color: Colors.black,
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.bold,
+                                            fontFamily: 'NotoSansJP',
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                   GestureDetector(
+                                    onTap: () {
+                                      print('たこ焼きプラスボタンが押されました');
+                                    },
                                     child: Image.asset(
                                       'assets/icon_plus.png',
-                                      width: screenWidth * 0.08,
-                                      height: screenWidth * 0.08,
-                                    ),
+                                      width: screenWidth * 0.16,
+                                      height: screenWidth * 0.16,
+                                    ), // ★プラスアイコン画像パス★
                                   ),
                                 ],
                               ),
@@ -319,66 +425,11 @@ class _ParkPageState extends State<ParkPage> {
                         ),
                       ),
                     ),
-                    // === 3. NEWSバナー (右上に配置) ===
-                    Positioned(
-                      top: bannerTopOffset, // bannerTopOffsetは事前に定義
-                      right: screenWidth * 0.05,
-                      child: GestureDetector(
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const NewsPage(),
-                            ),
-                          );
-                        },
-                        child: Image.asset(
-                          'assets/banner_news.png',
-                          width: bannerWidth,
-                          fit: BoxFit.fitWidth,
-                        ), // bannerWidthは事前に定義
-                      ),
-                    ),
-                    // === 4. 中央のキャラクター ===
-                    Positioned(
-                      left: 0,
-                      right: 0,
-                      top: 0,
-                      bottom: 0,
-                      child: Center(
-                        child: Padding(
-                          padding: EdgeInsets.only(
-                            bottom: bottomNavBarHeight * 0.5,
-                          ), // キャラクターがフッターに少し重ならないように調整
-                          child: Image.asset(
-                            _currentParkCharacterImage, // State変数
-                            width: screenWidth * 0.55,
-                            fit: BoxFit.contain,
-                          ),
-                        ),
-                      ),
-                    ),
-                    // === 6. お知らせバナー (左上に配置) ===
-                    Positioned(
-                      top: bannerTopOffset,
-                      left: screenWidth * 0.05,
-                      child: GestureDetector(
-                        onTap: () {
-                          _showNoticeDialog(context);
-                        },
-                        child: Image.asset(
-                          'assets/banner_notice.png',
-                          width: bannerWidth,
-                          fit: BoxFit.fitWidth,
-                        ),
-                      ),
-                    ),
                   ],
                 ),
               ),
             ),
           ),
-          // ...
         ],
       ),
     );

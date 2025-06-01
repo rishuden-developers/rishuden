@@ -37,8 +37,10 @@ flutter:
     - assets/character_takuji.png
     - assets/question_background_image.png
     - assets/button_park_icon.png
-
+    - assets/countdown.png
     - assets/ranking_guild_background.png
+    - assets/ui_takoyaki_bg.png
+    - assets/icon_plus.png
 
   fonts:
     - family: Noto Sans JP
