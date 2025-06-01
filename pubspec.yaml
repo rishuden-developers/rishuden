@@ -12,6 +12,7 @@ dependencies:
   firebase_core: ^3.13.1
   cloud_firestore: ^5.6.8
   firebase_auth: ^5.5.4
+  intl: ^0.19.0
 
 dev_dependencies:
   flutter_test:
@@ -35,6 +36,7 @@ flutter:
     - assets/character_god.png
     - assets/character_takuji.png
     - assets/question_background_image.png
+    - assets/button_park_icon.png
 
     - assets/ranking_guild_background.png
 

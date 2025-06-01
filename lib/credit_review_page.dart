@@ -1,112 +1,209 @@
-import 'package:flutter/material.dart'; // 急上昇ランキングページ
-import 'credit_explore_page.dart';
+import 'package:flutter/material.dart'; // ★★★ Flutterの基本的なウィジェットを使うために必須 ★★★
+import 'credit_explore_page.dart'; // 遷移先のページ
+import 'common_bottom_navigation.dart'; // ★ 共通フッターウィジェット (パスを確認してください)
+import 'park_page.dart'; // 以下、フッターから遷移する可能性のあるページ
+import 'time_schedule_page.dart';
+import 'ranking_page.dart';
+import 'item_page.dart';
 
 class CreditReviewPage extends StatelessWidget {
   const CreditReviewPage({super.key});
 
-  @override
-  Widget build(BuildContext context) {
-    // 画面の幅を取得 (タブレットなど広い画面での調整用)
-    final screenWidth = MediaQuery.of(context).size.width;
-    // コンテンツの最大幅を定義
-    final double maxContentWidth = 600.0; // 600ピクセルを最大幅と設定
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('単位レビュー'), // タイトルを「ランキング」に修正
-        backgroundColor: Colors.transparent, // 背景画像を活かすために透明に
-        elevation: 0, // 影を消す
-        iconTheme: const IconThemeData(color: Colors.white), // 戻るボタンの色
-      ),
-      extendBodyBehindAppBar: true, // AppBarの裏にBodyのコンテンツが広がるようにする
-
-      body: Container(
-        decoration: const BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage('assets/ranking_guild_background.png'), // 画像のパス
-            fit: BoxFit.cover, // 画像が画面全体を覆うようにフィット
+  // ボタンの共通ウィジェット
+  // このウィジェット内で context を使うので、引数として渡すか、
+  // build メソッドの context を利用する形にします。
+  // CreditReviewPageがStatelessWidgetなので、このメソッドもcontextを引数に取る形でOKです。
+  Widget _buildNavigateButton(
+    BuildContext context, // contextを引数で受け取る
+    String text,
+    IconData? icon,
+    VoidCallback onPressed,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 40.0, vertical: 8.0),
+      child: ElevatedButton.icon(
+        icon:
+            icon != null
+                ? Icon(icon, size: 24, color: Colors.white)
+                : SizedBox.shrink(), // アイコンの色も指定
+        label: Text(text, style: TextStyle(color: Colors.white)), // ボタンのテキスト色
+        onPressed: onPressed,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.brown[700]?.withOpacity(0.9),
+          foregroundColor: Colors.white, // Rippleエフェクトなどの色
+          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(color: Colors.orangeAccent[100]!, width: 1.5),
           ),
-        ),
-        child: Center(
-          // Column全体を中央に配置
-          child: ConstrainedBox(
-            // コンテンツの最大幅を制限
-            constraints: BoxConstraints(maxWidth: maxContentWidth),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center, // 垂直方向の中央揃え
-              crossAxisAlignment: CrossAxisAlignment.stretch, // 子要素を水平方向に引き伸ばす
-              children: [
-                // 上部にタイトルなどのスペースを作る (App Barの高さ分)
-                SizedBox(
-                  height: AppBar().preferredSize.height + 20,
-                ), // App Barの下に余白
-
-                const Text(
-                  '単位レビュー！', // テキストをより適切に
-                  textAlign: TextAlign.center, // 中央揃え
-                  style: TextStyle(
-                    fontSize: 28, // 大きめのフォント
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white, // 白文字で見やすく
-                    shadows: [
-                      // 影をつけて背景に埋もれないように
-                      Shadow(
-                        blurRadius: 5.0,
-                        color: Colors.black,
-                        offset: Offset(2.0, 2.0),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 40), // タイトルとボタンの間のスペース
-
-                _buildRankingButton(
-                  context,
-                  '検索',
-                  () {
-                    // ★余分な括弧を削除★
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const CreditExplorePage(),
-                      ),
-                    );
-                  }, // ★ここまで★
-                ),
-                const SizedBox(height: 20), // ボタン間のスペース
-              ], // ★Columnのchildrenリストの閉じ角括弧がここにあります★
-            ),
+          elevation: 6,
+          textStyle: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            fontFamily: 'NotoSansJP', // フォントファミリー指定例
           ),
         ),
       ),
     );
   }
 
-  // ランキングボタンの共通ウィジェット (見やすくするためヘルパー関数化)
-  Widget _buildRankingButton(
-    BuildContext context,
-    String text,
-    VoidCallback onPressed,
-  ) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 40.0), // 左右にパディングを追加
-      child: ElevatedButton(
-        onPressed: onPressed,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.brown[700], // ボタンの背景色
-          foregroundColor: Colors.white, // テキストの色
-          padding: const EdgeInsets.symmetric(vertical: 18), // ボタンの縦方向パディング
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10), // 角を丸く
-            side: const BorderSide(color: Colors.orange, width: 2), // 枠線
-          ),
-          elevation: 5, // 影
-          textStyle: const TextStyle(
-            fontSize: 20, // テキストサイズ
-            fontWeight: FontWeight.bold,
+  @override
+  Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final double maxContentWidth = 600.0;
+    final double bottomNavBarHeight = 75.0; // CommonBottomNavigationの高さに合わせて調整
+
+    return Scaffold(
+      extendBodyBehindAppBar: true,
+      extendBody: true, // ★ bodyをbottomNavigationBarの背後にも拡張
+
+      appBar: AppBar(
+        title: const Text('単位レビュー'),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.white), // 戻るボタンの色を白に
+        titleTextStyle: TextStyle(
+          fontFamily: 'NotoSansJP',
+          color: Colors.white,
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      bottomNavigationBar: CommonBottomNavigation(
+        currentPage: AppPage.creditReview,
+        // ★ 各ボタンの画像アセットパスを実際のパスに置き換えてください ★
+        parkIconAsset: 'assets/button_park_icon.png', // 例
+        timetableIconAsset: 'assets/button_timetable.png',
+        creditReviewIconAsset: 'assets/button_unit_review.png', // アクティブ用画像があれば
+        rankingIconAsset: 'assets/button_ranking.png',
+        itemIconAsset: 'assets/button_dressup.png',
+
+        onParkTap: () {
+          Navigator.pushReplacement(
+            context,
+            PageRouteBuilder(
+              pageBuilder:
+                  (context, animation, secondaryAnimation) => const ParkPage(),
+              transitionDuration: Duration.zero,
+              reverseTransitionDuration: Duration.zero,
+              // ParkPageが引数を期待している場合は settings を設定
+              // settings: RouteSettings(arguments: { ... }),
+            ),
+          );
+        },
+        onTimetableTap: () {
+          Navigator.pushReplacement(
+            context,
+            PageRouteBuilder(
+              pageBuilder:
+                  (context, animation, secondaryAnimation) =>
+                      const TimeSchedulePage(),
+              transitionDuration: Duration.zero,
+              reverseTransitionDuration: Duration.zero,
+              // ParkPageが引数を期待している場合は settings を設定
+              // settings: RouteSettings(arguments: { ... }),
+            ),
+          );
+        },
+        onRankingTap: () {
+          Navigator.pushReplacement(
+            context,
+            PageRouteBuilder(
+              pageBuilder:
+                  (context, animation, secondaryAnimation) =>
+                      const RankingPage(),
+              transitionDuration: Duration.zero,
+              reverseTransitionDuration: Duration.zero,
+              // ParkPageが引数を期待している場合は settings を設定
+              // settings: RouteSettings(arguments: { ... }),
+            ),
+          );
+        },
+        onCreditReviewTap: () {
+          print("Already on Ranking Page");
+        },
+        onItemTap: () {
+          Navigator.pushReplacement(
+            context,
+            PageRouteBuilder(
+              pageBuilder:
+                  (context, animation, secondaryAnimation) => const ItemPage(),
+              transitionDuration: Duration.zero,
+              reverseTransitionDuration: Duration.zero,
+              // ParkPageが引数を期待している場合は settings を設定
+              // settings: RouteSettings(arguments: { ... }),
+            ),
+          );
+        },
+      ),
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: const BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage('assets/ranking_guild_background.png'), // 背景画像
+            fit: BoxFit.cover,
           ),
         ),
-        child: Text(text),
+        child: SafeArea(
+          // ステータスバーやノッチを避ける
+          bottom: false, // bottomNavigationBarがあるので下はSafeAreaしない
+          child: Center(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: maxContentWidth),
+              child: SingleChildScrollView(
+                padding: EdgeInsets.only(
+                  bottom: bottomNavBarHeight, // フッターの高さ分のパディング
+                  top:
+                      AppBar().preferredSize.height +
+                      20, // AppBarの下の余白 (extendBodyBehindAppBarのため)
+                  left: 16,
+                  right: 16, // 左右の基本的なパディング
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // SizedBox(height: AppBar().preferredSize.height + 20), // Paddingで調整したので不要かも
+                    const Text(
+                      '単位レビュー探索',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        fontFamily: 'NotoSansJP',
+                        shadows: [
+                          Shadow(
+                            blurRadius: 6.0,
+                            color: Colors.black54,
+                            offset: Offset(2.0, 2.0),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 50),
+                    _buildNavigateButton(
+                      // contextを渡す
+                      context,
+                      '講義を検索する',
+                      Icons.search,
+                      () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const CreditExplorePage(),
+                          ),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 20),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
