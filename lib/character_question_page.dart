@@ -149,13 +149,13 @@ class _CharacterQuestionPageState extends State<CharacterQuestionPage> {
     List<int> userAnswers,
     String diagnosedCharacter,
   ) async {
-    String userID = 'u245319i'; // ユーザーIDを適切に取得する必要があります
+    String UID = 'W2Vdtqo6dFQeuayyEx4uq3cJqwh1'; // ユーザーIDを適切に取得する必要があります
     print('--- Firestoreへの保存処理を開始します (QuestionPageから) ---');
     try {
       var usersData =
           await FirebaseFirestore.instance.collection('users').get();
       var userDoc = usersData.docs.firstWhere(
-        (doc) => doc.id == userID,
+        (doc) => doc.id == UID,
         orElse: () => throw Exception('ユーザーが見つかりません'),
       );
       await userDoc.reference.update({
