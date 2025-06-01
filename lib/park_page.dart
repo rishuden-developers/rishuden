@@ -363,21 +363,6 @@ class _ParkPageState extends State<ParkPage> {
                       ),
                     ),
                     alignment: Alignment.center,
-                    child: const Text(
-                      '単位レビュー',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        shadows: [
-                          Shadow(
-                            blurRadius: 2.0,
-                            color: Colors.black,
-                            offset: Offset(1.0, 1.0),
-                          ),
-                        ],
-                      ),
-                    ),
                   ),
                 ),
 
@@ -403,21 +388,6 @@ class _ParkPageState extends State<ParkPage> {
                       ),
                     ),
                     alignment: Alignment.center,
-                    child: const Text(
-                      'ランキング',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        shadows: [
-                          Shadow(
-                            blurRadius: 2.0,
-                            color: Colors.black,
-                            offset: Offset(1.0, 1.0),
-                          ),
-                        ],
-                      ),
-                    ),
                   ),
                 ),
 
@@ -441,21 +411,6 @@ class _ParkPageState extends State<ParkPage> {
                       ),
                     ),
                     alignment: Alignment.center,
-                    child: const Text(
-                      '着せ替え',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        shadows: [
-                          Shadow(
-                            blurRadius: 2.0,
-                            color: Colors.black,
-                            offset: Offset(1.0, 1.0),
-                          ),
-                        ],
-                      ),
-                    ),
                   ),
                 ),
 
@@ -481,21 +436,6 @@ class _ParkPageState extends State<ParkPage> {
                       ),
                     ),
                     alignment: Alignment.center,
-                    child: const Text(
-                      '時間割',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        shadows: [
-                          Shadow(
-                            blurRadius: 2.0,
-                            color: Colors.black,
-                            offset: Offset(1.0, 1.0),
-                          ),
-                        ],
-                      ),
-                    ),
                   ),
                 ),
               ],
