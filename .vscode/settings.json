@@ -1,3 +1,4 @@
 {
-    "cmake.sourceDirectory": "/Users/makiyuto/dev/rishuden/windows/flutter"
+    "cmake.sourceDirectory": "/Users/makiyuto/dev/rishuden/windows/flutter",
+    "java.configuration.updateBuildConfiguration": "interactive"
 }
