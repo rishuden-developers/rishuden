@@ -1,18 +1,15 @@
 import 'package:flutter/material.dart';
-import 'park_page.dart'; // ★ ParkPage をインポート
-import 'dart:math'; // _normalizeAnswer などで使う場合は残す (今回は診断ロジックごと削除)
-
-// import 'package:cloud_firestore/cloud_firestore.dart'; // ★ Firebase関連は不要
+import 'park_page.dart'; // ParkPageのインポート
+// import 'dart:math'; // 診断ロジックがないので不要
 
 class CharacterDecidePage extends StatelessWidget {
-  final List<int> answers; // 一応受け取るが、主には diagnosedCharacterName を使う
-  final String
-  diagnosedCharacterName; // ★ CharacterQuestionPage から渡される診断済みのキャラクター名
+  final List<int> answers;
+  final String diagnosedCharacterName;
 
   const CharacterDecidePage({
     super.key,
     required this.answers,
-    required this.diagnosedCharacterName, // ★ コンストラクタで受け取る
+    required this.diagnosedCharacterName,
   });
 
   // キャラクターの全データ定義
@@ -82,23 +79,19 @@ class CharacterDecidePage extends StatelessWidget {
     },
   };
 
-  // ★★★ 診断ロジック (_normalizeAnswer, _normalizeInverse, _diagnoseCharacter) はここからは削除 ★★★
-
   @override
   Widget build(BuildContext context) {
-    // CharacterQuestionPage から渡された diagnosedCharacterName を使用
     final String characterName = diagnosedCharacterName;
     final Map<String, dynamic> displayCharacterData =
         _characterFullData[characterName] ?? _characterFullData["剣士"]!;
 
     return Scaffold(
-      backgroundColor: Colors.brown[50], // Stackの下になるので、実質見えない
       appBar: AppBar(
         title: const Text('診断結果'),
         backgroundColor: Colors.brown,
         automaticallyImplyLeading: false,
         titleTextStyle: TextStyle(
-          // AppBarのタイトルも白に
+          fontFamily: 'NotoSansJP',
           color: Colors.white,
           fontSize: 20,
           fontWeight: FontWeight.bold,
@@ -108,7 +101,7 @@ class CharacterDecidePage extends StatelessWidget {
         children: <Widget>[
           Positioned.fill(
             child: Image.asset(
-              'assets/question_background_image.png', // ★ QuestionPageと共通の背景画像
+              'assets/question_background_image.png', // QuestionPageと共通の背景画像
               fit: BoxFit.cover,
             ),
           ),
@@ -126,6 +119,7 @@ class CharacterDecidePage extends StatelessWidget {
                           ? "おっと！"
                           : "🎓 あなたの履修タイプは…！",
                       style: TextStyle(
+                        fontFamily: 'NotoSansJP',
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
@@ -152,6 +146,7 @@ class CharacterDecidePage extends StatelessWidget {
                     Text(
                       displayCharacterData["name"] ?? characterName,
                       style: TextStyle(
+                        fontFamily: 'NotoSansJP',
                         fontSize: 28,
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
@@ -300,6 +295,7 @@ class CharacterDecidePage extends StatelessWidget {
                 Text(
                   title,
                   style: TextStyle(
+                    fontFamily: 'NotoSansJP', // カード内のテキストにもフォント指定する場合
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
                     color: Colors.brown[800],
@@ -308,7 +304,11 @@ class CharacterDecidePage extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   text,
-                  style: TextStyle(fontSize: 15, color: Colors.brown[900]),
+                  style: TextStyle(
+                    fontFamily: 'NotoSansJP',
+                    fontSize: 15,
+                    color: Colors.brown[900],
+                  ),
                 ),
               ],
             ),
