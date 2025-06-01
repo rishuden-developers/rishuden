@@ -194,12 +194,12 @@ class _ParkPageState extends State<ParkPage> {
             right: 0,
             child: Container(
               height: topBarHeight,
-              decoration: const BoxDecoration(
+              /*decoration: const BoxDecoration(
                 image: DecorationImage(
                   image: AssetImage('assets/ui_top_bar.png'), // ★上部UIバーの背景画像パス★
                   fit: BoxFit.fill,
                 ),
-              ),
+              ),*/
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 10.0),
                 child: Row(
@@ -210,14 +210,14 @@ class _ParkPageState extends State<ParkPage> {
                     Container(
                       width: screenWidth * 0.25, // 幅を画面幅の25%に
                       height: double.infinity,
-                      decoration: const BoxDecoration(
+                      /*decoration: const BoxDecoration(
                         image: DecorationImage(
                           image: AssetImage(
                             'assets/ui_level_hp_bg.png',
                           ), // ★レベル/HP背景画像パス★
                           fit: BoxFit.fill,
                         ),
-                      ),
+                      ),*/
                       padding: const EdgeInsets.symmetric(horizontal: 5),
                       child: const Row(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -248,14 +248,14 @@ class _ParkPageState extends State<ParkPage> {
                         Container(
                           width: screenWidth * 0.35, // たこ焼き表示の幅を広げる
                           height: double.infinity,
-                          decoration: const BoxDecoration(
+                          /*decoration: const BoxDecoration(
                             image: DecorationImage(
                               image: AssetImage(
                                 'assets/ui_takoyaki_bg.png',
                               ), // ★たこ焼き表示の背景画像パス★
                               fit: BoxFit.fill,
                             ),
-                          ),
+                          ),*/
                           padding: const EdgeInsets.symmetric(horizontal: 5),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -282,11 +282,15 @@ class _ParkPageState extends State<ParkPage> {
                           onTap: () {
                             print('たこ焼きプラスボタンが押されました');
                           },
-                          child: Image.asset(
+                          child: const Icon(
+                            Icons.add,
+                            color: Colors.black,
+                            size: 30,
+                          ) /*Image.asset(
                             'assets/icon_plus.png', // ★プラスアイコン画像パス★
                             width: screenWidth * 0.08, // 幅を調整
                             height: screenWidth * 0.08, // 高さを調整
-                          ),
+                          ),*/,
                         ),
                       ],
                     ),
@@ -308,11 +312,11 @@ class _ParkPageState extends State<ParkPage> {
                   MaterialPageRoute(builder: (context) => const NewsPage()),
                 );
               },
-              child: Image.asset(
+              child: Text("news") /*Image.asset(
                 'assets/banner_news.png', // ★NEWSバナーの画像パス★
                 width: bannerWidth, // 画面幅の30%
                 fit: BoxFit.fitWidth,
-              ),
+              ),*/,
             ),
           ),
 
@@ -450,11 +454,11 @@ class _ParkPageState extends State<ParkPage> {
               onTap: () {
                 _showNoticeDialog(context); // 左上から現れるお知らせダイアログを表示
               },
-              child: Image.asset(
+              child: Text("banner_notice") /*Image.asset(
                 'assets/banner_notice.png', // ★お知らせバナーの画像パス★
                 width: bannerWidth, // 画面幅の30% (NEWSバナーと同じ幅)
                 fit: BoxFit.fitWidth,
-              ),
+              ),*/,
             ),
           ),
         ],
