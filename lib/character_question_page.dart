@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'dart:math'; // For max/min
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'character_decide_page.dart';
+import 'package:provider/provider.dart';
+import 'character_provider.dart';
+import 'character_data.dart';
 
 // 各質問の選択肢を定義 (ドロップダウン用 - 新しいインデックス10から19)
 final Map<int, List<String>> questionOptions = {
@@ -758,6 +761,20 @@ class _CharacterQuestionPageState extends State<CharacterQuestionPage> {
                                       finalAnswers,
                                       characterName,
                                     );
+                                    final String characterImagePath =
+                                        characterFullDataGlobal[characterName]?['image']
+                                            as String? ??
+                                        'assets/character_unknown.png';
+
+                                    if (mounted) {
+                                      Provider.of<CharacterProvider>(
+                                        context,
+                                        listen: false,
+                                      ).setCharacter(
+                                        characterName,
+                                        characterImagePath,
+                                      );
+                                    }
                                   } else {
                                     print("診断エラーのため、Firestoreへの保存はスキップされました。");
                                   }

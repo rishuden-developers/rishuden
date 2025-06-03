@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:async'; // Timer.periodic のために必要
-import 'package:intl/intl.dart'; // DateFormat のために必要
+import 'package:intl/intl.dart';
+// DateFormat のために必要
 
 // 共通フッターと遷移先ページのインポート (パスは実際の構成に合わせてください)
 import 'common_bottom_navigation.dart';

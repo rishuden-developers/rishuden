@@ -6,16 +6,31 @@ import 'mail_page.dart';
 import 'news_page.dart';
 import 'park_page.dart'; // ParkPageは広場画面
 import 'character_question_page.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
-import 'package:intl/date_symbol_data_local.dart';
+import 'package:provider/provider.dart';
+import 'character_provider.dart'; // 作成したProviderファイルをインポート
 
 void main() async {
+  // main関数をasyncに変更
+  // Flutterエンジンとウィジェットツリーのバインディングを保証
   WidgetsFlutterBinding.ensureInitialized();
+
+  // 日本語ロケールの日付フォーマット情報を初期化 (runAppより前、awaitで完了を待つ)
   await initializeDateFormatting('ja_JP', null);
+
+  // Firebaseの初期化 (これもrunAppより前、awaitで完了を待つ)
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  runApp(MyApp());
+
+  // アプリケーションの実行
+  runApp(
+    ChangeNotifierProvider(
+      create: (context) => CharacterProvider(), // CharacterProviderを提供
+      child: MyApp(), // MyAppウィジェットをラップ
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -131,6 +146,19 @@ class _MyHomePageState extends State<MyHomePage> {
                 );
               },
             ),
+            ListTile(
+              leading: const Icon(Icons.contact_mail),
+              title: const Text('履修キャラ診断'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => CharacterQuestionPage(),
+                  ),
+                );
+              },
+            ),
           ],
         ),
       ),
@@ -178,9 +206,6 @@ class _MyHomePageState extends State<MyHomePage> {
           ),
 
           // === 3. アプリのタイトル (手前だが、テキストなのでタップイベントは発生しないが、念のため) ===
-
-          // ParkPage.dart の _ParkPageState クラスの build メソッド内
-          // === 3. アプリのロゴアイコン (以前のタイトルの場所) ===
           Positioned(
             top: screenHeight * 0.1, // Y位置は維持 (必要なら調整)
             left: 0,
@@ -188,19 +213,22 @@ class _MyHomePageState extends State<MyHomePage> {
             child: IgnorePointer(
               // タップイベントを無視する点は維持
               child: Center(
-                // ★ アイコンを中央に配置するために Center ウィジェットで囲む
+                // ★ 画像を中央に配置するために Center ウィジェットで囲む (任意)
                 child: Image.asset(
-                  'assets/title.png', // ★★★ 仮のロゴ画像パス (実際のパスに置き換えてください) ★★★
-                  height: screenHeight * 0.12, // ★ アイコンの高さを指定 (例: 画面高さの12%)
+                  'assets/title.png', // ★★★ 画像のパスを指定 ★★★
+                  height: screenHeight * 0.1, // ★ 画像の高さを指定 (例: 画面高さの10%)
                   // この値はロゴのデザインに合わせて調整してください
+                  // widthを指定せず、fit: BoxFit.contain を使うことで
+                  // 高さに合わせてアスペクト比を保って幅が決定されます。
                   fit: BoxFit.contain, // アスペクト比を保って領域内に収める
                   errorBuilder: (context, error, stackTrace) {
                     // 画像読み込みエラー時のフォールバック
                     return Container(
-                      height: screenHeight * 0.12,
+                      // エラー時も高さを保つためContainerでラップ
+                      height: screenHeight * 0.1,
                       child: const Center(
                         child: Text(
-                          'ロゴ表示エラー',
+                          'タイトル画像なし',
                           style: TextStyle(color: Colors.red, fontSize: 12),
                         ),
                       ),
@@ -210,6 +238,7 @@ class _MyHomePageState extends State<MyHomePage> {
               ),
             ),
           ),
+
           // --- ここからが変更点：タップしたい要素を後方（手前）に配置 ---
 
           // === 4. ドーナツ状の円 (キャラクターの周囲、タップイベントを無視) ===
