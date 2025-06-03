@@ -41,7 +41,11 @@ flutter:
     - assets/ranking_guild_background.png
     - assets/ui_takoyaki_bg.png
     - assets/icon_plus.png
-
+    - assets/ui_level_hp_bg.png
+    - assets/banner_news.png
+    - assets/title.png
+    - assets/oztech.png
+    - assets/potipoti.png
   fonts:
     - family: Noto Sans JP
       fonts:

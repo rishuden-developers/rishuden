@@ -9,9 +9,11 @@ import 'character_question_page.dart';
 
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await initializeDateFormatting('ja_JP', null);
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   runApp(MyApp());
 }
@@ -176,30 +178,38 @@ class _MyHomePageState extends State<MyHomePage> {
           ),
 
           // === 3. アプリのタイトル (手前だが、テキストなのでタップイベントは発生しないが、念のため) ===
+
+          // ParkPage.dart の _ParkPageState クラスの build メソッド内
+          // === 3. アプリのロゴアイコン (以前のタイトルの場所) ===
           Positioned(
-            top: screenHeight * 0.05,
+            top: screenHeight * 0.1, // Y位置は維持 (必要なら調整)
             left: 0,
             right: 0,
             child: IgnorePointer(
-              child: const Text(
-                '履修伝説',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 48,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                  shadows: [
-                    Shadow(
-                      blurRadius: 10.0,
-                      color: Colors.black,
-                      offset: Offset(2.0, 2.0),
-                    ),
-                  ],
+              // タップイベントを無視する点は維持
+              child: Center(
+                // ★ アイコンを中央に配置するために Center ウィジェットで囲む
+                child: Image.asset(
+                  'assets/title.png', // ★★★ 仮のロゴ画像パス (実際のパスに置き換えてください) ★★★
+                  height: screenHeight * 0.12, // ★ アイコンの高さを指定 (例: 画面高さの12%)
+                  // この値はロゴのデザインに合わせて調整してください
+                  fit: BoxFit.contain, // アスペクト比を保って領域内に収める
+                  errorBuilder: (context, error, stackTrace) {
+                    // 画像読み込みエラー時のフォールバック
+                    return Container(
+                      height: screenHeight * 0.12,
+                      child: const Center(
+                        child: Text(
+                          'ロゴ表示エラー',
+                          style: TextStyle(color: Colors.red, fontSize: 12),
+                        ),
+                      ),
+                    );
+                  },
                 ),
               ),
             ),
           ),
-
           // --- ここからが変更点：タップしたい要素を後方（手前）に配置 ---
 
           // === 4. ドーナツ状の円 (キャラクターの周囲、タップイベントを無視) ===

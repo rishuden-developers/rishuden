@@ -766,7 +766,7 @@ class _TimeSchedulePageState extends State<TimeSchedulePage> {
       bottomNavigationBar: CommonBottomNavigation(
         currentPage: AppPage.timetable,
         parkIconAsset: 'assets/button_park_icon.png',
-        timetableIconAsset: 'assets/button_timetable_active.png',
+        timetableIconAsset: 'assets/button_timetable.png',
         creditReviewIconAsset: 'assets/button_unit_review.png',
         rankingIconAsset: 'assets/button_ranking.png',
         itemIconAsset: 'assets/button_dressup.png',
