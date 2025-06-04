@@ -101,8 +101,10 @@ class _CharacterQuestionPageState extends State<CharacterQuestionPage> {
     'Q20: もし1ヶ月間、全ての義務から解放されて自由に過ごせるとしたら、主に何をしますか？',
   ];
 
+  // Q1-Q6 は0から、Q7-Q10は1から始まるため、maxValuesの計算方法を調整
   final List<int> maxValues = [
-    25, 5, 25, 6, 5, 10, 10, 10, 10, 10, // Q1-Q10 (index 0-9)
+    25, 5, 25, 6, 5, 10, // Q1-Q6 (index 0-5)
+    10, 10, 10, 10, // Q7-Q10 (index 6-9)
     (questionOptions[10]?.length ?? 1) - 1,
     (questionOptions[11]?.length ?? 1) - 1,
     (questionOptions[12]?.length ?? 1) - 1,
@@ -125,13 +127,16 @@ class _CharacterQuestionPageState extends State<CharacterQuestionPage> {
     super.initState();
     _isQuestionAnswered = List.generate(_totalQuestions, (_) => false);
     answers = List.generate(_totalQuestions, (index) {
-      if (index <= 9) {
-        if (index >= 6 && index <= 9) {
-          // Q7-Q10 (1-10スケール)
-          return 1;
-        }
+      if (index >= 6 && index <= 9) {
+        // Q7-Q10 (1-10スケール) の初期値は1
+        return 1;
+      }
+      // その他のスライダー形式の質問（Q1-Q6）の初期値は0
+      else if (index >= 0 && index <= 5) {
         return 0;
-      } else {
+      }
+      // ドロップダウン形式の質問（Q11-Q20）の初期値はnull
+      else {
         return null;
       }
     });
@@ -244,7 +249,8 @@ class _CharacterQuestionPageState extends State<CharacterQuestionPage> {
       case 6:
       case 7:
       case 8:
-      case 9: // Q7-Q10 スライダー (1-10) (旧Q8-Q11)
+      case 9: // Q7-Q10 スライダー (1-10) (旧Q8-Q11) -> ラジオボタン (1-10)
+        // rawAnswer は既に 1-10 の値なので、そのままマッピング
         normalizedScore = ((rawAnswer - 1) / 9.0) * 4.0 + 1.0;
         break;
       case 10: // Q11 未知の体験 (旧Q12)
@@ -541,21 +547,91 @@ class _CharacterQuestionPageState extends State<CharacterQuestionPage> {
   }
 
   Widget _buildQuestionWidget(int index) {
-    // スライダーはインデックス0から9 (Q1からQ10)
     if (index <= 9) {
-      bool isOneBased = (index >= 6 && index <= 9); // Q7-Q10 (1-10スケール)
-      double minVal = isOneBased ? 1.0 : 0.0;
-      if (index == 2) {
-        // Q3 (飛んだ/代筆コマ数) も0始まり
-        minVal = 0.0;
-        isOneBased = false;
+      // Q1からQ10はラジオボタン形式
+      int startValue = (index >= 6 && index <= 9) ? 1 : 0; // Q7-Q10は1から、他は0から
+      int endValue = maxValues[index];
+
+      // 各数値のボタンを作成
+      List<Widget> valueButtons = [];
+      for (int value = startValue; value <= endValue; value++) {
+        bool isSelected = answers[index] == value;
+        valueButtons.add(
+          Padding( // ボタン間のスペースを確保するためにPaddingを追加
+            padding: const EdgeInsets.symmetric(horizontal: 4.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  value.toString(),
+                  style: TextStyle(
+                    color: isSelected ? Colors.tealAccent[400] : Colors.white.withOpacity(0.8),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                    shadows: [
+                      if (isSelected)
+                        Shadow(
+                          blurRadius: 8.0,
+                          color: Colors.tealAccent[400]!.withOpacity(0.8),
+                          offset: Offset(0, 0),
+                        ),
+                    ],
+                  ),
+                ),
+                SizedBox(height: 4),
+                Container(
+                  width: 40, // ボタンの幅を固定
+                  height: 40, // ボタンの高さを固定して円形にする
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: isSelected
+                        ? LinearGradient(
+                            colors: [
+                              Colors.tealAccent[200]!.withOpacity(0.8),
+                              Colors.tealAccent[700]!.withOpacity(0.8),
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          )
+                        : null,
+                    color: isSelected ? null : Colors.brown[600]?.withOpacity(0.7),
+                    border: Border.all(
+                      color: isSelected ? Colors.tealAccent[400]! : Colors.white.withOpacity(0.7),
+                      width: isSelected ? 2.5 : 1.0,
+                    ),
+                    boxShadow: [
+                      if (isSelected)
+                        BoxShadow(
+                          color: Colors.tealAccent[400]!.withOpacity(0.6),
+                          blurRadius: 10.0,
+                          spreadRadius: 2.0,
+                        ),
+                    ],
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () {
+                        setState(() {
+                          answers[index] = value;
+                          if (!_isQuestionAnswered[index]) {
+                            _isQuestionAnswered[index] = true;
+                            _updateAnsweredCount();
+                          }
+                        });
+                      },
+                      borderRadius: BorderRadius.circular(20), // 丸いボタンに合わせたborderRadius
+                      child: Center(
+                        // ラジオボタン内に何も表示しない
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
       }
-      int divisionsVal = maxValues[index] - (isOneBased ? 1 : 0);
-      if (index == 2) {
-        // Q3 の divisions
-        divisionsVal = maxValues[index];
-      }
-      if (divisionsVal <= 0) divisionsVal = 1;
 
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -564,23 +640,14 @@ class _CharacterQuestionPageState extends State<CharacterQuestionPage> {
             questions[index],
             style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
           ),
-          Slider(
-            value: (answers[index] ?? (isOneBased ? 1 : 0)).toDouble(),
-            min: minVal,
-            max: maxValues[index].toDouble(),
-            divisions: divisionsVal,
-            label: (answers[index] ?? (isOneBased ? 1 : 0)).toString(),
-            activeColor: Colors.orange[700],
-            inactiveColor: Colors.orange[200]?.withOpacity(0.7),
-            onChanged: (value) {
-              setState(() {
-                answers[index] = value.toInt();
-                if (!_isQuestionAnswered[index]) {
-                  _isQuestionAnswered[index] = true;
-                  _updateAnsweredCount();
-                }
-              });
-            },
+          SizedBox(height: 12),
+          // スクロール可能なSingleChildScrollViewでボタンを一列に配置
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.start, // 左寄せにする
+              children: valueButtons,
+            ),
           ),
         ],
       );
@@ -652,7 +719,7 @@ class _CharacterQuestionPageState extends State<CharacterQuestionPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('キャラ診断 ver5.0'), // ★ AppBarのタイトルから進捗表示を削除 (ゲージに集約)
+        title: Text('キャラ診断 ver5.0'),
         backgroundColor: Colors.brown,
         titleTextStyle: TextStyle(
           fontFamily: 'NotoSansJP',
@@ -676,19 +743,16 @@ class _CharacterQuestionPageState extends State<CharacterQuestionPage> {
                   vertical: 12.0,
                   horizontal: 16.0,
                 ),
-                // color: Colors.black.withOpacity(0.2), // 必要であれば背景に薄い色を敷く
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
                       '診断進行度: ${_answeredQuestionsCount} / $_totalQuestions',
-                      // 'EXP: ${(_answeredQuestionsCount * 100 / _totalQuestions).toInt()}%', // パーセント表示やEXP風も可
                       style: TextStyle(
                         color: Colors.white,
-                        fontSize: 18, // 少し大きく
+                        fontSize: 18,
                         fontWeight: FontWeight.bold,
                         shadows: [
-                          // 文字に影をつけて読みやすく
                           Shadow(
                             offset: Offset(1.0, 1.0),
                             blurRadius: 2.0,
@@ -697,19 +761,18 @@ class _CharacterQuestionPageState extends State<CharacterQuestionPage> {
                         ],
                       ),
                     ),
-                    SizedBox(height: 8), // テキストとゲージの間
+                    SizedBox(height: 8),
                     ClipRRect(
-                      // 角を丸くするため
                       borderRadius: BorderRadius.all(Radius.circular(8)),
                       child: LinearProgressIndicator(
                         value: progress,
                         backgroundColor: Colors.grey[700]?.withOpacity(
                           0.8,
-                        ), // ゲージの背景色を少し濃く
+                        ),
                         valueColor: AlwaysStoppedAnimation<Color>(
                           Colors.deepOrangeAccent[400]!,
-                        ), // ゲージの色を鮮やかに
-                        minHeight: 18, // ★ 高さを大きく (例: 18)
+                        ),
+                        minHeight: 18,
                       ),
                     ),
                   ],
@@ -748,33 +811,33 @@ class _CharacterQuestionPageState extends State<CharacterQuestionPage> {
                         onPressed:
                             allAnswered
                                 ? () async {
-                                  final List<int> finalAnswers =
-                                      answers.map((ans) => ans ?? 0).toList();
+                                    final List<int> finalAnswers =
+                                        answers.map((ans) => ans ?? 0).toList();
 
-                                  final String characterName =
-                                      _diagnoseCharacter(finalAnswers);
-                                  if (characterName != "エラー：回答数が不足しています") {
-                                    await _saveDiagnosisToFirestore(
-                                      finalAnswers,
-                                      characterName,
-                                    );
-                                  } else {
-                                    print("診断エラーのため、Firestoreへの保存はスキップされました。");
+                                    final String characterName =
+                                        _diagnoseCharacter(finalAnswers);
+                                    if (characterName != "エラー：回答数が不足しています") {
+                                      await _saveDiagnosisToFirestore(
+                                        finalAnswers,
+                                        characterName,
+                                      );
+                                    } else {
+                                      print("診断エラーのため、Firestoreへの保存はスキップされました。");
+                                    }
+                                    if (mounted) {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder:
+                                              (context) => CharacterDecidePage(
+                                                    answers: finalAnswers,
+                                                    diagnosedCharacterName:
+                                                        characterName,
+                                                  ),
+                                        ),
+                                      );
+                                    }
                                   }
-                                  if (mounted) {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder:
-                                            (context) => CharacterDecidePage(
-                                              answers: finalAnswers,
-                                              diagnosedCharacterName:
-                                                  characterName,
-                                            ),
-                                      ),
-                                    );
-                                  }
-                                }
                                 : null,
                       ),
                       SizedBox(height: 20),
