@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'dart:async'; // Timer.periodic のために必要
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart'; // ★ Providerをインポート
+import 'character_provider.dart';
 // DateFormat のために必要
 
 // 共通フッターと遷移先ページのインポート (パスは実際の構成に合わせてください)
@@ -41,6 +43,8 @@ class _ParkPageState extends State<ParkPage> {
   int _currentExp = 1250; // 仮の現在の経験値
   int _maxExp = 2000;
 
+  bool _isCharacterInfoInitialized = false;
+
   @override
   void initState() {
     super.initState();
@@ -51,20 +55,29 @@ class _ParkPageState extends State<ParkPage> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final args = ModalRoute.of(context)?.settings.arguments;
-    if (args != null && args is Map<String, dynamic>) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          setState(() {
-            _currentParkCharacterImage =
-                args['characterImage'] as String? ??
-                'assets/character_unknown.png';
-            _currentParkCharacterName =
-                args['characterName'] as String? ?? 'キャラクター';
-          });
-        }
-      });
+
+    // ★★★ Providerからキャラクター情報を取得してStateを更新 ★★★
+    // listen: true を使うことで、Providerの値が変更されたらこのメソッドが再度呼ばれ、
+    // UIが最新の状態に追従するようになります。
+    final characterProvider = Provider.of<CharacterProvider>(context);
+    // Providerの値が現在のStateと異なる場合、または初回読み込み時にStateを更新
+    if (!_isCharacterInfoInitialized ||
+        _currentParkCharacterName != characterProvider.characterName ||
+        _currentParkCharacterImage != characterProvider.characterImage) {
+      // didChangeDependencies内で直接setStateを呼ぶのは通常問題ありませんが、
+      // より安全に、かつビルド完了後に行いたい場合はaddPostFrameCallbackを使います。
+      // 今回は、依存関係の変更を検知して即座にStateを更新する形にします。
+      // ただし、これがビルド中に呼ばれると問題なので、初回はフラグで制御
+      if (mounted) {
+        // mountedチェックは常に良い習慣
+        setState(() {
+          _currentParkCharacterImage = characterProvider.characterImage;
+          _currentParkCharacterName = characterProvider.characterName;
+          _isCharacterInfoInitialized = true; // 初回読み込み完了
+        });
+      }
     }
+    // ★ ルート引数からのキャラクター情報取得は削除します ★
   }
 
   @override
@@ -322,12 +335,6 @@ class _ParkPageState extends State<ParkPage> {
               pageBuilder: (_, __, ___) => const TimeSchedulePage(),
               transitionDuration: Duration.zero,
               reverseTransitionDuration: Duration.zero,
-              settings: RouteSettings(
-                arguments: {
-                  'characterName': _currentParkCharacterName,
-                  'characterImage': _currentParkCharacterImage,
-                },
-              ),
             ),
           );
         },

@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'dart:math'; // For max/min
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'character_decide_page.dart';
 import 'package:provider/provider.dart';
+import 'character_decide_page.dart';
 import 'character_provider.dart';
-import 'character_data.dart';
+import 'character_data.dart'; // characterFullDataGlobal を使用するため
 
 // 各質問の選択肢を定義 (ドロップダウン用 - 新しいインデックス10から19)
 final Map<int, List<String>> questionOptions = {
@@ -76,6 +76,9 @@ final Map<int, List<String>> questionOptions = {
 };
 
 class CharacterQuestionPage extends StatefulWidget {
+  // ★ const CharacterQuestionPage({super.key}); から const を削除 (StatefulWidgetなので通常不要)
+  CharacterQuestionPage({super.key});
+
   @override
   _CharacterQuestionPageState createState() => _CharacterQuestionPageState();
 }
@@ -86,7 +89,7 @@ class _CharacterQuestionPageState extends State<CharacterQuestionPage> {
     'Q2: 1限は何コマ埋まってる？（0〜5回）',
     'Q3: 週何コマくらい飛んでる？（友達に代筆頼んだりも含む）（0〜25コマ）',
     'Q4: 週に何日バイトをしてる？（0〜6回）',
-    'Q5: 週に何日サークルや部活に参加してる？（0〜5回）',
+    'Q5: 週に何日サークルや部活に参加してる？（0〜7日）', // ★★★ 文言変更 (最大7日) ★★★
     'Q6: 週に空きコマは何コマある？（0〜10コマ）',
     'Q7: 集中力には自信がある？（1:すぐ気が散る 〜 10:超集中型）',
     'Q8: ストレス耐性はどれくらいある？（1:すぐ病む 〜 10:鋼メンタル）',
@@ -105,7 +108,8 @@ class _CharacterQuestionPageState extends State<CharacterQuestionPage> {
   ];
 
   final List<int> maxValues = [
-    25, 5, 25, 6, 5, 10, 10, 10, 10, 10, // Q1-Q10 (index 0-9)
+    25, 5, 25, 6, 7, 10, // ★★★ Q5 (index 4) の最大値を 7 に変更 ★★★
+    10, 10, 10, 10,
     (questionOptions[10]?.length ?? 1) - 1,
     (questionOptions[11]?.length ?? 1) - 1,
     (questionOptions[12]?.length ?? 1) - 1,
@@ -128,13 +132,14 @@ class _CharacterQuestionPageState extends State<CharacterQuestionPage> {
     super.initState();
     _isQuestionAnswered = List.generate(_totalQuestions, (_) => false);
     answers = List.generate(_totalQuestions, (index) {
-      if (index <= 9) {
-        if (index >= 6 && index <= 9) {
-          // Q7-Q10 (1-10スケール)
-          return 1;
-        }
+      if (index >= 6 && index <= 9) {
+        // Q7-Q10 (index 6-9)
+        return 1;
+      } else if (index >= 0 && index <= 5) {
+        // Q1-Q6 (index 0-5)
         return 0;
       } else {
+        // Q11-Q20 (index 10-19)
         return null;
       }
     });
@@ -152,149 +157,169 @@ class _CharacterQuestionPageState extends State<CharacterQuestionPage> {
     List<int> userAnswers,
     String diagnosedCharacter,
   ) async {
-    String UID = 'W2Vdtqo6dFQeuayyEx4uq3cJqwh1'; // ユーザーIDを適切に取得する必要があります
+    // String userID = 'u245319i'; // このハードコードはテスト用。実際は認証などから取得。
+    // ProviderなどからユーザーIDを取得する方が望ましい
+    final characterProvider = Provider.of<CharacterProvider>(
+      context,
+      listen: false,
+    );
+    String? userID =
+        characterProvider.userId; // CharacterProviderにuserIdを持たせる想定
+
+    if (userID == null) {
+      print('ユーザーIDが取得できませんでした。Firestoreへの保存をスキップします。');
+      return;
+    }
     print('--- Firestoreへの保存処理を開始します (QuestionPageから) ---');
     try {
-      var usersData =
-          await FirebaseFirestore.instance.collection('users').get();
-      var userDoc = usersData.docs.firstWhere(
-        (doc) => doc.id == UID,
-        orElse: () => throw Exception('ユーザーが見つかりません'),
-      );
-      await userDoc.reference.update({
+      // 特定のユーザーIDのドキュメントに直接書き込む
+      await FirebaseFirestore.instance.collection('users').doc(userID).set({
         'character': diagnosedCharacter,
-        'diagnostics': answers,
-      });
-      print('診断結果をFirestoreに保存しました。');
+        'diagnostics': userAnswers, // userAnswers は List<int>
+        'lastDiagnosed': FieldValue.serverTimestamp(), // 最後に診断した日時
+      }, SetOptions(merge: true)); // merge:true で既存のフィールドを上書きせずに追加・更新
+      print('診断結果をFirestoreに保存しました。UserID: $userID');
     } catch (e) {
       print('Firestoreへの保存に失敗しました: $e');
     }
   }
 
+  // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+  // ★ 正規化ロジック (_normalizeAnswer) - Q5(サークル)の最大値変更を反映 ★
+  // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
   double _normalizeAnswer(int questionIndex, int rawAnswer) {
     double normalizedScore = 3.0;
     switch (questionIndex) {
-      case 0: // Q1 履修コマ数
-        if (rawAnswer >= 22)
-          normalizedScore = 5.0;
-        else if (rawAnswer >= 18)
-          normalizedScore = 4.0;
-        else if (rawAnswer >= 14)
-          normalizedScore = 3.0;
-        else if (rawAnswer >= 10)
-          normalizedScore = 2.0;
-        else
-          normalizedScore = 1.0;
-        break;
-      case 1: // Q2 1限コマ数
-        if (rawAnswer >= 5)
-          normalizedScore = 5.0;
-        else if (rawAnswer == 4)
-          normalizedScore = 4.5;
-        else if (rawAnswer == 3)
-          normalizedScore = 3.5;
-        else if (rawAnswer == 2)
-          normalizedScore = 2.5;
-        else if (rawAnswer == 1)
-          normalizedScore = 1.5;
-        else
-          normalizedScore = 1.0;
-        break;
-      case 2: // Q3 週に飛んだ/代筆コマ数 (0-25)
-        if (rawAnswer == 0)
-          normalizedScore = 5.0;
-        else if (rawAnswer <= 2)
-          normalizedScore = 4.0;
-        else if (rawAnswer <= 5)
-          normalizedScore = 3.0;
-        else if (rawAnswer <= 8)
-          normalizedScore = 2.0;
-        else
-          normalizedScore = 1.0;
-        break;
-      case 3: // Q4 バイト回数 (旧Q5)
-        if (rawAnswer >= 5)
-          normalizedScore = 5.0;
-        else if (rawAnswer >= 3)
-          normalizedScore = 4.0;
-        else if (rawAnswer >= 1)
-          normalizedScore = 3.0;
-        else
-          normalizedScore = 1.5;
-        break;
-      case 4: // Q5 サークル参加回数 (旧Q6)
-        if (rawAnswer >= 4)
-          normalizedScore = 5.0;
+      case 0:
+        normalizedScore =
+            (rawAnswer >= 22)
+                ? 5.0
+                : (rawAnswer >= 18)
+                ? 4.0
+                : (rawAnswer >= 14)
+                ? 3.0
+                : (rawAnswer >= 10)
+                ? 2.0
+                : 1.0;
+        break; // Q1 履修コマ
+      case 1:
+        normalizedScore =
+            (rawAnswer >= 5)
+                ? 5.0
+                : (rawAnswer == 4)
+                ? 4.5
+                : (rawAnswer == 3)
+                ? 3.5
+                : (rawAnswer == 2)
+                ? 2.5
+                : (rawAnswer == 1)
+                ? 1.5
+                : 1.0;
+        break; // Q2 1限コマ
+      case 2:
+        normalizedScore =
+            (rawAnswer == 0)
+                ? 5.0
+                : (rawAnswer <= 2)
+                ? 4.0
+                : (rawAnswer <= 5)
+                ? 3.0
+                : (rawAnswer <= 8)
+                ? 2.0
+                : 1.0;
+        break; // Q3 飛んだ/代筆
+      case 3:
+        normalizedScore =
+            (rawAnswer >= 5)
+                ? 5.0
+                : (rawAnswer >= 3)
+                ? 4.0
+                : (rawAnswer >= 1)
+                ? 3.0
+                : 1.5;
+        break; // Q4 バイト
+      case 4: // Q5 サークル参加日数 (0-7日) ★★★ ロジック変更 ★★★
+        if (rawAnswer >= 6)
+          normalizedScore = 5.0; // 6-7日
+        else if (rawAnswer >= 4)
+          normalizedScore = 4.0; // 4-5日
         else if (rawAnswer >= 2)
-          normalizedScore = 3.5;
+          normalizedScore = 3.0; // 2-3日
         else if (rawAnswer == 1)
-          normalizedScore = 2.0;
+          normalizedScore = 1.5; // 1日
         else
-          normalizedScore = 1.0;
+          normalizedScore = 1.0; // 0日
         break;
-      case 5: // Q6 空きコマ数 (旧Q7)
-        if (rawAnswer <= 1)
-          normalizedScore = 5.0;
-        else if (rawAnswer <= 3)
-          normalizedScore = 4.0;
-        else if (rawAnswer <= 6)
-          normalizedScore = 3.0;
-        else if (rawAnswer <= 8)
-          normalizedScore = 2.0;
-        else
-          normalizedScore = 1.0;
-        break;
+      case 5:
+        normalizedScore =
+            (rawAnswer <= 1)
+                ? 5.0
+                : (rawAnswer <= 3)
+                ? 4.0
+                : (rawAnswer <= 6)
+                ? 3.0
+                : (rawAnswer <= 8)
+                ? 2.0
+                : 1.0;
+        break; // Q6 空きコマ
       case 6:
       case 7:
       case 8:
-      case 9: // Q7-Q10 スライダー (1-10) (旧Q8-Q11)
+      case 9:
         normalizedScore = ((rawAnswer - 1) / 9.0) * 4.0 + 1.0;
-        break;
-      case 10: // Q11 未知の体験 (旧Q12)
+        break; // Q7-Q10 (1-10スケール)
+      case 10:
         const scores = [1.0, 3.5, 5.0, 1.5];
         normalizedScore = scores[rawAnswer];
-        break;
-      case 11: // Q12 計画と実行 (旧Q13)
+        break; // Q11 未知
+      case 11:
         const scores = [5.0, 3.5, 4.5, 1.0];
         normalizedScore = scores[rawAnswer];
-        break;
-      case 12: // Q13 興味関心 (旧Q14)
+        break; // Q12 計画
+      case 12:
         const scores = [5.0, 4.5, 4.0, 1.0];
         normalizedScore = scores[rawAnswer];
-        break;
-      case 13: // Q14 困難への対処 (旧Q15)
+        break; // Q13 興味
+      case 13:
         const scores = [4.5, 4.0, 3.5, 1.0];
         normalizedScore = scores[rawAnswer];
-        break;
-      case 14: // Q15 活動時間帯 (旧Q16)
+        break; // Q14 困難
+      case 14:
         const scores = [4.5, 3.0, 3.5, 5.0, 3.5];
         normalizedScore = scores[rawAnswer];
-        break;
-      case 15: // Q16 ゆるい授業中 (旧Q17)
+        break; // Q15 活動時間
+      case 15:
         const scores = [4.0, 1.5, 3.5, 1.0];
         normalizedScore = scores[rawAnswer];
-        break;
-      case 16: // Q17 価値観/動機 (新規)
+        break; // Q16 ゆる授業
+      case 16: // Q17 価値観/動機
         const scores_q17 = [
           3.0,
           4.5,
-          4.0,
-          5.0,
-          4.0,
-          1.5,
-        ]; // 以前3.5だったAを3.0に、Fを1.0から1.5に微調整
+          3.5,
+          4.8,
+          4.2,
+          1.2,
+        ]; // A安定3.0, B知的好奇4.5, C実利3.5, D新規経験4.8, E困難克服4.2, Fストレス回避1.2 (微調整)
         normalizedScore = scores_q17[rawAnswer];
         break;
-      case 17: // Q18 グループワークリスク (新規)
-        const scores_q18 = [5.0, 3.0, 2.0, 1.0];
+      case 17: // Q18 グループワークリスク
+        const scores_q18 = [4.8, 3.0, 2.0, 1.0]; // A挑戦4.8 (微調整)
         normalizedScore = scores_q18[rawAnswer];
         break;
-      case 18: // Q19 エネルギー回復 (新規)
-        const scores_q19 = [3.5, 3.5, 1.5, 5.0];
+      case 18: // Q19 エネルギー回復
+        const scores_q19 = [3.5, 3.8, 1.5, 5.0]; // B仲間3.8 (微調整)
         normalizedScore = scores_q19[rawAnswer];
         break;
-      case 19: // Q20 1ヶ月自由時間 (新規)
-        const scores_q20 = [4.0, 4.5, 3.5, 4.0, 1.0, 5.0]; // Aを4.5から4.0に微調整
+      case 19: // Q20 1ヶ月自由時間
+        const scores_q20 = [
+          4.0,
+          4.5,
+          3.5,
+          4.2,
+          1.0,
+          4.8,
+        ]; // D体動かす4.2, F気分で4.8 (微調整)
         normalizedScore = scores_q20[rawAnswer];
         break;
     }
@@ -306,8 +331,10 @@ class _CharacterQuestionPageState extends State<CharacterQuestionPage> {
     return 6.0 - normalizedScore;
   }
 
+  // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+  // ★ 診断ロジック (_diagnoseCharacter) - 目標分布 (神5, カス5, ゴリラ18, 魔女18, 剣士18, 冒険家18, 商人18) に調整 ★
+  // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
   String _diagnoseCharacter(List<int> currentAnswersNonNull) {
-    // ★★★ 引数名を currentAnswersNonNull に統一 ★★★
     if (currentAnswersNonNull.length != 20) {
       return "エラー：回答数が不足しています";
     }
@@ -316,207 +343,203 @@ class _CharacterQuestionPageState extends State<CharacterQuestionPage> {
       (i) => _normalizeAnswer(i, currentAnswersNonNull[i]),
     );
 
-    double totalClasses = currentAnswersNonNull[0].toDouble();
-    double skippedOrDaipitsuRaw =
-        currentAnswersNonNull[2].toDouble(); // ★ Q3の生の値 (飛んだ/代筆)
-
+    double totalClasses = currentAnswersNonNull[0].toDouble(); // Q1
+    double skippedOrDaipitsuRaw = currentAnswersNonNull[2].toDouble(); // Q3
     double effectiveSkippedPercentage =
         (totalClasses > 0)
             ? (skippedOrDaipitsuRaw / totalClasses)
             : (skippedOrDaipitsuRaw > 0 ? 1.0 : 0.0);
-
-    double nonAttendanceScore; // 高いほど良い (欠席/代筆が少ない)
+    double nonAttendanceScore;
     if (effectiveSkippedPercentage == 0)
       nonAttendanceScore = 5.0;
-    else if (effectiveSkippedPercentage <= 0.1)
-      nonAttendanceScore = 4.0;
-    else if (effectiveSkippedPercentage <= 0.25)
-      nonAttendanceScore = 3.0;
-    else if (effectiveSkippedPercentage <= 0.50)
-      nonAttendanceScore = 2.0;
+    else if (effectiveSkippedPercentage <= 0.05)
+      nonAttendanceScore = 4.5; // 5%以内
+    else if (effectiveSkippedPercentage <= 0.15)
+      nonAttendanceScore = 3.5; // 15%以内
+    else if (effectiveSkippedPercentage <= 0.30)
+      nonAttendanceScore = 2.0; // 30%以内
     else
       nonAttendanceScore = 1.0;
 
-    // --- 各キャラクタースコア計算 (20問対応、最新のバランス調整) ---
+    // --- 各キャラクタースコア計算 (目標分布: 神5, カス5, 他各18) ---
     // インデックスは新しい質問順序に対応 (0-19)
 
-    double knightScore = 0;
+    double knightScore = 0; // 目標18%
     double baseKnightFactor = 1.0;
-    if (norm[8] < 3.0 || norm[6] < 3.0) {
-      // Q9モチベ(index8)かQ7集中力(index6)が低い
-      baseKnightFactor = 0.4;
-    }
-    knightScore += norm[1] * 0.4 * baseKnightFactor; // Q2 1限
-    knightScore += norm[4] * 0.7 * baseKnightFactor; // Q5サークル
-    knightScore += norm[6] * 0.8 * baseKnightFactor; // Q7集中力
-    knightScore += norm[7] * 0.7 * baseKnightFactor; // Q8ストレス耐性
-    knightScore += norm[8] * 1.0; // Q9モチベ
-    knightScore += norm[5] * 0.4 * baseKnightFactor; // Q6空きコマ少ない
-    // Q12計画 (index 11)
+    if (norm[8] < 2.8 || norm[6] < 2.8) {
+      baseKnightFactor = 0.45;
+    } // Q9モチベ, Q7集中力 (基準少し緩和)
+    knightScore += norm[1] * 0.5 * baseKnightFactor; // Q2 1限
+    knightScore += norm[4] * 0.8 * baseKnightFactor; // Q5サークル (少しアップ)
+    knightScore += norm[6] * 0.9 * baseKnightFactor; // Q7集中力
+    knightScore += norm[7] * 0.8 * baseKnightFactor; // Q8ストレス
+    knightScore += norm[8] * 1.1; // Q9モチベ (少しアップ)
+    knightScore += norm[5] * 0.5 * baseKnightFactor; // Q6空きコマ少ない (少しアップ)
     if (currentAnswersNonNull[11] == 0 && norm[8] >= 3.0)
-      knightScore += norm[11] * 1.8;
+      knightScore += norm[11] * 1.7; // Q12計画(A)
     else if (currentAnswersNonNull[11] == 1 && norm[8] >= 2.5)
-      knightScore += norm[11] * 1.3;
-    // Q14困難 (index 13)
+      knightScore += norm[11] * 1.2; // Q12計画(B)
     if (currentAnswersNonNull[13] == 1 && norm[8] >= 2.5)
-      knightScore += norm[13] * 1.5;
-    knightScore += nonAttendanceScore * 1.2; // Q3(統合版)欠席/代筆少ない
+      knightScore += norm[13] * 1.4; // Q14困難(B)
+    knightScore += nonAttendanceScore * 1.3; // Q3(統合版)欠席/代筆少ない (重要度少しアップ)
     if (currentAnswersNonNull[15] == 0)
-      knightScore += norm[15] * 1.0; // Q16ゆる授業(A:聞く)
-    // 新しい質問からの寄与
+      knightScore += norm[15] * 1.0; // Q16ゆる授業(A)
     if (currentAnswersNonNull[16] == 0)
-      knightScore += norm[16] * 0.8; // Q17価値観(A:安定秩序)
+      knightScore += norm[16] * 1.1; // Q17価値観(A:安定秩序) (少しアップ)
     if (currentAnswersNonNull[17] == 1)
-      knightScore += norm[17] * 0.8; // Q18リスク(B:堅実)
+      knightScore += norm[17] * 0.9; // Q18リスク(B:堅実) (少しアップ)
     if (currentAnswersNonNull[19] == 0)
-      knightScore += norm[19] * 0.7; // Q20自由時間(A:壮大計画)
+      knightScore += norm[19] * 0.8; // Q20自由時間(A:壮大計画) (少しアップ)
 
-    double witchScore = 0;
-    witchScore += norm[6] * 2.5; // Q7集中力
+    double witchScore = 0; // 目標18%
+    witchScore += norm[6] * 2.4; // Q7集中力 (少しダウン)
     if (currentAnswersNonNull[12] == 0)
       witchScore += norm[12] * 2.0; // Q13興味(A:深く狭く)
     if (currentAnswersNonNull[14] == 3)
-      witchScore += norm[14] * 2.0; // Q15活動(D:深夜)
-    if (norm[1] <= 2.0) witchScore += (6.0 - norm[1]) * 0.8;
-    witchScore += norm[8] * 1.0; // Q9モチベ
-    if (norm[4] <= 2.0) witchScore += (6.0 - norm[4]) * 0.5; // Q5サークル少ない
-    if (norm[3] <= 2.0) witchScore += (6.0 - norm[3]) * 0.3; // Q4バイト少ない
+      witchScore += norm[14] * 1.8; // Q15活動(D:深夜) (少しダウン)
+    if (norm[1] <= 2.2) witchScore += (6.0 - norm[1]) * 0.7;
+    witchScore += norm[8] * 0.9; // Q9モチベ
+    if (norm[4] <= 2.2) witchScore += (6.0 - norm[4]) * 0.5;
+    if (norm[3] <= 2.2) witchScore += (6.0 - norm[3]) * 0.3;
     if (currentAnswersNonNull[15] == 2)
-      witchScore += norm[15] * 0.7; // Q16ゆる授業(C:他課題)
-    // 新しい質問からの寄与
+      witchScore += norm[15] * 0.8; // Q16ゆる授業(C)
     if (currentAnswersNonNull[16] == 1)
-      witchScore += norm[16] * 1.5; // Q17価値観(B:知的好奇)
+      witchScore += norm[16] * 1.6; // Q17価値観(B:知的好奇) (少しアップ)
     if (currentAnswersNonNull[18] == 0)
-      witchScore += norm[18] * 1.2; // Q19エネルギー(A:一人趣味)
+      witchScore += norm[18] * 1.3; // Q19エネルギー(A:一人趣味) (少しアップ)
     if (currentAnswersNonNull[19] == 1)
-      witchScore += norm[19] * 1.5; // Q20自由時間(B:研究創作)
+      witchScore += norm[19] * 1.6; // Q20自由時間(B:研究創作) (少しアップ)
 
-    double merchantScore = 0;
-    merchantScore += norm[3] * 1.8; // Q4バイト
+    double merchantScore = 0; // 目標18%
+    merchantScore += norm[3] * 1.7; // Q4バイト (少しダウン)
     merchantScore +=
-        _normalizeInverse(5, currentAnswersNonNull[5]) * 1.2; // Q6空きコマ多い
+        _normalizeInverse(5, currentAnswersNonNull[5]) * 1.1; // Q6空きコマ多い
     if (currentAnswersNonNull[12] == 2)
-      merchantScore += norm[12] * 1.8; // Q13興味(C:実用的)
-    merchantScore += norm[9] * 1.0; // Q10忙しさ
+      merchantScore += norm[12] * 1.7; // Q13興味(C:実用的)
+    merchantScore += norm[9] * 0.9; // Q10忙しさ
     if (currentAnswersNonNull[13] == 2)
-      merchantScore += norm[13] * 1.5; // Q14困難(C:相談)
-    if (currentAnswersNonNull[11] == 1)
-      merchantScore += norm[11] * 1.0; // Q12計画(B:大まか)
+      merchantScore += norm[13] * 1.4; // Q14困難(C:相談)
+    if (currentAnswersNonNull[11] == 1) merchantScore += norm[11] * 0.9;
     if (currentAnswersNonNull[15] == 2)
-      merchantScore += norm[15] * 2.0; // Q16ゆる授業(C:他課題)
-    // 新しい質問からの寄与
+      merchantScore += norm[15] * 1.8; // Q16ゆる授業(C)
     if (currentAnswersNonNull[16] == 2)
-      merchantScore += norm[16] * 1.8; // Q17価値観(C:実利)
+      merchantScore += norm[16] * 1.7; // Q17価値観(C:実利)
     if (currentAnswersNonNull[17] == 1 || currentAnswersNonNull[17] == 2)
-      merchantScore += norm[17] * 0.8; // Q18リスク(B堅実/C様子見)
+      merchantScore += norm[17] * 0.9;
     if (currentAnswersNonNull[18] == 1)
-      merchantScore += norm[18] * 1.0; // Q19エネルギー(B:仲間)
+      merchantScore += norm[18] * 1.1; // Q19エネルギー(B:仲間)
     if (currentAnswersNonNull[19] == 2)
-      merchantScore += norm[19] * 1.5; // Q20自由時間(C:ビジネス)
+      merchantScore += norm[19] * 1.6; // Q20自由時間(C:ビジネス)
 
-    double gorillaScore = 0;
+    double gorillaScore = 0; // 目標18% (大幅アップ狙い)
     if (currentAnswersNonNull[14] == 0)
-      gorillaScore += norm[14] * 1.4; // Q15活動(A:早朝)
-    gorillaScore += norm[1] * 0.9; // Q2 1限
-    gorillaScore += norm[7] * 1.3; // Q8ストレス
-    gorillaScore += norm[8] * 1.1; // Q9モチベ
-    gorillaScore += norm[4] * 1.0; // Q5サークル
+      gorillaScore += norm[14] * 1.8; // Q15活動(A:早朝) (大幅アップ)
+    gorillaScore += norm[1] * 1.2; // Q2 1限 (大幅アップ)
+    gorillaScore += norm[7] * 1.6; // Q8ストレス (大幅アップ)
+    gorillaScore += norm[8] * 1.5; // Q9モチベ (大幅アップ)
+    gorillaScore += norm[4] * 1.6; // Q5サークル (大幅アップ)
     if (currentAnswersNonNull[13] == 0)
-      gorillaScore += norm[13] * 2.2; // Q14困難(A:根性)
-    gorillaScore += nonAttendanceScore * 0.8;
-    if (currentAnswersNonNull[15] == 3)
-      gorillaScore -= 0.3;
-    else if (currentAnswersNonNull[15] == 0)
-      gorillaScore += 0.7;
-    // 新しい質問からの寄与
+      gorillaScore += norm[13] * 2.8; // Q14困難(A:根性) (最重要、大幅アップ)
+    gorillaScore += nonAttendanceScore * 1.0; // 少しアップ
+    if (currentAnswersNonNull[15] == 0)
+      gorillaScore += norm[15] * 0.8; // 聞くも評価
+    else if (currentAnswersNonNull[15] == 3)
+      gorillaScore += norm[15] * 0.3; // 寝るは少しだけマイナスを緩和
     if (currentAnswersNonNull[16] == 4)
-      gorillaScore += norm[16] * 1.8; // Q17価値観(E:困難克服)
+      gorillaScore += norm[16] * 2.2; // Q17価値観(E:困難克服) (超重要)
     if (currentAnswersNonNull[18] == 1 || currentAnswersNonNull[18] == 2)
-      gorillaScore += norm[18] * 0.8;
+      gorillaScore += norm[18] * 1.0; // Q19エネルギー(仲間/寝る)
     if (currentAnswersNonNull[19] == 3)
-      gorillaScore += norm[19] * 1.8; // Q20自由時間(D:体動かす)
+      gorillaScore += norm[19] * 2.2; // Q20自由時間(D:体動かす) (超重要)
 
-    double adventurerScore = 0;
+    double adventurerScore = 0; // 目標18% (大幅抑制狙い)
     if (currentAnswersNonNull[10] == 2)
-      adventurerScore += norm[10] * 2.0; // Q11未知(C:ワクワク)
+      adventurerScore += norm[10] * 1.0; // Q11未知(C) (大幅ダウン)
     else if (currentAnswersNonNull[10] == 1)
-      adventurerScore += norm[10] * 1.2;
+      adventurerScore += norm[10] * 0.6; // (大幅ダウン)
     if (currentAnswersNonNull[11] == 2)
-      adventurerScore += norm[11] * 2.0; // Q12計画(C:即行動)
+      adventurerScore += norm[11] * 1.0; // Q12計画(C) (大幅ダウン)
     else if (currentAnswersNonNull[11] == 1)
-      adventurerScore += norm[11] * 1.0;
+      adventurerScore += norm[11] * 0.5; // (大幅ダウン)
     if (currentAnswersNonNull[12] == 1)
-      adventurerScore += norm[12] * 1.8; // Q13興味(B:広く浅く)
+      adventurerScore += norm[12] * 0.9; // Q13興味(B) (大幅ダウン)
     adventurerScore +=
-        _normalizeInverse(5, currentAnswersNonNull[5]) * 2.0; // Q6空きコマ多い
-    if (currentAnswersNonNull[11] == 0) adventurerScore -= 1.5;
+        _normalizeInverse(5, currentAnswersNonNull[5]) *
+        1.0; // Q6空きコマ多い (大幅ダウン)
+    if (currentAnswersNonNull[11] == 0) adventurerScore -= 2.0; // 完璧計画ペナルティ維持
     if (currentAnswersNonNull[14] == 4)
-      adventurerScore += norm[14] * 2.0; // Q15活動(E:不定)
+      adventurerScore += norm[14] * 1.0; // Q15活動(E) (大幅ダウン)
     if (currentAnswersNonNull[15] == 1)
-      adventurerScore += norm[15] * 1.2; // Q16ゆる授業(B:ゲーム)
-    // 新しい質問からの寄与
+      adventurerScore += norm[15] * 0.8; // Q16ゆる授業(B)
     if (currentAnswersNonNull[16] == 3)
-      adventurerScore += norm[16] * 2.2; // Q17価値観(D:新規経験)
+      adventurerScore += norm[16] * 1.2; // Q17価値観(D) (大幅ダウン)
     if (currentAnswersNonNull[17] == 0)
-      adventurerScore += norm[17] * 1.8; // Q18リスク(A:挑戦)
+      adventurerScore += norm[17] * 1.0; // Q18リスク(A) (大幅ダウン)
     if (currentAnswersNonNull[18] == 3)
-      adventurerScore += norm[18] * 1.5; // Q19エネルギー(D:新規活動)
+      adventurerScore += norm[18] * 1.0; // Q19エネルギー(D) (大幅ダウン)
     if (currentAnswersNonNull[19] == 0 || currentAnswersNonNull[19] == 5)
-      adventurerScore += norm[19] * 1.2; // Q20自由時間(A壮大計画/F気分で)
-    if (nonAttendanceScore <= 2.5) adventurerScore -= 1.0;
+      adventurerScore += norm[19] * 0.7;
+    if (nonAttendanceScore <= 2.0) adventurerScore -= 1.5; // サボりすぎペナルティ少し強化
 
     // --- レアキャラ判定 ---
     double godScoreSum = 0;
-    List<int> godCriteriaIndices = [1, 4, 6, 7, 8]; // Q2, Q5, Q7, Q8, Q9
+    List<int> godCriteriaIndices = [1, 4, 6, 7, 8];
     for (int idx in godCriteriaIndices) {
       godScoreSum += norm[idx];
     }
-    if (currentAnswersNonNull[11] == 0) godScoreSum += norm[11]; // Q12計画(A)
-    if (currentAnswersNonNull[13] == 1) godScoreSum += norm[13]; // Q14困難(B)
-    godScoreSum += nonAttendanceScore;
-    if (currentAnswersNonNull[15] == 0) godScoreSum += norm[15]; // Q16ゆる授業(A)
+    if (currentAnswersNonNull[11] == 0)
+      godScoreSum += norm[11] * 1.1; // 計画A 少し重視
+    if (currentAnswersNonNull[13] == 1)
+      godScoreSum += norm[13] * 1.1; // 困難B 少し重視
+    godScoreSum += nonAttendanceScore * 1.2; // 真面目さ重視
+    if (currentAnswersNonNull[15] == 0)
+      godScoreSum += norm[15] * 1.1; // ゆる授業A 少し重視
     if (currentAnswersNonNull[16] == 0 || currentAnswersNonNull[16] == 4)
-      godScoreSum += norm[16]; // Q17価値観(A or E)
-    if (currentAnswersNonNull[17] == 0) godScoreSum += norm[17]; // Q18リスク(A)
+      godScoreSum += norm[16] * 1.2; // 価値観AorE 重視
+    if (currentAnswersNonNull[17] == 0)
+      godScoreSum += norm[17] * 1.1; // リスクA 少し重視
     if (currentAnswersNonNull[19] == 0 || currentAnswersNonNull[19] == 1)
-      godScoreSum += norm[19]; // Q20自由時間(A or B)
-
-    // 12項目。平均4.2で約50.4点。
-    if (godScoreSum >= 50.0) {
-      // 閾値を少し上げる
+      godScoreSum += norm[19] * 1.1;
+    // 12項目。目標5%。閾値を調整 (例: 平均4.0で48点)
+    if (godScoreSum >= 48.0) {
+      // ★ 閾値を48に調整
       return "神";
     }
 
     double reCalclulatedLoserScore = 0;
     reCalclulatedLoserScore += _normalizeInverse(1, currentAnswersNonNull[1]);
     reCalclulatedLoserScore +=
-        (6.0 - nonAttendanceScore) * 3.5; // Q3(統合版)欠席/代筆多い
+        (6.0 - nonAttendanceScore) * 3.8; // ★ Q3(統合版)欠席/代筆多い(超超超重要)
     reCalclulatedLoserScore +=
         _normalizeInverse(5, currentAnswersNonNull[5]) * 1.5;
     reCalclulatedLoserScore +=
-        _normalizeInverse(6, currentAnswersNonNull[6]) * 1.2;
-    reCalclulatedLoserScore += _normalizeInverse(7, currentAnswersNonNull[7]);
+        _normalizeInverse(6, currentAnswersNonNull[6]) * 1.3;
     reCalclulatedLoserScore +=
-        (currentAnswersNonNull[11] == 3 ? 5.0 : (norm[11] <= 2.0 ? 3.0 : 1.0));
+        _normalizeInverse(7, currentAnswersNonNull[7]) * 1.1;
     reCalclulatedLoserScore +=
-        _normalizeInverse(8, currentAnswersNonNull[8]) * 1.5;
+        (currentAnswersNonNull[11] == 3
+            ? 5.5
+            : (norm[11] <= 2.5 ? 3.5 : 1.0)); // 計画D
     reCalclulatedLoserScore +=
-        (currentAnswersNonNull[13] == 3 ? 5.0 : (norm[13] <= 2.0 ? 3.0 : 1.0));
+        _normalizeInverse(8, currentAnswersNonNull[8]) * 1.6; // モチベ低い
+    reCalclulatedLoserScore +=
+        (currentAnswersNonNull[13] == 3
+            ? 5.5
+            : (norm[13] <= 2.5 ? 3.5 : 1.0)); // 困難D
     if (currentAnswersNonNull[15] == 1 || currentAnswersNonNull[15] == 3)
-      reCalclulatedLoserScore += 5.0;
+      reCalclulatedLoserScore += 5.5; // ゆる授業 B or D
     if (currentAnswersNonNull[16] == 5)
-      reCalclulatedLoserScore += norm[16] * 1.5; // Q17価値観(F:ストレス回避)
+      reCalclulatedLoserScore += norm[16] * 1.8; // 価値観F
     if (currentAnswersNonNull[17] == 3)
-      reCalclulatedLoserScore += norm[17] * 1.5; // Q18リスク(D:回避)
+      reCalclulatedLoserScore += norm[17] * 1.8; // リスクD
     if (currentAnswersNonNull[18] == 2)
-      reCalclulatedLoserScore += norm[18] * 1.2; // Q19エネルギー(C:寝る)
+      reCalclulatedLoserScore += norm[18] * 1.3; // エネルギーC
     if (currentAnswersNonNull[19] == 4 || currentAnswersNonNull[19] == 5)
-      reCalclulatedLoserScore += norm[19] * 1.5; // Q20自由時間(Eのんびり/F気分で)
-
-    // 閾値調整 (13項目。平均4.0で52点。欠席/代筆が多い場合は低い閾値でも)
-    if (reCalclulatedLoserScore >= 50.0 ||
-        ((6.0 - nonAttendanceScore) >= 4.0 &&
-            reCalclulatedLoserScore >= 45.0)) {
+      reCalclulatedLoserScore += norm[19] * 1.8;
+    // 目標5%。閾値を調整 (例: 52点)
+    if (reCalclulatedLoserScore >= 52.0 ||
+        ((6.0 - nonAttendanceScore) >= 4.5 &&
+            reCalclulatedLoserScore >= 48.0)) {
       return "カス大学生";
     }
 
@@ -532,7 +555,6 @@ class _CharacterQuestionPageState extends State<CharacterQuestionPage> {
 
     String finalCharacter = "剣士";
     double maxScore = -double.infinity;
-
     scores.forEach((character, score) {
       double effectiveScore = max(0, score);
       if (effectiveScore > maxScore) {
@@ -544,21 +566,105 @@ class _CharacterQuestionPageState extends State<CharacterQuestionPage> {
   }
 
   Widget _buildQuestionWidget(int index) {
-    // スライダーはインデックス0から9 (Q1からQ10)
+    // ... (UI部分はご提示のものを維持)
     if (index <= 9) {
-      bool isOneBased = (index >= 6 && index <= 9); // Q7-Q10 (1-10スケール)
-      double minVal = isOneBased ? 1.0 : 0.0;
-      if (index == 2) {
-        // Q3 (飛んだ/代筆コマ数) も0始まり
-        minVal = 0.0;
-        isOneBased = false;
+      // スライダーはQ1～Q10 (インデックス0～9)
+      int startValue = (index >= 6 && index <= 9) ? 1 : 0;
+      int endValue = maxValues[index];
+      // Q5(サークル)の場合は最大値が7になっていることを確認
+      if (index == 4) endValue = 7; // ★ Q5サークルの
+
+      // 各数値のボタンを作成
+      List<Widget> valueButtons = [];
+      for (int value = startValue; value <= endValue; value++) {
+        bool isSelected = answers[index] == value;
+        valueButtons.add(
+          Padding(
+            // ボタン間のスペースを確保するためにPaddingを追加
+            padding: const EdgeInsets.symmetric(horizontal: 4.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  value.toString(),
+                  style: TextStyle(
+                    color:
+                        isSelected
+                            ? Colors.tealAccent[400]
+                            : Colors.white.withOpacity(0.8),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                    shadows: [
+                      if (isSelected)
+                        Shadow(
+                          blurRadius: 8.0,
+                          color: Colors.tealAccent[400]!.withOpacity(0.8),
+                          offset: Offset(0, 0),
+                        ),
+                    ],
+                  ),
+                ),
+                SizedBox(height: 4),
+                Container(
+                  width: 40, // ボタンの幅を固定
+                  height: 40, // ボタンの高さを固定して円形にする
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient:
+                        isSelected
+                            ? LinearGradient(
+                              colors: [
+                                Colors.tealAccent[200]!.withOpacity(0.8),
+                                Colors.tealAccent[700]!.withOpacity(0.8),
+                              ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            )
+                            : null,
+                    color:
+                        isSelected ? null : Colors.brown[600]?.withOpacity(0.7),
+                    border: Border.all(
+                      color:
+                          isSelected
+                              ? Colors.tealAccent[400]!
+                              : Colors.white.withOpacity(0.7),
+                      width: isSelected ? 2.5 : 1.0,
+                    ),
+                    boxShadow: [
+                      if (isSelected)
+                        BoxShadow(
+                          color: Colors.tealAccent[400]!.withOpacity(0.6),
+                          blurRadius: 10.0,
+                          spreadRadius: 2.0,
+                        ),
+                    ],
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () {
+                        setState(() {
+                          answers[index] = value;
+                          if (!_isQuestionAnswered[index]) {
+                            _isQuestionAnswered[index] = true;
+                            _updateAnsweredCount();
+                          }
+                        });
+                      },
+                      borderRadius: BorderRadius.circular(
+                        20,
+                      ), // 丸いボタンに合わせたborderRadius
+                      child: Center(
+                        // ラジオボタン内に何も表示しない
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
       }
-      int divisionsVal = maxValues[index] - (isOneBased ? 1 : 0);
-      if (index == 2) {
-        // Q3 の divisions
-        divisionsVal = maxValues[index];
-      }
-      if (divisionsVal <= 0) divisionsVal = 1;
 
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -567,23 +673,14 @@ class _CharacterQuestionPageState extends State<CharacterQuestionPage> {
             questions[index],
             style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
           ),
-          Slider(
-            value: (answers[index] ?? (isOneBased ? 1 : 0)).toDouble(),
-            min: minVal,
-            max: maxValues[index].toDouble(),
-            divisions: divisionsVal,
-            label: (answers[index] ?? (isOneBased ? 1 : 0)).toString(),
-            activeColor: Colors.orange[700],
-            inactiveColor: Colors.orange[200]?.withOpacity(0.7),
-            onChanged: (value) {
-              setState(() {
-                answers[index] = value.toInt();
-                if (!_isQuestionAnswered[index]) {
-                  _isQuestionAnswered[index] = true;
-                  _updateAnsweredCount();
-                }
-              });
-            },
+          SizedBox(height: 12),
+          // スクロール可能なSingleChildScrollViewでボタンを一列に配置
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.start, // 左寄せにする
+              children: valueButtons,
+            ),
           ),
         ],
       );
@@ -655,7 +752,7 @@ class _CharacterQuestionPageState extends State<CharacterQuestionPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('キャラ診断 ver5.0'), // ★ AppBarのタイトルから進捗表示を削除 (ゲージに集約)
+        title: Text('キャラ診断 ver5.0'),
         backgroundColor: Colors.brown,
         titleTextStyle: TextStyle(
           fontFamily: 'NotoSansJP',
@@ -679,19 +776,16 @@ class _CharacterQuestionPageState extends State<CharacterQuestionPage> {
                   vertical: 12.0,
                   horizontal: 16.0,
                 ),
-                // color: Colors.black.withOpacity(0.2), // 必要であれば背景に薄い色を敷く
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
                       '診断進行度: ${_answeredQuestionsCount} / $_totalQuestions',
-                      // 'EXP: ${(_answeredQuestionsCount * 100 / _totalQuestions).toInt()}%', // パーセント表示やEXP風も可
                       style: TextStyle(
                         color: Colors.white,
-                        fontSize: 18, // 少し大きく
+                        fontSize: 18,
                         fontWeight: FontWeight.bold,
                         shadows: [
-                          // 文字に影をつけて読みやすく
                           Shadow(
                             offset: Offset(1.0, 1.0),
                             blurRadius: 2.0,
@@ -700,19 +794,16 @@ class _CharacterQuestionPageState extends State<CharacterQuestionPage> {
                         ],
                       ),
                     ),
-                    SizedBox(height: 8), // テキストとゲージの間
+                    SizedBox(height: 8),
                     ClipRRect(
-                      // 角を丸くするため
                       borderRadius: BorderRadius.all(Radius.circular(8)),
                       child: LinearProgressIndicator(
                         value: progress,
-                        backgroundColor: Colors.grey[700]?.withOpacity(
-                          0.8,
-                        ), // ゲージの背景色を少し濃く
+                        backgroundColor: Colors.grey[700]?.withOpacity(0.8),
                         valueColor: AlwaysStoppedAnimation<Color>(
                           Colors.deepOrangeAccent[400]!,
-                        ), // ゲージの色を鮮やかに
-                        minHeight: 18, // ★ 高さを大きく (例: 18)
+                        ),
+                        minHeight: 18,
                       ),
                     ),
                   ],
@@ -761,20 +852,6 @@ class _CharacterQuestionPageState extends State<CharacterQuestionPage> {
                                       finalAnswers,
                                       characterName,
                                     );
-                                    final String characterImagePath =
-                                        characterFullDataGlobal[characterName]?['image']
-                                            as String? ??
-                                        'assets/character_unknown.png';
-
-                                    if (mounted) {
-                                      Provider.of<CharacterProvider>(
-                                        context,
-                                        listen: false,
-                                      ).setCharacter(
-                                        characterName,
-                                        characterImagePath,
-                                      );
-                                    }
                                   } else {
                                     print("診断エラーのため、Firestoreへの保存はスキップされました。");
                                   }
