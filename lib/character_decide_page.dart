@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'park_page.dart'; // ParkPageのインポート
+import 'park_page.dart';
+import 'character_data.dart'; // ParkPageのインポート
 // import 'dart:math'; // 診断ロジックがないので不要
 
 class CharacterDecidePage extends StatelessWidget {
@@ -82,9 +83,10 @@ class CharacterDecidePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final String characterName = diagnosedCharacterName;
+    // ★★★ characterFullDataGlobal を使用 ★★★
     final Map<String, dynamic> displayCharacterData =
-        _characterFullData[characterName] ?? _characterFullData["剣士"]!;
-
+        characterFullDataGlobal[characterName] ??
+        characterFullDataGlobal["剣士"]!;
     return Scaffold(
       appBar: AppBar(
         title: const Text('診断結果'),
