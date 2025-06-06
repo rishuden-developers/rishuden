@@ -478,7 +478,7 @@ class _ParkPageState extends State<ParkPage> {
                                     "課題: $_taskName\n詳細: $_taskDetails\n締切: ${DateFormat('MM/dd HH:mm', 'ja').format(_taskDeadline)}",
                                     style: TextStyle(
                                       fontSize:
-                                          screenHeight * 0.014, // フォントサイズも少し調整
+                                          screenHeight * 0.026, // フォントサイズも少し調整
                                       color: Colors.grey[100]!.withOpacity(
                                         0.95,
                                       ),
