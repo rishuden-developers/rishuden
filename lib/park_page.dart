@@ -201,7 +201,7 @@ class _ParkPageState extends State<ParkPage> {
                                   color: Colors.white,
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,
-                                  fontFamily: 'NotoSansJP',
+                                  fontFamily: 'misaki',
                                 ),
                               ),
                             ),
@@ -228,13 +228,13 @@ class _ParkPageState extends State<ParkPage> {
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
-                                  fontFamily: 'NotoSansJP',
+                                  fontFamily: 'misaki',
                                 ),
                               ),
                               SizedBox(height: 10),
                               Text(
                                 'いつもご利用ありがとうございます。\nVer.1.1.0にアップデートしました。\n\n新機能：\n・新キャラクター「神」の追加\n・「楽単ランキング」の強化\n\n不具合修正：\n・一部UIの表示崩れを修正\n\n引き続き「履修伝説」をお楽しみください！',
-                                style: TextStyle(fontFamily: 'NotoSansJP'),
+                                style: TextStyle(fontFamily: 'misaki'),
                               ),
                               SizedBox(height: 20),
                               Text(
@@ -242,13 +242,13 @@ class _ParkPageState extends State<ParkPage> {
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
-                                  fontFamily: 'NotoSansJP',
+                                  fontFamily: 'misaki',
                                 ),
                               ),
                               SizedBox(height: 10),
                               Text(
                                 '期間：2025年5月10日〜5月31日\n\n期間中に指定された課題をクリアし、高GPAを目指しましょう！\n豪華報酬をゲットするチャンス！',
-                                style: TextStyle(fontFamily: 'NotoSansJP'),
+                                style: TextStyle(fontFamily: 'misaki'),
                               ),
                             ],
                           ),
@@ -289,7 +289,7 @@ class _ParkPageState extends State<ParkPage> {
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 24,
-                  fontFamily: 'NotoSansJP',
+                  fontFamily: 'misaki',
                 ),
               ),
             ),
@@ -445,7 +445,7 @@ class _ParkPageState extends State<ParkPage> {
                                 fontSize: screenHeight * 0.020,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.lightBlue[100]!.withOpacity(0.95),
-                                fontFamily: 'NotoSansJP',
+                                fontFamily: 'misaki',
                                 shadows: [
                                   BoxShadow(
                                     color: Colors.black.withOpacity(0.5),
@@ -482,7 +482,7 @@ class _ParkPageState extends State<ParkPage> {
                                       color: Colors.grey[100]!.withOpacity(
                                         0.95,
                                       ),
-                                      fontFamily: 'NotoSansJP',
+                                      fontFamily: 'misaki',
                                       height: 1.4,
                                     ),
                                   ),
@@ -558,7 +558,7 @@ class _ParkPageState extends State<ParkPage> {
                                               color: Colors.white,
                                               fontWeight: FontWeight.bold,
                                               fontSize: topBarHeight * 0.25,
-                                              fontFamily: 'NotoSansJP',
+                                              fontFamily: 'misaki',
                                               shadows: [
                                                 Shadow(
                                                   color: Colors.black54,
@@ -663,7 +663,7 @@ class _ParkPageState extends State<ParkPage> {
                                               color: Colors.black,
                                               fontSize: topBarHeight * 0.26,
                                               fontWeight: FontWeight.bold,
-                                              fontFamily: 'NotoSansJP',
+                                              fontFamily: 'misaki',
                                             ),
                                             overflow: TextOverflow.ellipsis,
                                             softWrap: false,

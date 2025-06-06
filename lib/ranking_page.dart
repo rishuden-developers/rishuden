@@ -42,7 +42,7 @@ class RankingPage extends StatelessWidget {
           textStyle: const TextStyle(
             fontSize: 18, // テキストサイズ調整
             fontWeight: FontWeight.bold,
-            fontFamily: 'NotoSansJP', // フォント指定例
+            fontFamily: 'misaki', // フォント指定例
           ),
         ),
         child: Text(text),
@@ -67,7 +67,7 @@ class RankingPage extends StatelessWidget {
         iconTheme: const IconThemeData(color: Colors.white),
         titleTextStyle: TextStyle(
           // AppBarのテキストスタイル
-          fontFamily: 'NotoSansJP',
+          fontFamily: 'misaki',
           color: Colors.white,
           fontSize: 20,
           fontWeight: FontWeight.bold,
@@ -182,7 +182,7 @@ class RankingPage extends StatelessWidget {
                         fontSize: 28,
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
-                        fontFamily: 'NotoSansJP',
+                        fontFamily: 'misaki',
                         shadows: [
                           Shadow(
                             blurRadius: 5.0,

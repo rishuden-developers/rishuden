@@ -371,7 +371,7 @@ class _TimeSchedulePageState extends State<TimeSchedulePage> {
           title: Text(
             dialogTitle,
             style: TextStyle(
-              fontFamily: 'NotoSansJP',
+              fontFamily: 'misaki',
               fontSize: 16,
               color: Colors.brown[800],
               fontWeight: FontWeight.bold,
@@ -385,7 +385,7 @@ class _TimeSchedulePageState extends State<TimeSchedulePage> {
               maxLines: 5,
               minLines: 3,
               style: TextStyle(
-                fontFamily: 'NotoSansJP',
+                fontFamily: 'misaki',
                 fontSize: 14,
                 color: Colors.brown[900],
               ),
@@ -407,7 +407,7 @@ class _TimeSchedulePageState extends State<TimeSchedulePage> {
               child: Text(
                 'キャンセル',
                 style: TextStyle(
-                  fontFamily: 'NotoSansJP',
+                  fontFamily: 'misaki',
                   color: Colors.brown[600],
                 ),
               ),
@@ -419,7 +419,7 @@ class _TimeSchedulePageState extends State<TimeSchedulePage> {
               ),
               child: Text(
                 '保存',
-                style: TextStyle(fontFamily: 'NotoSansJP', color: Colors.white),
+                style: TextStyle(fontFamily: 'misaki', color: Colors.white),
               ),
               onPressed: () {
                 // setStateをダイアログ内ではなく、ダイアログが閉じた後に行う
@@ -465,7 +465,7 @@ class _TimeSchedulePageState extends State<TimeSchedulePage> {
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 12,
-                  fontFamily: 'NotoSansJP',
+                  fontFamily: 'misaki',
                   color: Colors.brown[800],
                 ),
               ),
@@ -480,7 +480,7 @@ class _TimeSchedulePageState extends State<TimeSchedulePage> {
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 12,
-                    fontFamily: 'NotoSansJP',
+                    fontFamily: 'misaki',
                     color: Colors.brown[800],
                   ),
                 ),
@@ -526,7 +526,7 @@ class _TimeSchedulePageState extends State<TimeSchedulePage> {
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 10,
-                fontFamily: 'NotoSansJP',
+                fontFamily: 'misaki',
                 color: Colors.black.withOpacity(0.85),
               ),
               overflow: TextOverflow.ellipsis,
@@ -542,7 +542,7 @@ class _TimeSchedulePageState extends State<TimeSchedulePage> {
                 style: TextStyle(
                   fontSize: 8,
                   color: Colors.black.withOpacity(0.6),
-                  fontFamily: 'NotoSansJP',
+                  fontFamily: 'misaki',
                 ),
               ),
             ),
@@ -555,7 +555,7 @@ class _TimeSchedulePageState extends State<TimeSchedulePage> {
                 style: TextStyle(
                   fontSize: 7,
                   color: Colors.black.withOpacity(0.5),
-                  fontFamily: 'NotoSansJP',
+                  fontFamily: 'misaki',
                 ),
                 overflow: TextOverflow.ellipsis,
               ),
@@ -574,7 +574,7 @@ class _TimeSchedulePageState extends State<TimeSchedulePage> {
             fontSize: 9,
             color: Colors.brown[700],
             fontStyle: FontStyle.italic,
-            fontFamily: 'NotoSansJP',
+            fontFamily: 'misaki',
           ),
           textAlign: TextAlign.center,
           overflow: TextOverflow.ellipsis,
@@ -631,7 +631,7 @@ class _TimeSchedulePageState extends State<TimeSchedulePage> {
                   style: TextStyle(
                     fontSize: 9,
                     fontWeight: FontWeight.bold,
-                    fontFamily: 'NotoSansJP',
+                    fontFamily: 'misaki',
                     color: Colors.brown[800],
                     height: 1.2,
                   ),
@@ -668,7 +668,7 @@ class _TimeSchedulePageState extends State<TimeSchedulePage> {
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
-                    fontFamily: 'NotoSansJP',
+                    fontFamily: 'misaki',
                     color: Colors.white,
                     shadows: [
                       Shadow(
@@ -714,7 +714,7 @@ class _TimeSchedulePageState extends State<TimeSchedulePage> {
                         fontSize: 9,
                         color: Colors.green[900],
                         fontStyle: FontStyle.italic,
-                        fontFamily: 'NotoSansJP',
+                        fontFamily: 'misaki',
                       ),
                       overflow: TextOverflow.ellipsis,
                       maxLines: 3,
@@ -757,7 +757,7 @@ class _TimeSchedulePageState extends State<TimeSchedulePage> {
             style: TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.bold,
-              fontFamily: 'NotoSansJP',
+              fontFamily: 'misaki',
               color: Colors.white,
               shadows: [
                 Shadow(
@@ -781,7 +781,7 @@ class _TimeSchedulePageState extends State<TimeSchedulePage> {
               maxLines: null,
               expands: true,
               style: TextStyle(
-                fontFamily: 'NotoSansJP',
+                fontFamily: 'misaki',
                 fontSize: 13,
                 color: Colors.brown[900],
               ),
@@ -821,7 +821,7 @@ class _TimeSchedulePageState extends State<TimeSchedulePage> {
               ? _mainCharacterName
               : "${_mainCharacterName} (${_weekDateRange})", // ★ AppBarにキャラ名も表示
           style: TextStyle(
-            fontFamily: 'NotoSansJP',
+            fontFamily: 'misaki',
             fontWeight: FontWeight.bold,
             color: Colors.white,
             fontSize: 18,

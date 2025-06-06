@@ -43,9 +43,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true, // Material 3 デザインを使用
-        // カスタムフォントを使用する場合はここで定義します。
-        // 例:
-        // fontFamily: 'YourCustomFont',
+        fontFamily: 'misaki', // アプリ全体のフォントを設定
       ),
       // アプリのホーム画面としてMyHomePageを設定
       home: const MyHomePage(title: '履修伝説 - ホーム'),
