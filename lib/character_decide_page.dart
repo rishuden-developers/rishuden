@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'park_page.dart'; // ParkPageのインポート
+import 'park_page.dart';
+import 'character_data.dart'; // ParkPageのインポート
 // import 'dart:math'; // 診断ロジックがないので不要
 
 class CharacterDecidePage extends StatelessWidget {
@@ -82,16 +83,17 @@ class CharacterDecidePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final String characterName = diagnosedCharacterName;
+    // ★★★ characterFullDataGlobal を使用 ★★★
     final Map<String, dynamic> displayCharacterData =
-        _characterFullData[characterName] ?? _characterFullData["剣士"]!;
-
+        characterFullDataGlobal[characterName] ??
+        characterFullDataGlobal["剣士"]!;
     return Scaffold(
       appBar: AppBar(
         title: const Text('診断結果'),
         backgroundColor: Colors.brown,
         automaticallyImplyLeading: false,
         titleTextStyle: TextStyle(
-          fontFamily: 'NotoSansJP',
+          fontFamily: 'SansJP',
           color: Colors.white,
           fontSize: 20,
           fontWeight: FontWeight.bold,
@@ -119,7 +121,7 @@ class CharacterDecidePage extends StatelessWidget {
                           ? "おっと！"
                           : "🎓 あなたの履修タイプは…！",
                       style: TextStyle(
-                        fontFamily: 'NotoSansJP',
+                        fontFamily: 'SansJP',
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
@@ -146,7 +148,7 @@ class CharacterDecidePage extends StatelessWidget {
                     Text(
                       displayCharacterData["name"] ?? characterName,
                       style: TextStyle(
-                        fontFamily: 'NotoSansJP',
+                        fontFamily: 'SansJP',
                         fontSize: 28,
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
@@ -295,7 +297,7 @@ class CharacterDecidePage extends StatelessWidget {
                 Text(
                   title,
                   style: TextStyle(
-                    fontFamily: 'NotoSansJP', // カード内のテキストにもフォント指定する場合
+                    fontFamily: 'SansJP', // カード内のテキストにもフォント指定する場合
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
                     color: Colors.brown[800],
@@ -305,7 +307,7 @@ class CharacterDecidePage extends StatelessWidget {
                 Text(
                   text,
                   style: TextStyle(
-                    fontFamily: 'NotoSansJP',
+                    fontFamily: 'SansJP',
                     fontSize: 15,
                     color: Colors.brown[900],
                   ),

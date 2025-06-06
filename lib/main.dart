@@ -6,16 +6,31 @@ import 'mail_page.dart';
 import 'news_page.dart';
 import 'park_page.dart'; // ParkPageは広場画面
 import 'character_question_page.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
-
-import 'anthology_api.dart';
+import 'package:provider/provider.dart';
+import 'character_provider.dart'; // 作成したProviderファイルをインポート
 
 void main() async {
+  // main関数をasyncに変更
+  // Flutterエンジンとウィジェットツリーのバインディングを保証
   WidgetsFlutterBinding.ensureInitialized();
+
+  // 日本語ロケールの日付フォーマット情報を初期化 (runAppより前、awaitで完了を待つ)
+  await initializeDateFormatting('ja_JP', null);
+
+  // Firebaseの初期化 (これもrunAppより前、awaitで完了を待つ)
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  runApp(ApiApp());
+
+  // アプリケーションの実行
+  runApp(
+    ChangeNotifierProvider(
+      create: (context) => CharacterProvider(), // CharacterProviderを提供
+      child: MyApp(), // MyAppウィジェットをラップ
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -28,9 +43,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true, // Material 3 デザインを使用
-        // カスタムフォントを使用する場合はここで定義します。
-        // 例:
-        // fontFamily: 'YourCustomFont',
+        fontFamily: 'misaki', // アプリ全体のフォントを設定
       ),
       // アプリのホーム画面としてMyHomePageを設定
       home: const MyHomePage(title: '履修伝説 - ホーム'),
@@ -131,6 +144,19 @@ class _MyHomePageState extends State<MyHomePage> {
                 );
               },
             ),
+            ListTile(
+              leading: const Icon(Icons.contact_mail),
+              title: const Text('履修キャラ診断'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => CharacterQuestionPage(),
+                  ),
+                );
+              },
+            ),
           ],
         ),
       ),
@@ -179,24 +205,33 @@ class _MyHomePageState extends State<MyHomePage> {
 
           // === 3. アプリのタイトル (手前だが、テキストなのでタップイベントは発生しないが、念のため) ===
           Positioned(
-            top: screenHeight * 0.05,
+            top: screenHeight * 0.1, // Y位置は維持 (必要なら調整)
             left: 0,
             right: 0,
             child: IgnorePointer(
-              child: const Text(
-                '履修伝説',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 48,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                  shadows: [
-                    Shadow(
-                      blurRadius: 10.0,
-                      color: Colors.black,
-                      offset: Offset(2.0, 2.0),
-                    ),
-                  ],
+              // タップイベントを無視する点は維持
+              child: Center(
+                // ★ 画像を中央に配置するために Center ウィジェットで囲む (任意)
+                child: Image.asset(
+                  'assets/title.png', // ★★★ 画像のパスを指定 ★★★
+                  height: screenHeight * 0.1, // ★ 画像の高さを指定 (例: 画面高さの10%)
+                  // この値はロゴのデザインに合わせて調整してください
+                  // widthを指定せず、fit: BoxFit.contain を使うことで
+                  // 高さに合わせてアスペクト比を保って幅が決定されます。
+                  fit: BoxFit.contain, // アスペクト比を保って領域内に収める
+                  errorBuilder: (context, error, stackTrace) {
+                    // 画像読み込みエラー時のフォールバック
+                    return Container(
+                      // エラー時も高さを保つためContainerでラップ
+                      height: screenHeight * 0.1,
+                      child: const Center(
+                        child: Text(
+                          'タイトル画像なし',
+                          style: TextStyle(color: Colors.red, fontSize: 12),
+                        ),
+                      ),
+                    );
+                  },
                 ),
               ),
             ),

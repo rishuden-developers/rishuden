@@ -62,15 +62,11 @@ class DefaultFirebaseOptions {
     storageBucket: 'rishuden-1.firebasestorage.app',
     iosBundleId: 'com.example.rishuden',
   );
-
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyCmnKqqvn7LfFkiB_41gTdFQ5XjAPxM-vw',
-    appId: '1:476023993370:web:20f53d66d95a8eb3fa4da3',
+    apiKey: 'AIzaSyAM8cY9IX06_ZQaUA0s0jj904Yv900tuAc',
+    appId: '1:476023993370:android:e628d0f7e0b4c048fa4da3',
     messagingSenderId: '476023993370',
     projectId: 'rishuden-1',
-    authDomain: 'rishuden-1.firebaseapp.com',
     storageBucket: 'rishuden-1.firebasestorage.app',
-    measurementId: 'G-XKMSV0YE2D',
   );
-
 }

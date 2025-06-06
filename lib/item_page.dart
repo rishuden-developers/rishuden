@@ -38,7 +38,7 @@ class ItemPage extends StatelessWidget {
           textStyle: const TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
-            fontFamily: 'NotoSansJP',
+            fontFamily: 'misaki',
           ),
         ),
       ),
@@ -61,7 +61,7 @@ class ItemPage extends StatelessWidget {
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
         titleTextStyle: TextStyle(
-          fontFamily: 'NotoSansJP',
+          fontFamily: 'misaki',
           color: Colors.white,
           fontSize: 20,
           fontWeight: FontWeight.bold,
@@ -175,7 +175,7 @@ class ItemPage extends StatelessWidget {
                         fontSize: 32,
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
-                        fontFamily: 'NotoSansJP',
+                        fontFamily: 'misaki',
                         shadows: [
                           Shadow(
                             blurRadius: 6.0,
