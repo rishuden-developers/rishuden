@@ -51,3 +51,9 @@ flutter:
     - family: Noto Sans JP
       fonts:
         - asset: fonts/NotoSansJP-Regular.ttf
+    - family: digitalism
+      fonts:
+        - asset: fonts/digitalism.ttf
+    - family: misaki
+      fonts:
+        - asset: fonts/misaki_gothic.ttf
