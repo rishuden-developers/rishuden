@@ -133,7 +133,7 @@ class _ParkPageState extends State<ParkPage> {
       final hoursStr = hours.toString().padLeft(2, '0');
       final minutesStr = minutes.toString().padLeft(2, '0');
       final secondsStr = seconds.toString().padLeft(2, '0');
-      newText = "limit: ${daysStr}日 ${hoursStr}時${minutesStr}分${secondsStr}秒";
+      newText = "limit: ${daysStr}日 ${hoursStr}:${minutesStr}:${secondsStr}";
     }
     if (mounted && _countdownText != newText) {
       setState(() {
@@ -475,7 +475,7 @@ class _ParkPageState extends State<ParkPage> {
                                 ),
                                 child: SingleChildScrollView(
                                   child: Text(
-                                    "課題: $_taskName\n詳細: $_taskDetails\n締切: ${DateFormat('MM/dd HH:mm', 'ja').format(_taskDeadline)}",
+                                    "課題: $_taskName\n詳細: $_taskDetails\n${DateFormat('MM/dd HH:mm', 'ja').format(_taskDeadline)}",
                                     style: TextStyle(
                                       fontSize:
                                           screenHeight * 0.026, // フォントサイズも少し調整
