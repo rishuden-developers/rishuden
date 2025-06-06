@@ -418,7 +418,7 @@ class _ParkPageState extends State<ParkPage> {
                               _countdownText,
                               textAlign: TextAlign.center,
                               style: TextStyle(
-                                fontFamily: 'monospace',
+                                fontFamily: 'digitalism',
                                 fontSize: screenHeight * 0.038,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.cyanAccent.withOpacity(0.95),
