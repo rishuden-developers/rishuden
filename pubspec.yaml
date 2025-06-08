@@ -29,6 +29,12 @@ flutter:
     - assets/button_ranking.png
     - assets/button_dressup.png
     - assets/button_timetable.png
+    - assets/button_park_icon.png
+    - assets/button_unit_review_active.png
+    - assets/button_ranking_active.png
+    - assets/button_dressup_active.png
+    - assets/button_timetable_active.png
+    - assets/button_park_icon_active.png
     - assets/character_swordman.png
     - assets/character_wizard.png
     - assets/character_gorilla.png
@@ -37,10 +43,9 @@ flutter:
     - assets/character_god.png
     - assets/character_takuji.png
     - assets/question_background_image.png
-    - assets/button_park_icon.png
     - assets/countdown.png
     - assets/ranking_guild_background.png
-    - assets/ui_takoyaki_bg.png
+    - assets/ui_takoyaki_bar.png
     - assets/icon_plus.png
     - assets/ui_level_hp_bg.png
     - assets/banner_news.png
