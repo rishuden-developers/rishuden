@@ -54,19 +54,19 @@ class RankingPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final double maxContentWidth = 600.0;
-    final double bottomNavBarHeight = 75.0; // CommonBottomNavigationの高さに合わせて調整
+    // CommonBottomNavigationの高さに合わせて調整
+    final double bottomNavBarHeight = 95.0;
 
     return Scaffold(
       extendBodyBehindAppBar: true,
-      extendBody: true, // ★ bodyをbottomNavigationBarの背後にも拡張
+      extendBody: true,
 
       appBar: AppBar(
         title: const Text('ランキング'),
         backgroundColor: Colors.transparent,
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
-        titleTextStyle: TextStyle(
-          // AppBarのテキストスタイル
+        titleTextStyle: const TextStyle(
           fontFamily: 'misaki',
           color: Colors.white,
           fontSize: 20,
@@ -74,156 +74,152 @@ class RankingPage extends StatelessWidget {
         ),
       ),
 
-      // ★★★ 共通フッターナビゲーションを追加 ★★★
-      bottomNavigationBar: CommonBottomNavigation(
-        currentPage: AppPage.ranking, // 現在のページを指定
-        parkIconAsset: 'assets/button_park_icon.png',
-        timetableIconAsset: 'assets/button_timetable.png',
-        creditReviewIconAsset: 'assets/button_unit_review.png',
-        rankingIconAsset: 'assets/button_ranking.png', // アクティブ用画像があれば
-        itemIconAsset: 'assets/button_dressup.png',
-
-        onParkTap: () {
-          Navigator.pushReplacement(
-            context,
-            PageRouteBuilder(
-              pageBuilder:
-                  (context, animation, secondaryAnimation) => const ParkPage(),
-              transitionDuration: Duration.zero,
-              reverseTransitionDuration: Duration.zero,
-              // ParkPageが引数を期待している場合は settings を設定
-              // settings: RouteSettings(arguments: { ... }),
-            ),
-          );
-        },
-        onTimetableTap: () {
-          Navigator.pushReplacement(
-            context,
-            PageRouteBuilder(
-              pageBuilder:
-                  (context, animation, secondaryAnimation) =>
-                      const TimeSchedulePage(),
-              transitionDuration: Duration.zero,
-              reverseTransitionDuration: Duration.zero,
-              // ParkPageが引数を期待している場合は settings を設定
-              // settings: RouteSettings(arguments: { ... }),
-            ),
-          );
-        },
-        onCreditReviewTap: () {
-          Navigator.pushReplacement(
-            context,
-            PageRouteBuilder(
-              pageBuilder:
-                  (context, animation, secondaryAnimation) =>
-                      const CreditReviewPage(),
-              transitionDuration: Duration.zero,
-              reverseTransitionDuration: Duration.zero,
-              // ParkPageが引数を期待している場合は settings を設定
-              // settings: RouteSettings(arguments: { ... }),
-            ),
-          );
-        },
-        onRankingTap: () {
-          print("Already on Ranking Page");
-        },
-        onItemTap: () {
-          Navigator.pushReplacement(
-            context,
-            PageRouteBuilder(
-              pageBuilder:
-                  (context, animation, secondaryAnimation) => const ItemPage(),
-              transitionDuration: Duration.zero,
-              reverseTransitionDuration: Duration.zero,
-              // ParkPageが引数を期待している場合は settings を設定
-              // settings: RouteSettings(arguments: { ... }),
-            ),
-          );
-        },
-      ),
-
-      // ★★★ ここまで共通フッター ★★★
+      // ★★★ 1. ここにあった bottomNavigationBar プロパティは削除します ★★★
       body: Container(
         width: double.infinity,
         height: double.infinity,
         decoration: const BoxDecoration(
           image: DecorationImage(
-            image: AssetImage('assets/ranking_guild_background.png'), // 背景画像
+            image: AssetImage('assets/ranking_guild_background.png'),
             fit: BoxFit.cover,
           ),
         ),
-        child: SafeArea(
-          // ステータスバーやノッチを避ける
-          bottom: false, // bottomNavigationBarがあるので下はSafeAreaしない
-          child: Center(
-            child: ConstrainedBox(
-              constraints: BoxConstraints(maxWidth: maxContentWidth),
-              child: SingleChildScrollView(
-                // コンテンツがはみ出る場合にスクロール可能に
-                padding: EdgeInsets.only(
-                  // AppBarとステータスバーの高さ + 少し余白
-                  top:
-                      AppBar().preferredSize.height +
-                      MediaQuery.of(context).padding.top +
-                      20,
-                  bottom: bottomNavBarHeight + 20, // ★ フッターの高さ + 少し余白
-                  left: 16,
-                  right: 16,
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // SizedBox(height: AppBar().preferredSize.height + 20), // Paddingで調整
-                    const Text(
-                      'ランキングへようこそ！',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                        fontFamily: 'misaki',
-                        shadows: [
-                          Shadow(
-                            blurRadius: 5.0,
-                            color: Colors.black,
-                            offset: Offset(2.0, 2.0),
-                          ),
-                        ],
-                      ),
+        // ★★★ 2. Containerの子をStackにして、コンテンツとナビゲーションバーを重ねます ★★★
+        child: Stack(
+          children: [
+            // --- レイヤー1: 元々のページコンテンツ ---
+            SafeArea(
+              bottom: false,
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: maxContentWidth),
+                  child: SingleChildScrollView(
+                    padding: EdgeInsets.only(
+                      top:
+                          AppBar().preferredSize.height +
+                          MediaQuery.of(context).padding.top +
+                          20,
+                      bottom: bottomNavBarHeight + 20,
+                      left: 16,
+                      right: 16,
                     ),
-                    const SizedBox(height: 40),
-                    _buildRankingButton(context, '急上昇ランキング', () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const RankingTrendingPage(),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const Text(
+                          'ランキングへようこそ！',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                            fontFamily: 'misaki',
+                            shadows: [
+                              Shadow(
+                                blurRadius: 5.0,
+                                color: Colors.black,
+                                offset: Offset(2.0, 2.0),
+                              ),
+                            ],
+                          ),
                         ),
-                      );
-                    }),
-                    const SizedBox(height: 20),
-                    _buildRankingButton(context, '検索', () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const RankingExplorePage(),
-                        ),
-                      );
-                    }),
-                    const SizedBox(height: 20),
-                    _buildRankingButton(context, '投票', () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const RankingVotePage(),
-                        ),
-                      );
-                    }),
-                  ],
+                        const SizedBox(height: 40),
+                        _buildRankingButton(context, '急上昇ランキング', () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const RankingTrendingPage(),
+                            ),
+                          );
+                        }),
+                        const SizedBox(height: 20),
+                        _buildRankingButton(context, '検索', () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const RankingExplorePage(),
+                            ),
+                          );
+                        }),
+                        const SizedBox(height: 20),
+                        _buildRankingButton(context, '投票', () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const RankingVotePage(),
+                            ),
+                          );
+                        }),
+                      ],
+                    ),
+                  ),
                 ),
               ),
             ),
-          ),
+
+            // ★★★ 3. レイヤー2: フローティングナビゲーションバー ★★★
+            Positioned(
+              bottom: 30,
+              left: 40,
+              right: 40,
+              child: CommonBottomNavigation(
+                currentPage: AppPage.ranking, // このページの種別を指定
+                // --- アイコンのパスを指定 ---
+                parkIconAsset: 'assets/button_park.png',
+                parkIconActiveAsset: 'assets/button_park_icon_active.png',
+                timetableIconAsset: 'assets/button_timetable.png',
+                timetableIconActiveAsset: 'assets/button_timetable_active.png',
+                creditReviewIconAsset: 'assets/button_unit_review.png',
+                creditReviewActiveAsset: 'assets/button_unit_review_active.png',
+                rankingIconAsset: 'assets/button_ranking.png',
+                rankingIconActiveAsset: 'assets/button_ranking_active.png',
+                itemIconAsset: 'assets/button_dressup.png',
+                itemIconActiveAsset: 'assets/button_dressup_active.png',
+
+                // --- タップ時の処理 ---
+                onParkTap: () {
+                  Navigator.pushReplacement(
+                    context,
+                    PageRouteBuilder(
+                      pageBuilder: (_, __, ___) => const ParkPage(),
+                      transitionDuration: Duration.zero,
+                    ),
+                  );
+                },
+                onTimetableTap: () {
+                  Navigator.pushReplacement(
+                    context,
+                    PageRouteBuilder(
+                      pageBuilder: (_, __, ___) => const TimeSchedulePage(),
+                      transitionDuration: Duration.zero,
+                    ),
+                  );
+                },
+                onCreditReviewTap: () {
+                  Navigator.pushReplacement(
+                    context,
+                    PageRouteBuilder(
+                      pageBuilder: (_, __, ___) => const CreditReviewPage(),
+                      transitionDuration: Duration.zero,
+                    ),
+                  );
+                },
+                onItemTap: () {
+                  Navigator.pushReplacement(
+                    context,
+                    PageRouteBuilder(
+                      pageBuilder: (_, __, ___) => const ItemPage(),
+                      transitionDuration: Duration.zero,
+                    ),
+                  );
+                },
+                onRankingTap: () {
+                  print("Already on Ranking Page");
+                },
+              ),
+            ),
+          ],
         ),
       ),
     );

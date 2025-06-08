@@ -797,20 +797,11 @@ class _TimeSchedulePageState extends State<TimeSchedulePage> {
     );
   }
 
+  // ★★★ TimeSchedulePageのbuildメソッド全体をこちらに置き換えてください ★★★
   @override
   Widget build(BuildContext context) {
-    final double bottomNavBarHeight = 75.0;
-    // ★★★ buildメソッド内でProviderからキャラクター情報を取得 ★★★
-    // didChangeDependenciesで取得した値をbuildメソッドのライフサイクルで使うために、
-    // Provider.ofをここでも呼ぶか、あるいはState変数をそのまま使う。
-    // 今回はdidChangeDependenciesでState変数を更新しているので、それをそのまま使用。
-    // final characterProvider = Provider.of<CharacterProvider>(context);
-    // _mainCharacterName = characterProvider.characterName;
-    // _mainCharacterImagePath = characterProvider.characterImage;
-    // もし、Providerの値が変更されたときに即座にUIを再描画したい場合は、
-    // このbuildメソッドでProviderをwatchする(listen:trueで)。
-    // 今回はdidChangeDependenciesで初期値と変更をハンドルしているので、
-    // State変数 (_mainCharacterName, _mainCharacterImagePath) をそのまま使う。
+    // CommonBottomNavigationの高さに合わせて調整
+    final double bottomNavBarHeight = 95.0;
 
     return Scaffold(
       extendBodyBehindAppBar: true,
@@ -819,8 +810,8 @@ class _TimeSchedulePageState extends State<TimeSchedulePage> {
         title: Text(
           _weekDateRange.isEmpty
               ? _mainCharacterName
-              : "${_mainCharacterName} (${_weekDateRange})", // ★ AppBarにキャラ名も表示
-          style: TextStyle(
+              : "$_mainCharacterName ($_weekDateRange)",
+          style: const TextStyle(
             fontFamily: 'misaki',
             fontWeight: FontWeight.bold,
             color: Colors.white,
@@ -829,10 +820,10 @@ class _TimeSchedulePageState extends State<TimeSchedulePage> {
         ),
         backgroundColor: Colors.transparent,
         elevation: 0,
-        iconTheme: IconThemeData(color: Colors.white),
+        iconTheme: const IconThemeData(color: Colors.white),
         actions: [
           IconButton(
-            icon: Icon(Icons.save_alt, color: Colors.white),
+            icon: const Icon(Icons.save_alt, color: Colors.white),
             tooltip: '壁紙として保存',
             onPressed: () {
               /* TODO */
@@ -840,117 +831,126 @@ class _TimeSchedulePageState extends State<TimeSchedulePage> {
           ),
         ],
       ),
-      bottomNavigationBar: CommonBottomNavigation(
-        currentPage: AppPage.timetable,
-        parkIconAsset: 'assets/button_park_icon.png',
-        timetableIconAsset:
-            'assets/button_timetable.png', // ★ 通常アイコンに戻す (アクティブ表現はNav Bar内部で行う)
-        creditReviewIconAsset: 'assets/button_unit_review.png',
-        rankingIconAsset: 'assets/button_ranking.png',
-        itemIconAsset: 'assets/button_dressup.png',
-        onParkTap: () {
-          // ★★★ ParkPageへ遷移する際、引数は不要 (ParkPageもProviderから読むため) ★★★
-          Navigator.pushReplacement(
-            context,
-            PageRouteBuilder(
-              pageBuilder: (_, __, ___) => const ParkPage(),
-              transitionDuration: Duration.zero,
-              reverseTransitionDuration: Duration.zero,
-            ),
-          );
-        },
-        onTimetableTap: () {
-          /* Current page */
-        },
-        onCreditReviewTap: () {
-          Navigator.pushReplacement(
-            context,
-            PageRouteBuilder(
-              pageBuilder: (_, __, ___) => const CreditReviewPage(),
-              transitionDuration: Duration.zero,
-              reverseTransitionDuration: Duration.zero,
-            ),
-          );
-        },
-        onRankingTap: () {
-          Navigator.pushReplacement(
-            context,
-            PageRouteBuilder(
-              pageBuilder: (_, __, ___) => const RankingPage(),
-              transitionDuration: Duration.zero,
-              reverseTransitionDuration: Duration.zero,
-            ),
-          );
-        },
-        onItemTap: () {
-          Navigator.pushReplacement(
-            context,
-            PageRouteBuilder(
-              pageBuilder: (_, __, ___) => const ItemPage(),
-              transitionDuration: Duration.zero,
-              reverseTransitionDuration: Duration.zero,
-            ),
-          );
-        },
-      ),
+
+      // ★★★ 1. ここにあった bottomNavigationBar プロパティは削除します ★★★
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           image: DecorationImage(
             image: AssetImage("assets/question_background_image.png"),
             fit: BoxFit.cover,
           ),
         ),
-        child: SafeArea(
-          bottom: false,
-          child: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(8.0, 8.0, 8.0, 0),
-                child: _buildTimetableHeader(),
-              ),
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        decoration: BoxDecoration(
-                          border: Border(
-                            left: BorderSide(
-                              color: Colors.brown[200]!.withOpacity(0.7),
-                            ),
-                            right: BorderSide(
-                              color: Colors.brown[200]!.withOpacity(0.7),
-                            ),
-                            bottom: BorderSide(
-                              color: Colors.brown[200]!.withOpacity(0.7),
-                            ),
-                          ),
-                          borderRadius: BorderRadius.only(
-                            bottomLeft: Radius.circular(12),
-                            bottomRight: Radius.circular(12),
-                          ),
-                        ),
-                        child: _buildTimetableBodyContent(),
-                      ),
-                      _buildDailyMemoSection(),
-                    ],
+        // ★★★ 2. Containerの子をStackにして、コンテンツとナビゲーションバーを重ねます ★★★
+        child: Stack(
+          children: [
+            // --- レイヤー1: 元々のページコンテンツ ---
+            SafeArea(
+              bottom: false,
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(8.0, 8.0, 8.0, 0),
+                    child: _buildTimetableHeader(),
                   ),
-                ),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            decoration: BoxDecoration(
+                              border: Border(
+                                left: BorderSide(
+                                  color: Colors.brown[200]!.withOpacity(0.7),
+                                ),
+                                right: BorderSide(
+                                  color: Colors.brown[200]!.withOpacity(0.7),
+                                ),
+                                bottom: BorderSide(
+                                  color: Colors.brown[200]!.withOpacity(0.7),
+                                ),
+                              ),
+                              borderRadius: const BorderRadius.only(
+                                bottomLeft: Radius.circular(12),
+                                bottomRight: Radius.circular(12),
+                              ),
+                            ),
+                            child: _buildTimetableBodyContent(),
+                          ),
+                          _buildDailyMemoSection(),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              SizedBox(
-                height:
-                    bottomNavBarHeight > 0
-                        ? bottomNavBarHeight -
-                            MediaQuery.of(context).padding.bottom +
-                            10
-                        : 10,
+            ),
+
+            // ★★★ 3. レイヤー2: フローティングナビゲーションバー ★★★
+            Positioned(
+              bottom: 30,
+              left: 40,
+              right: 40,
+              child: CommonBottomNavigation(
+                currentPage: AppPage.timetable, // このページの種別を指定
+                // --- アイコンのパスを指定 ---
+                parkIconAsset: 'assets/button_park.png',
+                parkIconActiveAsset: 'assets/button_park_icon_active.png',
+                timetableIconAsset: 'assets/button_timetable.png',
+                timetableIconActiveAsset: 'assets/button_timetable_active.png',
+                creditReviewIconAsset: 'assets/button_unit_review.png',
+                creditReviewActiveAsset: 'assets/button_unit_review_active.png',
+                rankingIconAsset: 'assets/button_ranking.png',
+                rankingIconActiveAsset: 'assets/button_ranking_active.png',
+                itemIconAsset: 'assets/button_dressup.png',
+                itemIconActiveAsset: 'assets/button_dressup_active.png',
+
+                // --- タップ時の処理 ---
+                onParkTap: () {
+                  Navigator.pushReplacement(
+                    context,
+                    PageRouteBuilder(
+                      pageBuilder: (_, __, ___) => const ParkPage(),
+                      transitionDuration: Duration.zero,
+                    ),
+                  );
+                },
+                onCreditReviewTap: () {
+                  Navigator.pushReplacement(
+                    context,
+                    PageRouteBuilder(
+                      pageBuilder: (_, __, ___) => const CreditReviewPage(),
+                      transitionDuration: Duration.zero,
+                    ),
+                  );
+                },
+                onRankingTap: () {
+                  Navigator.pushReplacement(
+                    context,
+                    PageRouteBuilder(
+                      pageBuilder: (_, __, ___) => const RankingPage(),
+                      transitionDuration: Duration.zero,
+                    ),
+                  );
+                },
+                onItemTap: () {
+                  Navigator.pushReplacement(
+                    context,
+                    PageRouteBuilder(
+                      pageBuilder: (_, __, ___) => const ItemPage(),
+                      transitionDuration: Duration.zero,
+                    ),
+                  );
+                },
+                onTimetableTap: () {
+                  print("Already on Timetable Page");
+                },
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
