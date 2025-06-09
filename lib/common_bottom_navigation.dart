@@ -1,123 +1,85 @@
 import 'package:flutter/material.dart';
+import 'dart:ui';
 
 // 各ページを識別するためのenum
-
 enum AppPage { park, timetable, creditReview, ranking, item }
 
 class CommonBottomNavigation extends StatelessWidget {
   final AppPage currentPage;
-
   final VoidCallback? onParkTap;
-
   final VoidCallback? onTimetableTap;
-
   final VoidCallback? onCreditReviewTap;
-
   final VoidCallback? onRankingTap;
-
   final VoidCallback? onItemTap;
 
-  // 各ボタンには「通常状態」の画像パスを指定
-
   final String parkIconAsset;
-
+  final String parkIconActiveAsset;
   final String timetableIconAsset;
-
+  final String timetableIconActiveAsset;
   final String creditReviewIconAsset;
-
+  final String creditReviewActiveAsset;
   final String rankingIconAsset;
-
+  final String rankingIconActiveAsset;
   final String itemIconAsset;
+  final String itemIconActiveAsset;
 
   const CommonBottomNavigation({
     super.key,
-
     required this.currentPage,
-
     this.onParkTap,
-
     this.onTimetableTap,
-
     this.onCreditReviewTap,
-
     this.onRankingTap,
-
     this.onItemTap,
-
     required this.parkIconAsset,
-
+    required this.parkIconActiveAsset,
     required this.timetableIconAsset,
-
+    required this.timetableIconActiveAsset,
     required this.creditReviewIconAsset,
-
+    required this.creditReviewActiveAsset,
     required this.rankingIconAsset,
-
+    required this.rankingIconActiveAsset,
     required this.itemIconAsset,
+    required this.itemIconActiveAsset,
   });
 
-  // lib/common_bottom_navigation.dart 内の CommonBottomNavigation クラス
-
   Widget _buildNavItem({
-    required String iconAssetPath,
-
-    required AppPage page,
-
+    required String inactiveIconAsset,
+    required String activeIconAsset,
     required VoidCallback? onPressed,
-
-    required double buttonWidth, // ボタン全体の幅
-
-    required double buttonHeight, // ボタン全体の高さ
-
     required bool isActive,
   }) {
-    // ★★★ アイコン自体の表示サイズを調整 ★★★
+    const double activeSize = 80.0;
+    const double inactiveSize = 60.0;
 
-    // ボタンの高さに対して、より大きな割合をアイコン表示に使う
+    // ★★★ 4. ボタンが上に動く移動量を小さくする ★★★
+    const double activeYOffset = -8.0; // 例: -15.0から-8.0に変更
+    const double inactiveYOffset = 0.0;
 
-    final double iconDisplayProportion = 1.20; // 例: ボタンの高さの80%をアイコン基本サイズに
-
-    final double iconDisplaySize = buttonHeight * iconDisplayProportion;
-
-    Widget iconImage = Image.asset(
-      iconAssetPath,
-      width: iconDisplaySize,
-      height: iconDisplaySize,
-      fit: BoxFit.contain,
-      errorBuilder: (context, error, stackTrace) {
-        print(
-          "Error loading image $iconAssetPath (isActive: $isActive): $error",
-        );
-        return Icon(
-          Icons.broken_image,
-          size: iconDisplaySize * 0.8,
-          color: Colors.grey[400],
-        );
-      },
-    );
-
-    // finalIconContent は常に iconImage (拡大なし)
-    Widget finalIconContent = iconImage;
+    final double currentSize = isActive ? activeSize : inactiveSize;
+    final double currentYOffset = isActive ? activeYOffset : inactiveYOffset;
+    final String photoToShow = isActive ? activeIconAsset : inactiveIconAsset;
 
     return Expanded(
       child: InkWell(
         onTap: isActive ? null : onPressed,
-        customBorder: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12.0),
-        ),
-        child: Container(
-          width: buttonWidth,
-          height: buttonHeight,
-          // ★★★ decoration プロパティを完全に削除、または常にnullに ★★★
-          // decoration: null, // もし明示的に何もしないことを示すなら
-          // あるいは、タップエフェクトの形状のためにborderRadiusだけ残すなら以下のように
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12.0), // InkWellの形状と合わせる
-            color: Colors.transparent, // 明示的に背景を透明に
-          ),
-          alignment: Alignment.center,
-          child: Opacity(
-            opacity: isActive ? 1.0 : 0.6, // アクティブ時は不透明、非アクティブ時は半透明
-            child: finalIconContent,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeOut,
+          transform: Matrix4.translationValues(0, currentYOffset, 0),
+          transformAlignment: Alignment.center,
+          child: Image.asset(
+            photoToShow,
+            width: currentSize,
+            height: currentSize,
+            fit: BoxFit.contain,
+            errorBuilder: (context, error, stackTrace) {
+              return Icon(
+                Icons.broken_image,
+                size: currentSize * 0.8,
+                color: Colors.grey[400],
+              );
+            },
           ),
         ),
       ),
@@ -126,104 +88,72 @@ class CommonBottomNavigation extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
+    const double barHeight = 95.0;
 
-    final double navButtonWidth = screenWidth * 0.19;
-
-    final double navButtonHeight = 80.0;
-
-    return BottomAppBar(
-      color: Colors.transparent, // 背景を透明に (ページ背景が見えるように)
-
-      elevation: 0, // 影もなし
-
-      padding: EdgeInsets.zero,
-
-      child: Container(
-        height: navButtonHeight + 15, // バー全体の高さ (アイコンの拡大やエフェクトを考慮)
-        // decoration: BoxDecoration( // ボタンバー自体に背景をつけたい場合はここを有効化
-
-        // color: Colors.black.withOpacity(0.2),
-
-        // ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-
-          crossAxisAlignment: CrossAxisAlignment.center,
-
-          children: <Widget>[
-            _buildNavItem(
-              iconAssetPath: creditReviewIconAsset,
-
-              page: AppPage.creditReview,
-
-              onPressed: onCreditReviewTap,
-
-              buttonWidth: navButtonWidth,
-
-              buttonHeight: navButtonHeight,
-
-              isActive: currentPage == AppPage.creditReview,
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(50.0),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
+        child: Container(
+          height: barHeight,
+          decoration: BoxDecoration(
+            // ★★★ 1. 虹色のグラデーションに変更 ★★★
+            gradient: LinearGradient(
+              colors: [
+                Color(0xFF00FFFF).withOpacity(0.6),
+                Color.fromARGB(255, 153, 36, 221).withOpacity(0.6),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
-
-            _buildNavItem(
-              iconAssetPath: rankingIconAsset,
-
-              page: AppPage.ranking,
-
-              onPressed: onRankingTap,
-
-              buttonWidth: navButtonWidth,
-
-              buttonHeight: navButtonHeight,
-
-              isActive: currentPage == AppPage.ranking,
+            // ★★★ 2. フチを明るい白に変更して、よりモダンな印象に ★★★
+            border: Border.all(
+              color: Colors.white.withOpacity(0.6),
+              width: 2.0,
             ),
-
-            _buildNavItem(
-              iconAssetPath: parkIconAsset,
-
-              page: AppPage.park,
-
-              onPressed: onParkTap,
-
-              buttonWidth: navButtonWidth,
-
-              buttonHeight: navButtonHeight,
-
-              isActive: currentPage == AppPage.park,
+            borderRadius: BorderRadius.circular(50.0),
+          ),
+          // ★★★ 3. ボタン全体を少し下に配置して、見切れないようにする ★★★
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: <Widget>[
+                _buildNavItem(
+                  inactiveIconAsset: creditReviewIconAsset,
+                  activeIconAsset: creditReviewActiveAsset,
+                  onPressed: onCreditReviewTap,
+                  isActive: currentPage == AppPage.creditReview,
+                ),
+                _buildNavItem(
+                  inactiveIconAsset: rankingIconAsset,
+                  activeIconAsset: rankingIconActiveAsset,
+                  onPressed: onRankingTap,
+                  isActive: currentPage == AppPage.ranking,
+                ),
+                _buildNavItem(
+                  inactiveIconAsset: parkIconAsset,
+                  activeIconAsset: parkIconActiveAsset,
+                  onPressed: onParkTap,
+                  isActive: currentPage == AppPage.park,
+                ),
+                _buildNavItem(
+                  inactiveIconAsset: timetableIconAsset,
+                  activeIconAsset: timetableIconActiveAsset,
+                  onPressed: onTimetableTap,
+                  isActive: currentPage == AppPage.timetable,
+                ),
+                _buildNavItem(
+                  inactiveIconAsset: itemIconAsset,
+                  activeIconAsset: itemIconActiveAsset,
+                  onPressed: onItemTap,
+                  isActive: currentPage == AppPage.item,
+                ),
+              ],
             ),
-
-            _buildNavItem(
-              iconAssetPath: itemIconAsset,
-
-              page: AppPage.item,
-
-              onPressed: onItemTap,
-
-              buttonWidth: navButtonWidth,
-
-              buttonHeight: navButtonHeight,
-
-              isActive: currentPage == AppPage.item,
-            ),
-
-            _buildNavItem(
-              iconAssetPath: timetableIconAsset,
-
-              page: AppPage.timetable,
-
-              onPressed: onTimetableTap,
-
-              buttonWidth: navButtonWidth,
-
-              buttonHeight: navButtonHeight,
-
-              isActive: currentPage == AppPage.timetable,
-            ),
-          ],
+          ),
         ),
       ),
     );
-  } // build メソッドの閉じ括弧
+  }
 }

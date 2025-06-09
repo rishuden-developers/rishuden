@@ -93,7 +93,7 @@ class CharacterDecidePage extends StatelessWidget {
         backgroundColor: Colors.brown,
         automaticallyImplyLeading: false,
         titleTextStyle: TextStyle(
-          fontFamily: 'NotoSansJP',
+          fontFamily: 'SansJP',
           color: Colors.white,
           fontSize: 20,
           fontWeight: FontWeight.bold,
@@ -121,7 +121,7 @@ class CharacterDecidePage extends StatelessWidget {
                           ? "おっと！"
                           : "🎓 あなたの履修タイプは…！",
                       style: TextStyle(
-                        fontFamily: 'NotoSansJP',
+                        fontFamily: 'SansJP',
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
@@ -148,7 +148,7 @@ class CharacterDecidePage extends StatelessWidget {
                     Text(
                       displayCharacterData["name"] ?? characterName,
                       style: TextStyle(
-                        fontFamily: 'NotoSansJP',
+                        fontFamily: 'SansJP',
                         fontSize: 28,
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
@@ -297,7 +297,7 @@ class CharacterDecidePage extends StatelessWidget {
                 Text(
                   title,
                   style: TextStyle(
-                    fontFamily: 'NotoSansJP', // カード内のテキストにもフォント指定する場合
+                    fontFamily: 'SansJP', // カード内のテキストにもフォント指定する場合
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
                     color: Colors.brown[800],
@@ -307,7 +307,7 @@ class CharacterDecidePage extends StatelessWidget {
                 Text(
                   text,
                   style: TextStyle(
-                    fontFamily: 'NotoSansJP',
+                    fontFamily: 'SansJP',
                     fontSize: 15,
                     color: Colors.brown[900],
                   ),

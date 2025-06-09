@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart'; // ★ Firebase Auth を利用する場合
 
 class CharacterProvider with ChangeNotifier {
-  String _characterName = 'キャラクター';
-  String _characterImage = 'assets/character_unknown.png';
+  String _characterName = '勇者';
+  String _characterImage = 'assets/character_swordman.png';
   String? _userId; // ★★★ ユーザーIDを保持するフィールドを追加 (null許容) ★★★
 
   String get characterName => _characterName;

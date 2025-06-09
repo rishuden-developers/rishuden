@@ -38,189 +38,186 @@ class ItemPage extends StatelessWidget {
           textStyle: const TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
-            fontFamily: 'NotoSansJP',
+            fontFamily: 'misaki',
           ),
         ),
       ),
     );
   }
 
+  // ★★★ ItemPageのbuildメソッド全体をこちらに置き換えてください ★★★
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final double maxContentWidth = 600.0;
-    final double bottomNavBarHeight = 75.0; // CommonBottomNavigationの高さに合わせて調整
+    // CommonBottomNavigationの高さに合わせて調整
+    final double bottomNavBarHeight = 95.0;
 
     return Scaffold(
       extendBodyBehindAppBar: true,
-      extendBody: true, // ★ bodyをbottomNavigationBarの背後にも拡張
+      extendBody: true,
 
       appBar: AppBar(
-        title: const Text('アイテム・着せ替え'), // ★ タイトル変更
+        title: const Text('アイテム・着せ替え'),
         backgroundColor: Colors.transparent,
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
-        titleTextStyle: TextStyle(
-          fontFamily: 'NotoSansJP',
+        titleTextStyle: const TextStyle(
+          fontFamily: 'misaki',
           color: Colors.white,
           fontSize: 20,
           fontWeight: FontWeight.bold,
         ),
       ),
 
-      // ★★★ 共通フッターナビゲーションを追加 ★★★
-      bottomNavigationBar: CommonBottomNavigation(
-        currentPage: AppPage.item, // 現在のページを指定
-        // ★ 各ボタンの画像アセットパス (実際のパスに置き換えてください) ★
-        parkIconAsset: 'assets/button_park_icon.png',
-        timetableIconAsset: 'assets/button_timetable.png',
-        creditReviewIconAsset: 'assets/button_unit_review.png',
-        rankingIconAsset: 'assets/button_ranking.png',
-        itemIconAsset: 'assets/button_dressup.png', // アクティブ用画像があれば
-
-        onParkTap: () {
-          Navigator.pushReplacement(
-            context,
-            PageRouteBuilder(
-              pageBuilder:
-                  (context, animation, secondaryAnimation) => const ParkPage(),
-              transitionDuration: Duration.zero,
-              reverseTransitionDuration: Duration.zero,
-              // ParkPageが引数を期待している場合は settings を設定
-              // settings: RouteSettings(arguments: { ... }),
-            ),
-          );
-        },
-        onTimetableTap: () {
-          Navigator.pushReplacement(
-            context,
-            PageRouteBuilder(
-              pageBuilder:
-                  (context, animation, secondaryAnimation) =>
-                      const TimeSchedulePage(),
-              transitionDuration: Duration.zero,
-              reverseTransitionDuration: Duration.zero,
-              // ParkPageが引数を期待している場合は settings を設定
-              // settings: RouteSettings(arguments: { ... }),
-            ),
-          );
-        },
-        onCreditReviewTap: () {
-          Navigator.pushReplacement(
-            context,
-            PageRouteBuilder(
-              pageBuilder:
-                  (context, animation, secondaryAnimation) =>
-                      const CreditReviewPage(),
-              transitionDuration: Duration.zero,
-              reverseTransitionDuration: Duration.zero,
-              // ParkPageが引数を期待している場合は settings を設定
-              // settings: RouteSettings(arguments: { ... }),
-            ),
-          );
-        },
-        onItemTap: () {
-          print("Already on Ranking Page");
-        },
-        onRankingTap: () {
-          Navigator.pushReplacement(
-            context,
-            PageRouteBuilder(
-              pageBuilder:
-                  (context, animation, secondaryAnimation) =>
-                      const RankingPage(),
-              transitionDuration: Duration.zero,
-              reverseTransitionDuration: Duration.zero,
-              // ParkPageが引数を期待している場合は settings を設定
-              // settings: RouteSettings(arguments: { ... }),
-            ),
-          );
-        },
-      ),
-
-      // ★★★ ここまで共通フッター ★★★
+      // ★★★ 1. ここにあった bottomNavigationBar プロパティは削除します ★★★
       body: Container(
         width: double.infinity,
         height: double.infinity,
         decoration: const BoxDecoration(
           image: DecorationImage(
-            // ★ 背景画像を他のページと合わせるか、専用のものにするか (例: ParkPageの背景) ★
             image: AssetImage('assets/ranking_guild_background.png'),
             fit: BoxFit.cover,
           ),
         ),
-        child: SafeArea(
-          bottom: false,
-          child: Center(
-            child: ConstrainedBox(
-              constraints: BoxConstraints(maxWidth: maxContentWidth),
-              child: SingleChildScrollView(
-                padding: EdgeInsets.only(
-                  top:
-                      AppBar().preferredSize.height +
-                      MediaQuery.of(context).padding.top +
-                      40, // AppBarとステータスバーの高さ + 余白
-                  bottom: bottomNavBarHeight + 40, // ★ フッターの高さ + 余白
-                  left: 16,
-                  right: 16,
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const Text(
-                      'アイテムと着せ替え', // ★ ページタイトル
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                        fontFamily: 'NotoSansJP',
-                        shadows: [
-                          Shadow(
-                            blurRadius: 6.0,
-                            color: Colors.black54,
-                            offset: Offset(2.0, 2.0),
-                          ),
-                        ],
-                      ),
+        // ★★★ 2. Containerの子をStackにして、コンテンツとナビゲーションバーを重ねます ★★★
+        child: Stack(
+          children: [
+            // --- レイヤー1: 元々のページコンテンツ ---
+            SafeArea(
+              bottom: false,
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: maxContentWidth),
+                  child: SingleChildScrollView(
+                    padding: EdgeInsets.only(
+                      top:
+                          AppBar().preferredSize.height +
+                          MediaQuery.of(context).padding.top +
+                          40,
+                      bottom: bottomNavBarHeight + 40,
+                      left: 16,
+                      right: 16,
                     ),
-                    const SizedBox(height: 50),
-                    _buildMenuButton(
-                      // ★ ヘルパーメソッド名変更、アイコン追加
-                      context,
-                      'キャラクター着せ替え',
-                      Icons.accessibility_new, // アイコン例
-                      () {
-                        Navigator.push(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const Text(
+                          'アイテムと着せ替え',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 32,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                            fontFamily: 'misaki',
+                            shadows: [
+                              Shadow(
+                                blurRadius: 6.0,
+                                color: Colors.black54,
+                                offset: Offset(2.0, 2.0),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 50),
+                        _buildMenuButton(
                           context,
-                          MaterialPageRoute(
-                            builder: (context) => ItemChangePage(),
-                          ),
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 25),
-                    _buildMenuButton(
-                      // ★ ヘルパーメソッド名変更、アイコン追加
-                      context,
-                      'アイテム交換所',
-                      Icons.storefront, // アイコン例
-                      () {
-                        Navigator.push(
+                          'キャラクター着せ替え',
+                          Icons.accessibility_new,
+                          () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => ItemChangePage(),
+                              ),
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 25),
+                        _buildMenuButton(
                           context,
-                          MaterialPageRoute(
-                            builder: (context) => ItemShopPage(),
-                          ),
-                        );
-                      },
+                          'アイテム交換所',
+                          Icons.storefront,
+                          () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => ItemShopPage(),
+                              ),
+                            );
+                          },
+                        ),
+                      ],
                     ),
-                    // 必要であれば他の要素もここに追加
-                  ],
+                  ),
                 ),
               ),
             ),
-          ),
+
+            // ★★★ 3. レイヤー2: フローティングナビゲーションバー ★★★
+            Positioned(
+              bottom: 30,
+              left: 40,
+              right: 40,
+              child: CommonBottomNavigation(
+                currentPage: AppPage.item, // このページの種別を指定
+                // --- アイコンのパスを指定 ---
+                parkIconAsset: 'assets/button_park.png',
+                parkIconActiveAsset: 'assets/button_park_icon_active.png',
+                timetableIconAsset: 'assets/button_timetable.png',
+                timetableIconActiveAsset: 'assets/button_timetable_active.png',
+                creditReviewIconAsset: 'assets/button_unit_review.png',
+                creditReviewActiveAsset: 'assets/button_unit_review_active.png',
+                rankingIconAsset: 'assets/button_ranking.png',
+                rankingIconActiveAsset: 'assets/button_ranking_active.png',
+                itemIconAsset: 'assets/button_dressup.png',
+                itemIconActiveAsset: 'assets/button_dressup_active.png',
+
+                // --- タップ時の処理 ---
+                onParkTap: () {
+                  Navigator.pushReplacement(
+                    context,
+                    PageRouteBuilder(
+                      pageBuilder: (_, __, ___) => const ParkPage(),
+                      transitionDuration: Duration.zero,
+                    ),
+                  );
+                },
+                onTimetableTap: () {
+                  Navigator.pushReplacement(
+                    context,
+                    PageRouteBuilder(
+                      pageBuilder: (_, __, ___) => const TimeSchedulePage(),
+                      transitionDuration: Duration.zero,
+                    ),
+                  );
+                },
+                onCreditReviewTap: () {
+                  Navigator.pushReplacement(
+                    context,
+                    PageRouteBuilder(
+                      pageBuilder: (_, __, ___) => const CreditReviewPage(),
+                      transitionDuration: Duration.zero,
+                    ),
+                  );
+                },
+                onRankingTap: () {
+                  Navigator.pushReplacement(
+                    context,
+                    PageRouteBuilder(
+                      pageBuilder: (_, __, ___) => const RankingPage(),
+                      transitionDuration: Duration.zero,
+                    ),
+                  );
+                },
+                // onItemTapは現在のページなので、何もしないか、リフレッシュ処理などを記述
+                onItemTap: () {
+                  print("Already on Item Page");
+                },
+              ),
+            ),
+          ],
         ),
       ),
     );

@@ -12,6 +12,9 @@ import 'item_page.dart';
 import 'ranking_page.dart';
 import 'time_schedule_page.dart';
 import 'news_page.dart';
+import 'level_gauge.dart';
+// park_page.dart の一番上に追加
+import 'dart:ui';
 
 class ParkPage extends StatefulWidget {
   const ParkPage({super.key});
@@ -26,9 +29,9 @@ class _ParkPageState extends State<ParkPage> {
   String _currentParkCharacterName = '勇者'; // デフォルト名
 
   // 課題情報とカウントダウンのためのState変数
-  String _taskSubject = "情報システム工学";
-  String _taskName = "次世代ネットワークに関するレポート";
-  String _taskDetails = "A4 5枚以上。参考文献リスト必須。詳細はCLEを参照。";
+  String _taskSubject = "力学詳論";
+  String _taskName = "課題レポート";
+  String _taskDetails = "A4 5枚以上";
   DateTime _taskDeadline = DateTime.now().add(
     Duration(days: 5, hours: 18, minutes: 30),
   );
@@ -45,12 +48,244 @@ class _ParkPageState extends State<ParkPage> {
 
   bool _isCharacterInfoInitialized = false;
 
+  void _showPurchaseDialog(BuildContext context) {
+    // 画面上にオーバーレイ表示するための関数
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: true, // ダイアログの外側をタップして閉じられるようにする
+      barrierLabel: 'Close',
+      barrierColor: Colors.black.withOpacity(0.6), // 背景の黒いオーバーレイの色
+      transitionDuration: const Duration(
+        milliseconds: 300,
+      ), // 表示されるときのアニメーション速度
+      pageBuilder: (ctx, anim1, anim2) {
+        // ここでダイアログの見た目を作る
+        return Center(
+          // 画面中央に配置
+          child: Material(
+            // ダイアログ内のテキスト等のスタイルを正しく表示するために必要
+            type: MaterialType.transparency,
+            child: ScaleTransition(
+              // ふわっと拡大するアニメーション
+              scale: anim1,
+              child: FadeTransition(
+                // フェードインするアニメーション
+                opacity: anim1,
+                child: ClipRRect(
+                  // 角を丸くするために必要
+                  borderRadius: BorderRadius.circular(15.0),
+                  child: BackdropFilter(
+                    // ★★★ これが「すりガラス」効果の本体 ★★★
+                    filter: ImageFilter.blur(
+                      sigmaX: 10.0,
+                      sigmaY: 10.0,
+                    ), // ぼかしの強さ
+                    child: Container(
+                      width:
+                          MediaQuery.of(context).size.width * 0.85, // ダイアログの幅
+                      padding: const EdgeInsets.all(24.0),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.15), // すりガラスの白っぽい色
+                        borderRadius: BorderRadius.circular(15.0),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.3),
+                        ),
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min, // 中身の高さに合わせる
+                        children: [
+                          Text(
+                            'たこ焼きを増やすには？',
+                            style: TextStyle(
+                              fontFamily: 'misaki',
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          const Text(
+                            '「たこ焼き」は課題をクリアしたり、ログインボーナスで獲得できます。\n\nすぐに増やしたい場合は、ショップで購入することも可能です。（未実装）',
+                            style: TextStyle(
+                              fontFamily: 'misaki',
+                              fontSize: 16,
+                              color: Colors.white,
+                              height: 1.5,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 24),
+                          ElevatedButton(
+                            onPressed:
+                                () => Navigator.of(ctx).pop(), // ダイアログを閉じる
+                            child: const Text('閉じる'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // ★★★ この2つの関数を _ParkPageState クラスの中に追加 ★★★
+
+  // 1. 学生団体ロゴ用のダイアログ
+  void _showOztechDialog(BuildContext context) {
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: 'Close',
+      barrierColor: Colors.black.withOpacity(0.6),
+      transitionDuration: const Duration(milliseconds: 300),
+      pageBuilder: (ctx, anim1, anim2) {
+        return Center(
+          child: Material(
+            type: MaterialType.transparency,
+            child: ScaleTransition(
+              scale: anim1,
+              child: FadeTransition(
+                opacity: anim1,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(15.0),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
+                    child: Container(
+                      width: MediaQuery.of(context).size.width * 0.85,
+                      padding: const EdgeInsets.all(24.0),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(15.0),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.3),
+                        ),
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text(
+                            '学生団体 OZTECH', // ★ タイトルを変更
+                            style: TextStyle(
+                              fontFamily: 'misaki',
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          const Text(
+                            '★★★ ここに学生団体の紹介文を入れてください ★★★\n\n例：OZTECHは、学生の技術力向上と交流を目的とした団体です。アプリ開発や勉強会を定期的に開催しています。',
+                            style: TextStyle(
+                              fontFamily: 'misaki',
+                              fontSize: 16,
+                              color: Colors.white,
+                              height: 1.5,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 24),
+                          ElevatedButton(
+                            onPressed: () => Navigator.of(ctx).pop(),
+                            child: const Text('閉じる'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // 2. 開発サークルロゴ用のダイアログ
+  void _showPotiPotiDialog(BuildContext context) {
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: 'Close',
+      barrierColor: Colors.black.withOpacity(0.6),
+      transitionDuration: const Duration(milliseconds: 300),
+      pageBuilder: (ctx, anim1, anim2) {
+        return Center(
+          child: Material(
+            type: MaterialType.transparency,
+            child: ScaleTransition(
+              scale: anim1,
+              child: FadeTransition(
+                opacity: anim1,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(15.0),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
+                    child: Container(
+                      width: MediaQuery.of(context).size.width * 0.85,
+                      padding: const EdgeInsets.all(24.0),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(15.0),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.3),
+                        ),
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text(
+                            '開発サークル ぽちぽち', // ★ タイトルを変更
+                            style: TextStyle(
+                              fontFamily: 'misaki',
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          const Text(
+                            '★★★ ここに開発サークルの紹介文を入れてください ★★★\n\n例：このアプリ「履修伝説」を開発している、ゲーム好きが集まるサークルです。いつでもメンバー募集中！',
+                            style: TextStyle(
+                              fontFamily: 'misaki',
+                              fontSize: 16,
+                              color: Colors.white,
+                              height: 1.5,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 24),
+                          ElevatedButton(
+                            onPressed: () => Navigator.of(ctx).pop(),
+                            child: const Text('閉じる'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   void initState() {
     super.initState();
     _calculateWeekDateRange();
     _startCountdownTimer();
   }
+
+  final GlobalKey<LiquidLevelGaugeState> _gaugeKey =
+      GlobalKey<LiquidLevelGaugeState>();
 
   @override
   void didChangeDependencies() {
@@ -133,7 +368,7 @@ class _ParkPageState extends State<ParkPage> {
       final hoursStr = hours.toString().padLeft(2, '0');
       final minutesStr = minutes.toString().padLeft(2, '0');
       final secondsStr = seconds.toString().padLeft(2, '0');
-      newText = "limit: ${daysStr}日 ${hoursStr}時${minutesStr}分${secondsStr}秒";
+      newText = "limit: ${daysStr}日 ${hoursStr}:${minutesStr}:${secondsStr}";
     }
     if (mounted && _countdownText != newText) {
       setState(() {
@@ -201,7 +436,7 @@ class _ParkPageState extends State<ParkPage> {
                                   color: Colors.white,
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,
-                                  fontFamily: 'NotoSansJP',
+                                  fontFamily: 'misaki',
                                 ),
                               ),
                             ),
@@ -228,13 +463,13 @@ class _ParkPageState extends State<ParkPage> {
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
-                                  fontFamily: 'NotoSansJP',
+                                  fontFamily: 'misaki',
                                 ),
                               ),
                               SizedBox(height: 10),
                               Text(
                                 'いつもご利用ありがとうございます。\nVer.1.1.0にアップデートしました。\n\n新機能：\n・新キャラクター「神」の追加\n・「楽単ランキング」の強化\n\n不具合修正：\n・一部UIの表示崩れを修正\n\n引き続き「履修伝説」をお楽しみください！',
-                                style: TextStyle(fontFamily: 'NotoSansJP'),
+                                style: TextStyle(fontFamily: 'misaki'),
                               ),
                               SizedBox(height: 20),
                               Text(
@@ -242,13 +477,13 @@ class _ParkPageState extends State<ParkPage> {
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
-                                  fontFamily: 'NotoSansJP',
+                                  fontFamily: 'misaki',
                                 ),
                               ),
                               SizedBox(height: 10),
                               Text(
                                 '期間：2025年5月10日〜5月31日\n\n期間中に指定された課題をクリアし、高GPAを目指しましょう！\n豪華報酬をゲットするチャンス！',
-                                style: TextStyle(fontFamily: 'NotoSansJP'),
+                                style: TextStyle(fontFamily: 'misaki'),
                               ),
                             ],
                           ),
@@ -289,7 +524,7 @@ class _ParkPageState extends State<ParkPage> {
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 24,
-                  fontFamily: 'NotoSansJP',
+                  fontFamily: 'misaki',
                 ),
               ),
             ),
@@ -318,57 +553,7 @@ class _ParkPageState extends State<ParkPage> {
           ],
         ),
       ),
-      bottomNavigationBar: CommonBottomNavigation(
-        currentPage: AppPage.park,
-        parkIconAsset: 'assets/button_park_icon.png',
-        timetableIconAsset: 'assets/button_timetable.png',
-        creditReviewIconAsset: 'assets/button_unit_review.png',
-        rankingIconAsset: 'assets/button_ranking.png',
-        itemIconAsset: 'assets/button_dressup.png',
-        onParkTap: () {
-          print("Already on Park Page");
-        },
-        onTimetableTap: () {
-          Navigator.pushReplacement(
-            context,
-            PageRouteBuilder(
-              pageBuilder: (_, __, ___) => const TimeSchedulePage(),
-              transitionDuration: Duration.zero,
-              reverseTransitionDuration: Duration.zero,
-            ),
-          );
-        },
-        onCreditReviewTap: () {
-          Navigator.pushReplacement(
-            context,
-            PageRouteBuilder(
-              pageBuilder: (_, __, ___) => const CreditReviewPage(),
-              transitionDuration: Duration.zero,
-              reverseTransitionDuration: Duration.zero,
-            ),
-          );
-        },
-        onRankingTap: () {
-          Navigator.pushReplacement(
-            context,
-            PageRouteBuilder(
-              pageBuilder: (_, __, ___) => const RankingPage(),
-              transitionDuration: Duration.zero,
-              reverseTransitionDuration: Duration.zero,
-            ),
-          );
-        },
-        onItemTap: () {
-          Navigator.pushReplacement(
-            context,
-            PageRouteBuilder(
-              pageBuilder: (_, __, ___) => const ItemPage(),
-              transitionDuration: Duration.zero,
-              reverseTransitionDuration: Duration.zero,
-            ),
-          );
-        },
-      ),
+
       body: Stack(
         children: [
           Positioned.fill(
@@ -401,7 +586,7 @@ class _ParkPageState extends State<ParkPage> {
                     ),
                     // === 電子掲示板の情報表示エリア ===
                     Positioned(
-                      top: screenHeight * 0.18,
+                      top: screenHeight * 0.165,
                       left: screenWidth * 0.10, // 左右の余白を少し広げる
                       right: screenWidth * 0.10,
                       height: screenHeight * 0.28, // 表示エリアの高さを確保
@@ -410,86 +595,89 @@ class _ParkPageState extends State<ParkPage> {
                           horizontal: 12.0,
                           vertical: 8.0,
                         ), // パディング調整
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.start,
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Text(
-                              _countdownText,
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontFamily: 'monospace',
-                                fontSize: screenHeight * 0.038,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.cyanAccent.withOpacity(0.95),
-                                letterSpacing: 2.0,
-                                shadows: [
-                                  BoxShadow(
-                                    color: Colors.blue.withOpacity(0.8),
-                                    blurRadius: 8,
-                                    spreadRadius: 2,
-                                  ),
-                                  BoxShadow(
-                                    color: Colors.cyanAccent.withOpacity(0.6),
-                                    blurRadius: 12,
-                                    spreadRadius: 4,
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 8), // 少し間隔を詰める
-                            Text(
-                              _taskSubject,
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontSize: screenHeight * 0.020,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.lightBlue[100]!.withOpacity(0.95),
-                                fontFamily: 'NotoSansJP',
-                                shadows: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.5),
-                                    blurRadius: 2,
-                                    offset: Offset(1, 1),
-                                  ),
-                                ],
-                              ),
-                              overflow: TextOverflow.ellipsis, // 教科名が長い場合
-                            ),
-                            const SizedBox(height: 6), // 少し間隔を詰める
-                            Center(
-                              // ★ ContainerをCenterで囲んで中央寄せにする (任意)
-                              child: Container(
-                                width:
-                                    screenWidth *
-                                    0.55, // ★ 横幅を画面幅の65%に設定 (掲示板の幅より小さく)
-                                // この値を調整してください
-                                padding: EdgeInsets.all(10),
-                                decoration: BoxDecoration(
-                                  color: Colors.black.withOpacity(0.35),
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(
-                                    color: Colors.white.withOpacity(0.2),
-                                    width: 0.5,
-                                  ),
+                        child: SingleChildScrollView(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.start,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Text(
+                                _countdownText,
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontFamily: 'digitalism',
+                                  fontSize: screenHeight * 0.05,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.cyanAccent.withOpacity(0.95),
+                                  letterSpacing: 2.0,
+                                  shadows: [
+                                    BoxShadow(
+                                      color: Colors.blue.withOpacity(0.8),
+                                      blurRadius: 8,
+                                      spreadRadius: 2,
+                                    ),
+                                    BoxShadow(
+                                      color: Colors.cyanAccent.withOpacity(0.6),
+                                      blurRadius: 12,
+                                      spreadRadius: 4,
+                                    ),
+                                  ],
                                 ),
-                                child: SingleChildScrollView(
-                                  child: Text(
-                                    "課題: $_taskName\n詳細: $_taskDetails\n締切: ${DateFormat('MM/dd HH:mm', 'ja').format(_taskDeadline)}",
-                                    style: TextStyle(
-                                      fontSize:
-                                          screenHeight * 0.014, // フォントサイズも少し調整
-                                      color: Colors.grey[100]!.withOpacity(
-                                        0.95,
+                              ),
+                              const SizedBox(height: 4), // 少し間隔を詰める
+                              Text(
+                                _taskSubject,
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: screenHeight * 0.030,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.lightBlue[100]!.withOpacity(
+                                    0.95,
+                                  ),
+                                  fontFamily: 'misaki',
+                                  shadows: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.5),
+                                      blurRadius: 2,
+                                      offset: Offset(1, 1),
+                                    ),
+                                  ],
+                                ),
+                                overflow: TextOverflow.ellipsis, // 教科名が長い場合
+                              ),
+                              const SizedBox(height: 6), // 少し間隔を詰める
+                              Center(
+                                // ★ ContainerをCenterで囲んで中央寄せにする (任意)
+                                child: Container(
+                                  width:
+                                      screenWidth *
+                                      0.55, // ★ 横幅を画面幅の65%に設定 (掲示板の幅より小さく)
+                                  // この値を調整してください
+                                  padding: EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                    color: Colors.black.withOpacity(0.35),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: Colors.white.withOpacity(0.2),
+                                      width: 0.5,
+                                    ),
+                                  ),
+                                  child: SingleChildScrollView(
+                                    child: Text(
+                                      "課題: $_taskName\n詳細: $_taskDetails\n期限: ${DateFormat('MM/dd HH:mm', 'ja').format(_taskDeadline)}",
+                                      style: TextStyle(
+                                        fontSize: screenHeight * 0.020,
+                                        color: Colors.grey[100]!.withOpacity(
+                                          0.95,
+                                        ),
+                                        fontFamily: 'misaki',
+                                        height: 1.4,
                                       ),
-                                      fontFamily: 'NotoSansJP',
-                                      height: 1.4,
                                     ),
                                   ),
                                 ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                     ),
@@ -509,7 +697,31 @@ class _ParkPageState extends State<ParkPage> {
                         ),
                       ),
                     ),
-
+                    Positioned(
+                      // ★★★ 1. ボタンを右下に配置 ★★★
+                      bottom: 130, // 下からの距離
+                      right: 15, // 右からの距離
+                      child: ElevatedButton(
+                        // ★★★ 2. ボタンを目立たないスタイルに変更 ★★★
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.black.withOpacity(
+                            0.4,
+                          ), // 半透明の黒に
+                          foregroundColor: Colors.white.withOpacity(
+                            0.8,
+                          ), // 文字も少し透明に
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                          textStyle: const TextStyle(fontSize: 12), // 文字を小さく
+                        ),
+                        onPressed: () {
+                          _gaugeKey.currentState?.addExperience(20);
+                        },
+                        child: const Text('EXP+20'), // テキストを短く
+                      ),
+                    ),
                     // === 上部UI要素群 ===
                     Positioned(
                       top: 0,
@@ -534,75 +746,13 @@ class _ParkPageState extends State<ParkPage> {
                             crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
                               // --- 1. レベルゲージ (左側) ---
-                              Container(
+                              LiquidLevelGauge(
+                                // ★★★ 4. ゲージにキーをセット ★★★
+                                key: _gaugeKey,
                                 width: screenWidth * 0.28,
                                 height: topBarHeight * 0.70,
-                                child: Stack(
-                                  alignment: Alignment.centerLeft,
-                                  children: [
-                                    Image.asset(
-                                      'assets/ui_level_hp_bg.png',
-                                      fit: BoxFit.fill,
-                                      width: double.infinity,
-                                      height: double.infinity,
-                                    ),
-                                    Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 5.0,
-                                      ),
-                                      child: Row(
-                                        children: [
-                                          Text(
-                                            'Lv.$_currentLevel',
-                                            style: TextStyle(
-                                              color: Colors.white,
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: topBarHeight * 0.25,
-                                              fontFamily: 'NotoSansJP',
-                                              shadows: [
-                                                Shadow(
-                                                  color: Colors.black54,
-                                                  blurRadius: 2,
-                                                  offset: Offset(1, 1),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                          SizedBox(width: 4),
-                                          Expanded(
-                                            child: ClipRRect(
-                                              borderRadius:
-                                                  BorderRadius.circular(
-                                                    topBarHeight * 0.1,
-                                                  ),
-                                              child: LinearProgressIndicator(
-                                                value:
-                                                    0.7, // 仮: _currentExp / _maxExp
-                                                backgroundColor: Colors
-                                                    .grey
-                                                    .shade600
-                                                    .withOpacity(0.8),
-                                                valueColor:
-                                                    AlwaysStoppedAnimation<
-                                                      Color
-                                                    >(
-                                                      const Color.fromARGB(
-                                                        255,
-                                                        61,
-                                                        245,
-                                                        255,
-                                                      ),
-                                                    ),
-                                                minHeight: topBarHeight * 0.18,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
                               ),
+
                               const Spacer(),
                               // --- 2. 中央バナー (NEWS) ---
                               GestureDetector(
@@ -625,65 +775,58 @@ class _ParkPageState extends State<ParkPage> {
                               ),
                               const Spacer(),
                               // --- 3. たこ焼き表示 (右側) ---
+                              // ★★★ このStackウィジェット全体を置き換えてください ★★★
                               Stack(
-                                alignment: Alignment.centerRight,
+                                alignment: Alignment.center,
                                 children: [
+                                  // --- レイヤー1: 新しい背景画像と数字 ---
                                   Container(
                                     width: screenWidth * 0.25,
                                     height: topBarHeight * 0.5,
                                     decoration: const BoxDecoration(
                                       image: DecorationImage(
+                                        // ★ 1. 新しい「アイコン一体型」の画像パスを指定 ★
                                         image: AssetImage(
-                                          'assets/ui_takoyaki_bg.png',
-                                        ),
+                                          'assets/ui_takoyaki_bar.png',
+                                        ), // ← あなたが作成した新しいファイル名にしてください
                                         fit: BoxFit.fill,
                                       ),
                                     ),
+                                    // ★ 2. 新しい背景に合わせて数字の表示位置を調整 ★
+                                    // 左側のアイコン部分のスペースを空けるために、左の余白を多めに取ります
                                     padding: const EdgeInsets.only(
-                                      left: 2.0,
-                                      right: 18.0,
+                                      left: 30.0,
+                                      right: 20.0,
                                     ),
-                                    child: Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.center,
-                                      children: [
-                                        Image.asset(
-                                          'assets/icon_takoyaki.png',
-                                          width: topBarHeight * 1.0,
-                                          height: topBarHeight * 1.0,
-                                          fit: BoxFit.contain,
-                                        ),
-                                        const SizedBox(width: 2),
-                                        Expanded(
-                                          child: Text(
-                                            '13800',
-                                            style: TextStyle(
-                                              color: Colors.black,
-                                              fontSize: topBarHeight * 0.26,
-                                              fontWeight: FontWeight.bold,
-                                              fontFamily: 'NotoSansJP',
-                                            ),
-                                            overflow: TextOverflow.ellipsis,
-                                            softWrap: false,
-                                          ),
-                                        ),
-                                      ],
+                                    alignment: Alignment.center,
+                                    child: Text(
+                                      '13800',
+                                      style: TextStyle(
+                                        color: Colors.black,
+                                        fontSize: topBarHeight * 0.26,
+                                        fontWeight: FontWeight.bold,
+                                        fontFamily: 'misaki',
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                      softWrap: false,
                                     ),
                                   ),
+
+                                  // --- はみ出すアイコン用のPositionedウィジェットは削除しました ---
+
+                                  // --- プラスボタン (変更なし) ---
                                   Positioned(
                                     right: -3,
                                     child: GestureDetector(
                                       onTap: () {
-                                        print('たこ焼きプラスボタンが押されました');
+                                        _showPurchaseDialog(context);
                                       },
                                       child: Container(
                                         padding: const EdgeInsets.all(1.0),
                                         child: Image.asset(
                                           'assets/icon_plus.png',
-                                          width: topBarHeight * 0.6,
-                                          height: topBarHeight * 0.6,
+                                          width: topBarHeight * 0.5,
+                                          height: topBarHeight * 0.5,
                                           fit: BoxFit.contain,
                                         ),
                                       ),
@@ -715,10 +858,10 @@ class _ParkPageState extends State<ParkPage> {
                     // === ロゴなどの配置 (フッターナビゲーションの上) ===
                     Positioned(
                       left: 15,
-                      bottom: 10,
+                      bottom: 60,
                       child: GestureDetector(
                         onTap: () {
-                          print("オーズテックロゴタップ");
+                          _showOztechDialog(context); // ★ 新しい関数を呼び出す
                         },
                         child: Opacity(
                           opacity: 1.0, // 透明度は適宜調整してください
@@ -766,10 +909,10 @@ class _ParkPageState extends State<ParkPage> {
 
                     Positioned(
                       right: 15,
-                      bottom: 10,
+                      bottom: 60,
                       child: GestureDetector(
                         onTap: () {
-                          print("開発サークルロゴタップ");
+                          _showPotiPotiDialog(context); // ★ 新しい関数を呼び出す
                         },
                         child: Opacity(
                           opacity: 1.0, // 透明度は適宜調整してください
@@ -817,6 +960,69 @@ class _ParkPageState extends State<ParkPage> {
                   ],
                 ),
               ),
+            ),
+          ),
+          Positioned(
+            bottom: 30, // 画面の下からの距離
+            left: 40, // 画面の左からの距離
+            right: 40, // 画面の右からの距離
+            child: CommonBottomNavigation(
+              currentPage: AppPage.park,
+
+              // --- 通常アイコンのパス ---
+              parkIconAsset: 'assets/button_park.png',
+              timetableIconAsset: 'assets/button_timetable.png',
+              creditReviewIconAsset: 'assets/button_unit_review.png',
+              rankingIconAsset: 'assets/button_ranking.png',
+              itemIconAsset: 'assets/button_dressup.png',
+
+              // --- アクティブアイコンのパス（すべて指定） ---
+              parkIconActiveAsset: 'assets/button_park_icon_active.png',
+              timetableIconActiveAsset: 'assets/button_timetable_active.png',
+              creditReviewActiveAsset: 'assets/button_unit_review_active.png',
+              rankingIconActiveAsset: 'assets/button_ranking_active.png',
+              itemIconActiveAsset: 'assets/button_dressup_active.png',
+
+              // --- タップ時の処理（省略せずにすべて記述） ---
+              onParkTap: () {
+                print("Already on Park Page");
+              },
+              onTimetableTap: () {
+                Navigator.pushReplacement(
+                  context,
+                  PageRouteBuilder(
+                    pageBuilder: (_, __, ___) => const TimeSchedulePage(),
+                    transitionDuration: Duration.zero,
+                  ),
+                );
+              },
+              onCreditReviewTap: () {
+                Navigator.pushReplacement(
+                  context,
+                  PageRouteBuilder(
+                    pageBuilder: (_, __, ___) => const CreditReviewPage(),
+                    transitionDuration: Duration.zero,
+                  ),
+                );
+              },
+              onRankingTap: () {
+                Navigator.pushReplacement(
+                  context,
+                  PageRouteBuilder(
+                    pageBuilder: (_, __, ___) => const RankingPage(),
+                    transitionDuration: Duration.zero,
+                  ),
+                );
+              },
+              onItemTap: () {
+                Navigator.pushReplacement(
+                  context,
+                  PageRouteBuilder(
+                    pageBuilder: (_, __, ___) => const ItemPage(),
+                    transitionDuration: Duration.zero,
+                  ),
+                );
+              },
             ),
           ),
         ],

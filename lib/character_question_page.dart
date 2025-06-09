@@ -755,7 +755,7 @@ class _CharacterQuestionPageState extends State<CharacterQuestionPage> {
         title: Text('キャラ診断 ver5.0'),
         backgroundColor: Colors.brown,
         titleTextStyle: TextStyle(
-          fontFamily: 'NotoSansJP',
+          fontFamily: 'misaki',
           color: Colors.white,
           fontSize: 20,
           fontWeight: FontWeight.bold,
