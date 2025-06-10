@@ -3,6 +3,7 @@ import 'dart:async'; // Timer.periodic のために必要
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart'; // ★ Providerをインポート
 import 'character_provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 // DateFormat のために必要
 
 // 共通フッターと遷移先ページのインポート (パスは実際の構成に合わせてください)
@@ -47,6 +48,14 @@ class _ParkPageState extends State<ParkPage> {
   int _maxExp = 2000;
 
   bool _isCharacterInfoInitialized = false;
+
+  Future<void> _launchURL(String url) async {
+    final Uri uri = Uri.parse(url);
+    if (!await launchUrl(uri)) {
+      // エラー処理をここに追加できます (例: SnackBarの表示)
+      debugPrint('Could not launch $url');
+    }
+  }
 
   void _showPurchaseDialog(BuildContext context) {
     // 画面上にオーバーレイ表示するための関数
@@ -527,6 +536,40 @@ class _ParkPageState extends State<ParkPage> {
                   fontFamily: 'misaki',
                 ),
               ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.school_outlined),
+              title: const Text('KOAN'),
+              onTap: () {
+                // TODO: Replace with your KOAN URL
+                _launchURL(
+                  'https://koan.osaka-u.ac.jp/campusweb/campusportal.do?page=main',
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.book_outlined),
+              title: const Text('CLE'),
+              onTap: () {
+                // TODO: Replace with your CLE URL
+                _launchURL('https://www.cle.osaka-u.ac.jp/ultra/course');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.person_outline),
+              title: const Text('マイハンダイ'),
+              onTap: () {
+                // TODO: Replace with your MyHandai URL
+                _launchURL('https://my.osaka-u.ac.jp/');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.mail_outline),
+              title: const Text('OU-Mail'),
+              onTap: () {
+                // TODO: Replace with your OUMail URL
+                _launchURL('https://outlook.office.com/mail/');
+              },
             ),
             ListTile(
               leading: const Icon(Icons.info_outline),

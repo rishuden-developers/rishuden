@@ -13,8 +13,6 @@ import 'firebase_options.dart';
 import 'package:provider/provider.dart';
 import 'character_provider.dart'; // 作成したProviderファイルをインポート
 
-import 'anthology_api.dart';
-
 void main() async {
   // main関数をasyncに変更
   // Flutterエンジンとウィジェットツリーのバインディングを保証
@@ -33,7 +31,6 @@ void main() async {
       child: MyApp(), // MyAppウィジェットをラップ
     ),
   );
-  runApp(ApiApp());
 }
 
 class MyApp extends StatelessWidget {
