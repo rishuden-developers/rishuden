@@ -66,3 +66,6 @@ flutter:
     - family: display_free_tfb
       fonts:
         - asset: fonts/DISPLAY FREE TFB.ttf
+    - family: DISPLAY FREE TFB
+      fonts:
+        - asset: fonts/DISPLAY FREE TFB.ttf

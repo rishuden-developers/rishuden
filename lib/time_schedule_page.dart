@@ -1620,9 +1620,7 @@ class _TimeSchedulePageState extends State<TimeSchedulePage> {
                 curve: Curves.easeOut,
                 height: totalColumnHeight * _timeGaugeProgress,
                 decoration: BoxDecoration(
-                  // ★★★ 角を丸くして「試験管」風に ★★★
                   borderRadius: BorderRadius.circular(10),
-                  // ★★★「危険な液体」風のグラデーション ★★★
                   gradient: LinearGradient(
                     colors: [
                       const Color.fromARGB(255, 20, 182, 226).withOpacity(0.7),
@@ -1631,6 +1629,36 @@ class _TimeSchedulePageState extends State<TimeSchedulePage> {
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                   ),
+                  // ★★★ boxShadowのリストを、この新しいものに置き換える ★★★
+                  boxShadow: [
+                    // 既存の内側の光 (色は以前のものを維持)
+                    BoxShadow(
+                      color: const Color.fromARGB(
+                        255,
+                        20,
+                        182,
+                        226,
+                      ).withOpacity(0.4),
+                      blurRadius: 15.0,
+                      spreadRadius: 5.0,
+                    ),
+                    BoxShadow(
+                      color: const Color.fromARGB(
+                        255,
+                        134,
+                        19,
+                        159,
+                      ).withOpacity(0.3),
+                      blurRadius: 20.0,
+                      spreadRadius: 8.0,
+                    ),
+                    // 新しい外側の白い光
+                    BoxShadow(
+                      color: Colors.white.withOpacity(0.4), // 少し控えめな透明度
+                      blurRadius: 40.0, // より大きくぼかして広がりを出す
+                      spreadRadius: 20.0, // 広げる範囲も大きく
+                    ),
+                  ],
                 ),
               ),
             ),
