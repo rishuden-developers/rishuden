@@ -138,16 +138,16 @@ class CommonBottomNavigation extends StatelessWidget {
                   isActive: currentPage == AppPage.park,
                 ),
                 _buildNavItem(
-                  inactiveIconAsset: itemIconAsset,
-                  activeIconAsset: itemIconActiveAsset,
-                  onPressed: onItemTap,
-                  isActive: currentPage == AppPage.item,
-                ),
-                _buildNavItem(
                   inactiveIconAsset: timetableIconAsset,
                   activeIconAsset: timetableIconActiveAsset,
                   onPressed: onTimetableTap,
                   isActive: currentPage == AppPage.timetable,
+                ),
+                _buildNavItem(
+                  inactiveIconAsset: itemIconAsset,
+                  activeIconAsset: itemIconActiveAsset,
+                  onPressed: onItemTap,
+                  isActive: currentPage == AppPage.item,
                 ),
               ],
             ),
