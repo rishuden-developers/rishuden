@@ -64,3 +64,6 @@ flutter:
     - family: misaki
       fonts:
         - asset: fonts/misaki_gothic.ttf
+    - family: pockc
+      fonts:
+        - asset: fonts/POCKC___.TTF

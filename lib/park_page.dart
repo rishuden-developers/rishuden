@@ -377,7 +377,7 @@ class _ParkPageState extends State<ParkPage> {
       final hoursStr = hours.toString().padLeft(2, '0');
       final minutesStr = minutes.toString().padLeft(2, '0');
       final secondsStr = seconds.toString().padLeft(2, '0');
-      newText = "limit: ${daysStr}日 ${hoursStr}:${minutesStr}:${secondsStr}";
+      newText = "${daysStr}:${hoursStr}:${minutesStr}:${secondsStr}";
     }
     if (mounted && _countdownText != newText) {
       setState(() {
@@ -635,7 +635,7 @@ class _ParkPageState extends State<ParkPage> {
                     ),
                     // === 電子掲示板の情報表示エリア ===
                     Positioned(
-                      top: screenHeight * 0.165,
+                      top: screenHeight * 0.155,
                       left: screenWidth * 0.10, // 左右の余白を少し広げる
                       right: screenWidth * 0.10,
                       height: screenHeight * 0.28, // 表示エリアの高さを確保
@@ -653,16 +653,16 @@ class _ParkPageState extends State<ParkPage> {
                                 _countdownText,
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
-                                  fontFamily: 'digitalism',
-                                  fontSize: screenHeight * 0.05,
+                                  fontFamily: 'pockc',
+                                  fontSize: screenHeight * 0.07,
                                   fontWeight: FontWeight.bold,
                                   color: Colors.cyanAccent.withOpacity(0.95),
-                                  letterSpacing: 2.0,
+                                  letterSpacing: 1.0,
                                   shadows: [
                                     BoxShadow(
                                       color: Colors.blue.withOpacity(0.8),
                                       blurRadius: 8,
-                                      spreadRadius: 2,
+                                      spreadRadius: 1,
                                     ),
                                     BoxShadow(
                                       color: Colors.cyanAccent.withOpacity(0.6),
