@@ -157,9 +157,9 @@ class ItemPage extends StatelessWidget {
 
             // ★★★ 3. レイヤー2: フローティングナビゲーションバー ★★★
             Positioned(
-              bottom: 30,
-              left: 40,
-              right: 40,
+              bottom: 0,
+              left: 0,
+              right: 0,
               child: CommonBottomNavigation(
                 currentPage: AppPage.item, // このページの種別を指定
                 // --- アイコンのパスを指定 ---
