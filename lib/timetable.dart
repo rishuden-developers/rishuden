@@ -52,75 +52,29 @@ class GetTimetableData {
     return 0; // 該当しない場合は0を返す
   }
 
-  Future<List<Map<String, dynamic>>> getTimeTableData() async {
+  /// 今週のイベントをリストで返す（曜日・時限順ソート済み）
+  Future<List<Map<String, dynamic>>> getWeeklyEventList() async {
     final url = Uri.parse(urlStr);
 
-    try {
-      final res = await http.get(url);
-      if (res.statusCode == 200) {
-        String icsText = utf8.decode(res.bodyBytes);
-        final calenderData = ICalendar.fromString(icsText);
-
-        // 今週の月曜〜日曜を計算
-        final now = DateTime.now();
-        final monday = _getThisMonday(now);
-        final sunday = _getThisSunday(now);
-
-        DateTime start;
-        final events =
-            calenderData.data
-                .where((e) => e['dtend'] != null && e['type'] == 'VEVENT')
-                .map<Map<String, dynamic>>((e) {
-                  start = _parseIcsDate(e['dtstart'].dt);
-                  return {
-                    'weekday': start.weekday, // 1=月曜, 7=日曜
-                    'classPeriodNumber': _getClassPeriodNumber(start),
-                    'location': e["location"] ?? '（場所未定）',
-                    'summary': e['summary'] ?? '（タイトルなし）',
-                  };
-                })
-                .where(
-                  (ev) =>
-                      (ev['weekday'] >= monday.weekday &&
-                          ev['weekday'] <= sunday.weekday),
-                )
-                .toList()
-              ..sort((a, b) {
-                // まず曜日で比較（1=月曜, 7=日曜）
-                int cmp = a['weekday'].compareTo(b['weekday']);
-                if (cmp != 0) return cmp;
-                // 曜日が同じならclassPeriodNumber（時限）で比較
-                return a['classPeriodNumber'].compareTo(b['classPeriodNumber']);
-              });
-        return events;
-      } else {
-        throw 'サーバーからの応答が正しくありません（コード: ${res.statusCode}）';
-      }
-    } catch (e) {
-      throw 'データの取得中にエラーが発生しました。ネットワーク接続をご確認ください。$e';
-    }
-  }
-
-  Future<Map<int, Map<int, List<Map<String, String>>>>>
-  getWeeklyTimetable() async {
-    final url = Uri.parse(urlStr);
     final res = await http.get(url);
-    if (res.statusCode != 200) throw Exception('取得失敗');
+    if (res.statusCode != 200) {
+      throw Exception('取得失敗');
+    }
 
     String icsText = utf8.decode(res.bodyBytes);
     final calenderData = ICalendar.fromString(icsText);
 
-    final now = DateTime.now();
+    // 今週の月曜〜日曜を計算
+    final now = DateTime(2025, 5, 26); //.now();
     final monday = _getThisMonday(now);
     final sunday = _getThisSunday(now);
 
-    DateTime start;
-    // まず今週のイベントを抽出
+    // 今週のイベントを抽出
     final events =
         calenderData.data
             .where((e) => e['dtend'] != null && e['type'] == 'VEVENT')
             .map<Map<String, dynamic>>((e) {
-              start = _parseIcsDate(e['dtstart'].dt);
+              final start = _parseIcsDate(e['dtstart'].dt);
               return {
                 'weekday': start.weekday, // 1=月曜, 7=日曜
                 'classPeriodNumber': _getClassPeriodNumber(start),
@@ -133,9 +87,23 @@ class GetTimetableData {
                   (ev['weekday'] >= monday.weekday &&
                       ev['weekday'] <= sunday.weekday),
             )
-            .toList();
+            .toList()
+          ..sort((a, b) {
+            // まず曜日で比較（1=月曜, 7=日曜）
+            int cmp = a['weekday'].compareTo(b['weekday']);
+            if (cmp != 0) return cmp;
+            // 曜日が同じならclassPeriodNumber（時限）で比較
+            return a['classPeriodNumber'].compareTo(b['classPeriodNumber']);
+          });
 
-    // ネストされたMapを作成
+    return events;
+  }
+
+  /// 今週のイベントを曜日・時限ごとのネストMapで返す
+  Future<Map<int, Map<int, List<Map<String, String>>>>>
+  getWeeklyTimetable() async {
+    final events = await getWeeklyEventList();
+
     final Map<int, Map<int, List<Map<String, String>>>> timetable = {};
 
     for (final ev in events) {
