@@ -6,7 +6,6 @@ import 'login_page.dart';
 import 'mail_page.dart';
 import 'news_page.dart';
 import 'park_page.dart'; // ParkPageは広場画面
-import 'character_question_page.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
 import 'package:firebase_core/firebase_core.dart';
