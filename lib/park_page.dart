@@ -3,6 +3,7 @@ import 'dart:async'; // Timer.periodic のために必要
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart'; // ★ Providerをインポート
 import 'character_provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 // DateFormat のために必要
 
 // 共通フッターと遷移先ページのインポート (パスは実際の構成に合わせてください)
@@ -29,7 +30,7 @@ class _ParkPageState extends State<ParkPage> {
   String _currentParkCharacterName = '勇者'; // デフォルト名
 
   // 課題情報とカウントダウンのためのState変数
-  String _taskSubject = "力学詳論";
+  String _taskSubject = "力学詳論Ⅰ";
   String _taskName = "課題レポート";
   String _taskDetails = "A4 5枚以上";
   DateTime _taskDeadline = DateTime.now().add(
@@ -47,6 +48,14 @@ class _ParkPageState extends State<ParkPage> {
   int _maxExp = 2000;
 
   bool _isCharacterInfoInitialized = false;
+
+  Future<void> _launchURL(String url) async {
+    final Uri uri = Uri.parse(url);
+    if (!await launchUrl(uri)) {
+      // エラー処理をここに追加できます (例: SnackBarの表示)
+      debugPrint('Could not launch $url');
+    }
+  }
 
   void _showPurchaseDialog(BuildContext context) {
     // 画面上にオーバーレイ表示するための関数
@@ -529,6 +538,40 @@ class _ParkPageState extends State<ParkPage> {
               ),
             ),
             ListTile(
+              leading: const Icon(Icons.school_outlined),
+              title: const Text('KOAN'),
+              onTap: () {
+                // TODO: Replace with your KOAN URL
+                _launchURL(
+                  'https://koan.osaka-u.ac.jp/campusweb/campusportal.do?page=main',
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.book_outlined),
+              title: const Text('CLE'),
+              onTap: () {
+                // TODO: Replace with your CLE URL
+                _launchURL('https://www.cle.osaka-u.ac.jp/ultra/course');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.person_outline),
+              title: const Text('マイハンダイ'),
+              onTap: () {
+                // TODO: Replace with your MyHandai URL
+                _launchURL('https://my.osaka-u.ac.jp/');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.mail_outline),
+              title: const Text('OU-Mail'),
+              onTap: () {
+                // TODO: Replace with your OUMail URL
+                _launchURL('https://outlook.office.com/mail/');
+              },
+            ),
+            ListTile(
               leading: const Icon(Icons.info_outline),
               title: const Text('お知らせを見る'),
               onTap: () {
@@ -560,6 +603,12 @@ class _ParkPageState extends State<ParkPage> {
             child: Image.asset(
               'assets/background_plaza.png',
               fit: BoxFit.cover,
+            ),
+          ),
+          // 暗さを出すための黒いオーバーレイ
+          Positioned.fill(
+            child: Container(
+              color: Colors.black.withOpacity(0.5), // ← 数値を0.3〜0.6で調整
             ),
           ),
           Positioned.fill(
@@ -669,7 +718,7 @@ class _ParkPageState extends State<ParkPage> {
                                         color: Colors.grey[100]!.withOpacity(
                                           0.95,
                                         ),
-                                        fontFamily: 'misaki',
+
                                         height: 1.4,
                                       ),
                                     ),
@@ -699,7 +748,7 @@ class _ParkPageState extends State<ParkPage> {
                     ),
                     Positioned(
                       // ★★★ 1. ボタンを右下に配置 ★★★
-                      bottom: 130, // 下からの距離
+                      top: 120, // 下からの距離
                       right: 15, // 右からの距離
                       child: ElevatedButton(
                         // ★★★ 2. ボタンを目立たないスタイルに変更 ★★★
@@ -858,7 +907,7 @@ class _ParkPageState extends State<ParkPage> {
                     // === ロゴなどの配置 (フッターナビゲーションの上) ===
                     Positioned(
                       left: 15,
-                      bottom: 60,
+                      top: 60,
                       child: GestureDetector(
                         onTap: () {
                           _showOztechDialog(context); // ★ 新しい関数を呼び出す
@@ -909,7 +958,7 @@ class _ParkPageState extends State<ParkPage> {
 
                     Positioned(
                       right: 15,
-                      bottom: 60,
+                      top: 60,
                       child: GestureDetector(
                         onTap: () {
                           _showPotiPotiDialog(context); // ★ 新しい関数を呼び出す
@@ -963,9 +1012,9 @@ class _ParkPageState extends State<ParkPage> {
             ),
           ),
           Positioned(
-            bottom: 30, // 画面の下からの距離
-            left: 40, // 画面の左からの距離
-            right: 40, // 画面の右からの距離
+            bottom: 0, // 画面の下からの距離
+            left: 0, // 画面の左からの距離
+            right: 0, // 画面の右からの距離
             child: CommonBottomNavigation(
               currentPage: AppPage.park,
 
