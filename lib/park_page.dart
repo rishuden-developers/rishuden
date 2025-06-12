@@ -635,7 +635,7 @@ class _ParkPageState extends State<ParkPage> {
                     ),
                     // === 電子掲示板の情報表示エリア ===
                     Positioned(
-                      top: screenHeight * 0.155,
+                      top: screenHeight * 0.169,
                       left: screenWidth * 0.10, // 左右の余白を少し広げる
                       right: screenWidth * 0.10,
                       height: screenHeight * 0.28, // 表示エリアの高さを確保
@@ -649,24 +649,37 @@ class _ParkPageState extends State<ParkPage> {
                             mainAxisAlignment: MainAxisAlignment.start,
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
+                              // ★★★ このTextウィジェットを修正 ★★★
                               Text(
                                 _countdownText,
+
                                 textAlign: TextAlign.center,
+
                                 style: TextStyle(
-                                  fontFamily: 'pockc',
-                                  fontSize: screenHeight * 0.07,
+                                  fontFamily: 'display_free_tfb',
+
+                                  fontSize: screenHeight * 0.05,
+
                                   fontWeight: FontWeight.bold,
+
                                   color: Colors.cyanAccent.withOpacity(0.95),
-                                  letterSpacing: 1.0,
+
+                                  letterSpacing: 2.0,
+
                                   shadows: [
                                     BoxShadow(
                                       color: Colors.blue.withOpacity(0.8),
+
                                       blurRadius: 8,
+
                                       spreadRadius: 1,
                                     ),
+
                                     BoxShadow(
                                       color: Colors.cyanAccent.withOpacity(0.6),
+
                                       blurRadius: 12,
+
                                       spreadRadius: 4,
                                     ),
                                   ],
@@ -701,7 +714,7 @@ class _ParkPageState extends State<ParkPage> {
                                       screenWidth *
                                       0.55, // ★ 横幅を画面幅の65%に設定 (掲示板の幅より小さく)
                                   // この値を調整してください
-                                  padding: EdgeInsets.all(10),
+                                  padding: const EdgeInsets.all(10),
                                   decoration: BoxDecoration(
                                     color: Colors.black.withOpacity(0.35),
                                     borderRadius: BorderRadius.circular(8),
@@ -718,7 +731,6 @@ class _ParkPageState extends State<ParkPage> {
                                         color: Colors.grey[100]!.withOpacity(
                                           0.95,
                                         ),
-
                                         height: 1.4,
                                       ),
                                     ),

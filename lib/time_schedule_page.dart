@@ -258,74 +258,96 @@ class _TimeSchedulePageState extends State<TimeSchedulePage> {
   // ★★★ このメソッドを丸ごと追加 ★★★
   // ★★★ このメソッドを丸ごと置き換え ★★★
   // ★★★ このメソッドを丸ごと置き換えてください ★★★
+  // ★★★ このメソッドを丸ごと置き換えてください ★★★
   double _calculateActiveTimeProgress(DateTime now) {
-    // 授業コマの時間定義 [開始(分), 終了(分), このブロックの長さ(分)]
-    final classBlocks = [
-      [8 * 60 + 50, 10 * 60 + 20, 90.0], // 1限
-      [10 * 60 + 30, 12 * 60 + 0, 90.0], // 2限
-      [13 * 60 + 30, 15 * 60 + 0, 90.0], // 3限
-      [15 * 60 + 10, 16 * 60 + 40, 90.0], // 4限
-      [16 * 50 + 50, 18 * 60 + 20, 90.0], // 5限
-      [18 * 60 + 30, 20 * 60 + 0, 90.0], // 6限
+    final currentTimeInMinutes = now.hour * 60.0 + now.minute;
+
+    // 各時間ブロックを定義 [開始時間(分), 終了時間(分), 対応するUIブロックの高さ]
+    final blocks = [
+      {
+        'start': 8 * 60 + 50.0,
+        'end': 10 * 60 + 20.0,
+        'height': _periodRowHeight,
+      }, // 1限
+      {'start': 10 * 60 + 20.0, 'end': 10 * 60 + 30.0, 'height': 0.0}, // 休み時間
+      {
+        'start': 10 * 60 + 30.0,
+        'end': 12 * 60 + 0.0,
+        'height': _periodRowHeight,
+      }, // 2限
+      {
+        'start': 12 * 60 + 0.0,
+        'end': 13 * 60 + 30.0,
+        'height': _lunchRowHeight,
+      }, // 昼休み
+      {
+        'start': 13 * 60 + 30.0,
+        'end': 15 * 60 + 0.0,
+        'height': _periodRowHeight,
+      }, // 3限
+      {'start': 15 * 60 + 0.0, 'end': 15 * 60 + 10.0, 'height': 0.0}, // 休み時間
+      {
+        'start': 15 * 60 + 10.0,
+        'end': 16 * 60 + 40.0,
+        'height': _periodRowHeight,
+      }, // 4限
+      {'start': 16 * 60 + 40.0, 'end': 16 * 60 + 50.0, 'height': 0.0}, // 休み時間
+      {
+        'start': 16 * 60 + 50.0,
+        'end': 18 * 60 + 20.0,
+        'height': _periodRowHeight,
+      }, // 5限
+      {'start': 18 * 60 + 20.0, 'end': 18 * 60 + 30.0, 'height': 0.0}, // 休み時間
+      {
+        'start': 18 * 60 + 30.0,
+        'end': 20 * 60 + 0.0,
+        'height': _periodRowHeight,
+      }, // 6限
+      {
+        'start': 20 * 60 + 0.0,
+        'end': 24 * 60.0,
+        'height': _lunchRowHeight,
+      }, // 放課後
     ];
 
-    final double totalActiveMinutes = 540.0;
-    double elapsedActiveMinutes = 0;
-    bool timeFound = false;
-    final double currentTimeInMinutes = now.hour * 60.0 + now.minute;
+    double accumulatedHeight = 0.0;
+    final double totalHeight = (_periodRowHeight * 6) + (_lunchRowHeight * 2);
 
-    if (currentTimeInMinutes < classBlocks.first[0]) return 0.0;
+    // 1限開始前は0%
+    if (currentTimeInMinutes < blocks.first['start']!) return 0.0;
+    // 24時以降は100%
+    if (currentTimeInMinutes >= blocks.last['end']!) return 1.0;
 
-    if (currentTimeInMinutes >= classBlocks.last[1]) {
-      timeFound = false;
-    } else {
-      for (int i = 0; i < classBlocks.length; i++) {
-        final block = classBlocks[i];
-        // ★★★ ここで .toDouble() を追加して型を変換 ★★★
-        final double blockStart = block[0].toDouble();
-        final double blockEnd = block[1].toDouble();
-        final double blockDuration = block[2].toDouble();
+    for (final block in blocks) {
+      final double blockStart = block['start']!;
+      final double blockEnd = block['end']!;
+      final double blockHeight = block['height']!;
 
-        if (i > 0 &&
-            currentTimeInMinutes > classBlocks[i - 1][1] &&
-            currentTimeInMinutes < blockStart) {
-          timeFound = true;
-          break;
-        }
-
-        if (currentTimeInMinutes >= blockStart &&
-            currentTimeInMinutes <= blockEnd) {
-          elapsedActiveMinutes += (currentTimeInMinutes - blockStart);
-          timeFound = true;
-          break;
-        }
-
-        elapsedActiveMinutes += blockDuration;
-      }
-    }
-
-    final double classTimeHeightRatio =
-        (_periodRowHeight * 6 + _lunchRowHeight) /
-        (_periodRowHeight * 6 + _lunchRowHeight * 2);
-
-    if (timeFound) {
-      return (elapsedActiveMinutes / totalActiveMinutes) * classTimeHeightRatio;
-    } else {
-      final double afterClassStart = 20 * 60.0;
-      final double afterClassEnd = 24 * 60.0;
-      if (currentTimeInMinutes >= afterClassEnd) return 1.0;
-      if (currentTimeInMinutes < afterClassStart) {
-        // 20時より前で、授業も休憩時間でもない場合（＝6限終了直後など）
-        return classTimeHeightRatio;
+      if (currentTimeInMinutes < blockStart) {
+        // 現在時刻が、まだ到達していないブロック（＝10分休憩など）の場合、ここで計算終了
+        break;
       }
 
-      final double afterClassDuration = afterClassEnd - afterClassStart;
-      final double afterClassElapsed = currentTimeInMinutes - afterClassStart;
+      if (currentTimeInMinutes >= blockStart &&
+          currentTimeInMinutes <= blockEnd) {
+        // 現在時刻がこのブロックの中にある場合
+        final double blockDuration = blockEnd - blockStart;
+        if (blockDuration > 0) {
+          // このブロック内での進捗率を計算
+          final double progressInBlock =
+              (currentTimeInMinutes - blockStart) / blockDuration;
+          // その進捗率を、このブロックの高さに適用して加算
+          accumulatedHeight += blockHeight * progressInBlock;
+        }
+        break; // このブロックの計算で終わり
+      }
 
-      final double afterClassPortion = 1.0 - classTimeHeightRatio;
-      return classTimeHeightRatio +
-          (afterClassElapsed / afterClassDuration) * afterClassPortion;
+      // 現在時刻がこのブロックより後なら、このブロックの高さは100%分加算
+      accumulatedHeight += blockHeight;
     }
+
+    // 計算された合計の高さを、全体の高さに対する割合(0.0~1.0)に変換して返す
+    return (accumulatedHeight / totalHeight).clamp(0.0, 1.0);
   }
 
   @override
