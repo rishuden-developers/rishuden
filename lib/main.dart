@@ -1,23 +1,18 @@
 import 'dart:math'; // mathライブラリをインポートしてcos, sin関数を使う
 
 import 'package:flutter/material.dart';
+import 'package:rishuden/character_question_page.dart';
 import 'login_page.dart';
 import 'mail_page.dart';
 import 'news_page.dart';
 import 'park_page.dart'; // ParkPageは広場画面
-import 'character_question_page.dart';
 
-import 'package:firebase_core/firebase_core.dart';
-import 'firebase_options.dart';
-
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  runApp(MyApp());
+void main() {
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
-  MyApp({super.key});
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -31,7 +26,7 @@ class MyApp extends StatelessWidget {
         // fontFamily: 'YourCustomFont',
       ),
       // アプリのホーム画面としてMyHomePageを設定
-      home: const MyHomePage(title: '履修伝説 - ホーム'),
+      home: MyHomePage(title: '履修伝説'),
     );
   }
 }
