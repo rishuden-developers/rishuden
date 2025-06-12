@@ -13,6 +13,7 @@ import 'item_page.dart';
 import 'ranking_page.dart';
 import 'time_schedule_page.dart';
 import 'news_page.dart';
+import 'mail_page.dart';
 import 'level_gauge.dart';
 // park_page.dart の一番上に追加
 import 'dart:ui';
@@ -784,6 +785,20 @@ class _ParkPageState extends State<ParkPage> {
               onTap: () {
                 // TODO: Replace with your OUMail URL
                 _launchURL('https://outlook.office.com/mail/');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.mail_outline), // アイコンをメールに変更
+              title: const Text('お問い合わせ'), // テキストを「お問い合わせ」に変更
+              onTap: () {
+                // 現在の画面（おそらくDrawerやモーダル）を閉じる
+                Navigator.pop(context);
+
+                // MailPageに画面遷移する
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const MailPage()),
+                );
               },
             ),
             ListTile(

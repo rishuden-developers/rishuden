@@ -168,7 +168,7 @@ class _MyHomePageState extends State<MyHomePage> {
           Positioned.fill(
             child: IgnorePointer(
               child: Image.asset(
-                'assets/ranking_guild_background.png',
+                'assets/stage.png',
                 fit: BoxFit.cover,
                 errorBuilder: (context, error, stackTrace) {
                   return Container(

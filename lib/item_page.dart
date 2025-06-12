@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'item_change_page.dart'; // 着せ替えページ
 import 'item_shop_page.dart'; // アイテム交換所ページ
+import 'dart:ui'; // すりガラス効果(ImageFilter)のために必要
 
 // ★★★ 共通フッターと遷移先ページをインポート ★★★
 import 'common_bottom_navigation.dart'; // common_bottom_navigation.dart のパスを正しく指定してください
@@ -8,6 +9,7 @@ import 'park_page.dart';
 import 'time_schedule_page.dart';
 import 'credit_review_page.dart';
 import 'ranking_page.dart';
+import 'mail_page.dart';
 // ItemPage自身は不要
 
 class ItemPage extends StatelessWidget {
@@ -46,6 +48,7 @@ class ItemPage extends StatelessWidget {
   }
 
   // ★★★ ItemPageのbuildメソッド全体をこちらに置き換えてください ★★★
+  // ★★★ ItemPageのbuildメソッド全体をこちらに置き換えてください ★★★
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
@@ -56,7 +59,6 @@ class ItemPage extends StatelessWidget {
     return Scaffold(
       extendBodyBehindAppBar: true,
       extendBody: true,
-
       appBar: AppBar(
         title: const Text('アイテム・着せ替え'),
         backgroundColor: Colors.transparent,
@@ -69,8 +71,6 @@ class ItemPage extends StatelessWidget {
           fontWeight: FontWeight.bold,
         ),
       ),
-
-      // ★★★ 1. ここにあった bottomNavigationBar プロパティは削除します ★★★
       body: Container(
         width: double.infinity,
         height: double.infinity,
@@ -80,7 +80,6 @@ class ItemPage extends StatelessWidget {
             fit: BoxFit.cover,
           ),
         ),
-        // ★★★ 2. Containerの子をStackにして、コンテンツとナビゲーションバーを重ねます ★★★
         child: Stack(
           children: [
             // --- レイヤー1: 元々のページコンテンツ ---
@@ -155,7 +154,86 @@ class ItemPage extends StatelessWidget {
               ),
             ),
 
-            // ★★★ 3. レイヤー2: フローティングナビゲーションバー ★★★
+            // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+            // ★★★ レイヤー2: 後ろを暗くするオーバーレイ（この部分を追加） ★★★
+            Positioned.fill(
+              child: Container(
+                color: Colors.black.withOpacity(0.5), // この数値(0.0~1.0)で暗さを調整
+              ),
+            ),
+            // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+
+            // --- レイヤー3: 常に表示するすりガラスのコンテンツ ---
+            Positioned.fill(
+              child: Align(
+                alignment: Alignment.center,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(15.0),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
+                    child: Container(
+                      width: MediaQuery.of(context).size.width * 0.85,
+                      padding: const EdgeInsets.all(24.0),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(15.0),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.3),
+                        ),
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min, // コンテンツの高さに合わせる
+                        children: [
+                          const Text(
+                            'Ver.2.0で実装予定！',
+                            style: TextStyle(
+                              fontFamily: 'misaki',
+                              fontSize: 28,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          const Text(
+                            '現在、アプリのバージョン2.0を開発中です。\nみんなが欲しい機能や改善点など、ぜひご意見をお聞かせください！',
+                            style: TextStyle(
+                              fontFamily: 'misaki',
+                              fontSize: 16,
+                              color: Colors.white,
+                              height: 1.5,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 24),
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.orangeAccent,
+                              foregroundColor: Colors.white,
+                              textStyle: const TextStyle(
+                                fontFamily: 'misaki',
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            onPressed: () {
+                              // MailPageに画面遷移する
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const MailPage(),
+                                ),
+                              );
+                            },
+                            child: const Text('ご意見を送る'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
+            // --- レイヤー4: フローティングナビゲーションバー (最前面に配置) ---
             Positioned(
               bottom: 0,
               left: 0,
@@ -163,7 +241,7 @@ class ItemPage extends StatelessWidget {
               child: CommonBottomNavigation(
                 currentPage: AppPage.item, // このページの種別を指定
                 // --- アイコンのパスを指定 ---
-                parkIconAsset: 'assets/button_park.png',
+                parkIconAsset: 'assets/button_park_icon.png',
                 parkIconActiveAsset: 'assets/button_park_icon_active.png',
                 timetableIconAsset: 'assets/button_timetable.png',
                 timetableIconActiveAsset: 'assets/button_timetable_active.png',
