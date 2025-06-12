@@ -53,6 +53,7 @@ flutter:
     - assets/title.png
     - assets/oztech.png
     - assets/potipoti.png
+    - assets/bottom_bar_bg.png
   fonts:
     - family: Noto Sans JP
       fonts:

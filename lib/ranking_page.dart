@@ -160,13 +160,13 @@ class RankingPage extends StatelessWidget {
 
             // ★★★ 3. レイヤー2: フローティングナビゲーションバー ★★★
             Positioned(
-              bottom: 30,
-              left: 40,
-              right: 40,
+              bottom: 0,
+              left: 0,
+              right: 0,
               child: CommonBottomNavigation(
                 currentPage: AppPage.ranking, // このページの種別を指定
                 // --- アイコンのパスを指定 ---
-                parkIconAsset: 'assets/button_park.png',
+                parkIconAsset: 'assets/button_park_icon.png',
                 parkIconActiveAsset: 'assets/button_park_icon_active.png',
                 timetableIconAsset: 'assets/button_timetable.png',
                 timetableIconActiveAsset: 'assets/button_timetable_active.png',

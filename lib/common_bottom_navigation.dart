@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:ui';
 
-// 各ページを識別するためのenum
 enum AppPage { park, timetable, creditReview, ranking, item }
 
 class CommonBottomNavigation extends StatelessWidget {
@@ -51,10 +50,8 @@ class CommonBottomNavigation extends StatelessWidget {
   }) {
     const double activeSize = 80.0;
     const double inactiveSize = 60.0;
-
-    // ★★★ 4. ボタンが上に動く移動量を小さくする ★★★
-    const double activeYOffset = -8.0; // 例: -15.0から-8.0に変更
-    const double inactiveYOffset = 0.0;
+    const double activeYOffset = -8.0;
+    const double inactiveYOffset = 8.0;
 
     final double currentSize = isActive ? activeSize : inactiveSize;
     final double currentYOffset = isActive ? activeYOffset : inactiveYOffset;
@@ -90,69 +87,52 @@ class CommonBottomNavigation extends StatelessWidget {
   Widget build(BuildContext context) {
     const double barHeight = 95.0;
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(50.0),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
-        child: Container(
-          height: barHeight,
-          decoration: BoxDecoration(
-            // ★★★ 1. 虹色のグラデーションに変更 ★★★
-            gradient: LinearGradient(
-              colors: [
-                Color(0xFF00FFFF).withOpacity(0.6),
-                Color.fromARGB(255, 153, 36, 221).withOpacity(0.6),
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            // ★★★ 2. フチを明るい白に変更して、よりモダンな印象に ★★★
-            border: Border.all(
-              color: Colors.white.withOpacity(0.6),
-              width: 2.0,
-            ),
-            borderRadius: BorderRadius.circular(50.0),
+    return SizedBox(
+      height: barHeight,
+      width: double.infinity,
+      child: Stack(
+        children: [
+          // 背景画像（ファイル名は後で変更）
+          Positioned.fill(
+            child: Image.asset('assets/bottom_bar_bg.png', fit: BoxFit.cover),
           ),
-          // ★★★ 3. ボタン全体を少し下に配置して、見切れないようにする ★★★
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: <Widget>[
-                _buildNavItem(
-                  inactiveIconAsset: creditReviewIconAsset,
-                  activeIconAsset: creditReviewActiveAsset,
-                  onPressed: onCreditReviewTap,
-                  isActive: currentPage == AppPage.creditReview,
-                ),
-                _buildNavItem(
-                  inactiveIconAsset: rankingIconAsset,
-                  activeIconAsset: rankingIconActiveAsset,
-                  onPressed: onRankingTap,
-                  isActive: currentPage == AppPage.ranking,
-                ),
-                _buildNavItem(
-                  inactiveIconAsset: parkIconAsset,
-                  activeIconAsset: parkIconActiveAsset,
-                  onPressed: onParkTap,
-                  isActive: currentPage == AppPage.park,
-                ),
-                _buildNavItem(
-                  inactiveIconAsset: timetableIconAsset,
-                  activeIconAsset: timetableIconActiveAsset,
-                  onPressed: onTimetableTap,
-                  isActive: currentPage == AppPage.timetable,
-                ),
-                _buildNavItem(
-                  inactiveIconAsset: itemIconAsset,
-                  activeIconAsset: itemIconActiveAsset,
-                  onPressed: onItemTap,
-                  isActive: currentPage == AppPage.item,
-                ),
-              ],
-            ),
+          // ボタン群
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: <Widget>[
+              _buildNavItem(
+                inactiveIconAsset: creditReviewIconAsset,
+                activeIconAsset: creditReviewActiveAsset,
+                onPressed: onCreditReviewTap,
+                isActive: currentPage == AppPage.creditReview,
+              ),
+              _buildNavItem(
+                inactiveIconAsset: rankingIconAsset,
+                activeIconAsset: rankingIconActiveAsset,
+                onPressed: onRankingTap,
+                isActive: currentPage == AppPage.ranking,
+              ),
+              _buildNavItem(
+                inactiveIconAsset: parkIconAsset,
+                activeIconAsset: parkIconActiveAsset,
+                onPressed: onParkTap,
+                isActive: currentPage == AppPage.park,
+              ),
+              _buildNavItem(
+                inactiveIconAsset: timetableIconAsset,
+                activeIconAsset: timetableIconActiveAsset,
+                onPressed: onTimetableTap,
+                isActive: currentPage == AppPage.timetable,
+              ),
+              _buildNavItem(
+                inactiveIconAsset: itemIconAsset,
+                activeIconAsset: itemIconActiveAsset,
+                onPressed: onItemTap,
+                isActive: currentPage == AppPage.item,
+              ),
+            ],
           ),
-        ),
+        ],
       ),
     );
   }

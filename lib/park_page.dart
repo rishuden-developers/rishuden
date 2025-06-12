@@ -30,7 +30,7 @@ class _ParkPageState extends State<ParkPage> {
   String _currentParkCharacterName = '勇者'; // デフォルト名
 
   // 課題情報とカウントダウンのためのState変数
-  String _taskSubject = "力学詳論";
+  String _taskSubject = "力学詳論Ⅰ";
   String _taskName = "課題レポート";
   String _taskDetails = "A4 5枚以上";
   DateTime _taskDeadline = DateTime.now().add(
@@ -605,6 +605,12 @@ class _ParkPageState extends State<ParkPage> {
               fit: BoxFit.cover,
             ),
           ),
+          // 暗さを出すための黒いオーバーレイ
+          Positioned.fill(
+            child: Container(
+              color: Colors.black.withOpacity(0.5), // ← 数値を0.3〜0.6で調整
+            ),
+          ),
           Positioned.fill(
             child: SafeArea(
               bottom: false,
@@ -712,7 +718,7 @@ class _ParkPageState extends State<ParkPage> {
                                         color: Colors.grey[100]!.withOpacity(
                                           0.95,
                                         ),
-                                        fontFamily: 'misaki',
+
                                         height: 1.4,
                                       ),
                                     ),
@@ -742,7 +748,7 @@ class _ParkPageState extends State<ParkPage> {
                     ),
                     Positioned(
                       // ★★★ 1. ボタンを右下に配置 ★★★
-                      bottom: 130, // 下からの距離
+                      top: 120, // 下からの距離
                       right: 15, // 右からの距離
                       child: ElevatedButton(
                         // ★★★ 2. ボタンを目立たないスタイルに変更 ★★★
@@ -901,7 +907,7 @@ class _ParkPageState extends State<ParkPage> {
                     // === ロゴなどの配置 (フッターナビゲーションの上) ===
                     Positioned(
                       left: 15,
-                      bottom: 60,
+                      top: 60,
                       child: GestureDetector(
                         onTap: () {
                           _showOztechDialog(context); // ★ 新しい関数を呼び出す
@@ -952,7 +958,7 @@ class _ParkPageState extends State<ParkPage> {
 
                     Positioned(
                       right: 15,
-                      bottom: 60,
+                      top: 60,
                       child: GestureDetector(
                         onTap: () {
                           _showPotiPotiDialog(context); // ★ 新しい関数を呼び出す
@@ -1006,9 +1012,9 @@ class _ParkPageState extends State<ParkPage> {
             ),
           ),
           Positioned(
-            bottom: 30, // 画面の下からの距離
-            left: 40, // 画面の左からの距離
-            right: 40, // 画面の右からの距離
+            bottom: 0, // 画面の下からの距離
+            left: 0, // 画面の左からの距離
+            right: 0, // 画面の右からの距離
             child: CommonBottomNavigation(
               currentPage: AppPage.park,
 
