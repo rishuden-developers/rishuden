@@ -1,6 +1,5 @@
 import 'package:http/http.dart' as http;
 import 'package:icalendar_parser/icalendar_parser.dart';
-import 'package:flutter/material.dart';
 import 'dart:convert';
 
 class GetTimetableData {
