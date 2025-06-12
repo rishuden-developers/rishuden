@@ -328,10 +328,15 @@ class _CreditReviewPageState extends State<CreditReviewPage> {
       ),
       bottomNavigationBar: CommonBottomNavigation(
         currentPage: AppPage.creditReview,
+        parkIconActiveAsset: 'assets/button_park_icon_active.png',
         parkIconAsset: 'assets/button_park_icon.png',
+        timetableIconActiveAsset: 'assets/button_timetable_active.png',
         timetableIconAsset: 'assets/button_timetable.png',
+        creditReviewActiveAsset: 'assets/button_unit_review_active.png',
         creditReviewIconAsset: 'assets/button_unit_review.png',
+        rankingIconActiveAsset: 'assets/button_ranking_active.png',
         rankingIconAsset: 'assets/button_ranking.png',
+        itemIconActiveAsset: 'assets/button_dressup_active.png',
         itemIconAsset: 'assets/button_dressup.png',
         onParkTap: () {
           Navigator.pushReplacement(
