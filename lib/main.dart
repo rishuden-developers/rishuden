@@ -1,6 +1,7 @@
 import 'dart:math'; // mathライブラリをインポートしてcos, sin関数を使う
 
 import 'package:flutter/material.dart';
+import 'package:rishuden/character_question_page.dart';
 import 'login_page.dart';
 import 'mail_page.dart';
 import 'news_page.dart';
@@ -34,7 +35,7 @@ void main() async {
 }
 
 class MyApp extends StatelessWidget {
-  MyApp({super.key});
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -43,10 +44,10 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true, // Material 3 デザインを使用
-        fontFamily: 'misaki', // アプリ全体のフォントを設定
+        fontFamily: 'NotoSansJP', // アプリ全体のフォントを設定
       ),
       // アプリのホーム画面としてMyHomePageを設定
-      home: const MyHomePage(title: '履修伝説 - ホーム'),
+      home: MyHomePage(title: '履修伝説'),
     );
   }
 }
