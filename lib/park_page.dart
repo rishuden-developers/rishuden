@@ -30,13 +30,34 @@ class _ParkPageState extends State<ParkPage> {
   String _currentParkCharacterName = '勇者'; // デフォルト名
 
   // 課題情報とカウントダウンのためのState変数
-  String _taskSubject = "力学詳論Ⅰ";
-  String _taskName = "課題レポート";
-  String _taskDetails = "A4 5枚以上";
-  DateTime _taskDeadline = DateTime.now().add(
-    Duration(days: 5, hours: 18, minutes: 30),
-  );
-  String _countdownText = "計算中...";
+  // ★★★ 課題情報をリストで管理するように変更 ★★★
+  final List<Map<String, dynamic>> _tasks = [
+    {
+      'subject': "力学詳論Ⅰ",
+      'name': "課題レポート",
+      'details': "A4 5枚以上",
+      'deadline': DateTime.now().add(
+        const Duration(days: 5, hours: 18, minutes: 00),
+      ),
+    },
+    {
+      'subject': "総合英語",
+      'name': "最終課題",
+      'details': "プレゼン作成",
+      'deadline': DateTime.now().add(const Duration(days: 12, hours: 00)),
+    },
+    // 他にも課題があればここに追加
+  ];
+
+  // ★★★ PageViewを管理するための変数を追加 ★★★
+  final PageController _pageController = PageController(
+    viewportFraction: 0.725,
+  ); // 左右のページを少し見せる
+  int _currentPage = 0;
+  String _daysStr = "0";
+  String _hoursStr = "00";
+  String _minutesStr = "00";
+  String _secondsStr = "00";
   Timer? _timer;
 
   String _weekDateRange = ""; // AppBarの週表示用 (main.dartでのintl初期化が必要)
@@ -142,7 +163,190 @@ class _ParkPageState extends State<ParkPage> {
     );
   }
 
+  Widget _buildArrowSeparator() {
+    return const Padding(
+      padding: EdgeInsets.symmetric(horizontal: 16.0), // 左右の余白で位置調整
+      child: Icon(
+        Icons.arrow_forward_ios, // あるいは Icons.chevron_right などお好みの矢印
+        color: Colors.white30, // 白く透けた感じ
+        size: 24.0, // サイズ調整
+      ),
+    );
+  }
+
   // ★★★ この2つの関数を _ParkPageState クラスの中に追加 ★★★
+  Widget _buildBulletinBoardPage(Map<String, dynamic> taskData) {
+    final screenHeight = MediaQuery.of(context).size.height;
+    final screenWidth = MediaQuery.of(context).size.width;
+
+    // データを取り出す
+    final String taskSubject = taskData['subject'];
+    final String taskName = taskData['name'];
+    final String taskDetails = taskData['details'];
+    final DateTime taskDeadline = taskData['deadline'];
+
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        // 背景の掲示板画像
+        Positioned(
+          top: 0,
+          bottom: 0,
+          // ★★★ これらの値を調整して横幅を狭めます ★★★
+          left: screenWidth * 0.02, // 左から5%内側に寄せる
+          right: screenWidth * 0.04, // 右から5%内側に寄せる
+          child: Opacity(
+            opacity: 0.6,
+            child: Image.asset(
+              'assets/countdown.png',
+              fit: BoxFit.contain,
+            ), // fitも変更推奨
+          ),
+        ),
+        // 情報表示エリア
+        Positioned(
+          top: screenHeight * 0.227,
+          left: screenWidth * 0.0,
+          right: screenWidth * 0.0,
+          height: screenHeight * 0.28,
+          child: Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 10.0,
+              vertical: 8.0,
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // カウントダウンタイマー
+                // 注: このTextは、State変数(_countdownText)を直接参照するため、
+                // 表示される内容は全ページで同じになります。
+                RichText(
+                  textAlign: TextAlign.center,
+                  text: TextSpan(
+                    style: TextStyle(
+                      fontSize: screenHeight * 0.05,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.cyanAccent.withOpacity(0.95),
+                      letterSpacing: 1.0,
+                      fontFamily: 'display_free_tfb', // 数字用のフォント
+                      shadows: [
+                        BoxShadow(
+                          color: Colors.blue.withOpacity(0.8),
+                          blurRadius: 8,
+                          spreadRadius: 1,
+                        ),
+                        BoxShadow(
+                          color: Colors.cyanAccent.withOpacity(0.6),
+                          blurRadius: 12,
+                          spreadRadius: 4,
+                        ),
+                      ],
+                    ),
+                    // ... RichTextの中
+                    children: <InlineSpan>[
+                      // ★ List<InlineSpan> に変更
+                      TextSpan(text: _daysStr),
+                      TextSpan(
+                        text: 'd',
+                        style: TextStyle(
+                          fontFamily: 'misaki',
+                          fontSize: screenHeight * 0.03,
+                          color: Colors.white,
+                        ),
+                      ),
+
+                      // ★★★ スペースの作り方をWidgetSpan + SizedBoxに変更 ★★★
+                      const WidgetSpan(child: SizedBox(width: 12)),
+
+                      TextSpan(text: _hoursStr),
+                      TextSpan(
+                        text: 'h',
+                        style: TextStyle(
+                          fontFamily: 'misaki',
+                          fontSize: screenHeight * 0.03,
+                          color: Colors.white,
+                        ),
+                      ),
+
+                      const WidgetSpan(child: SizedBox(width: 12)),
+
+                      TextSpan(text: _minutesStr),
+                      TextSpan(
+                        text: 'm',
+                        style: TextStyle(
+                          fontFamily: 'misaki',
+                          fontSize: screenHeight * 0.03,
+                          color: Colors.white,
+                        ),
+                      ),
+
+                      const WidgetSpan(child: SizedBox(width: 12)),
+
+                      TextSpan(text: _secondsStr),
+                      TextSpan(
+                        text: 's',
+                        style: TextStyle(
+                          fontFamily: 'misaki',
+                          fontSize: screenHeight * 0.03,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                    // ...
+                  ),
+                ),
+                const SizedBox(height: 4),
+                // 教科名
+                Text(
+                  taskSubject,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: screenHeight * 0.030,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.lightBlue[100]!.withOpacity(0.95),
+                    fontFamily: 'misaki',
+                    shadows: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.5),
+                        blurRadius: 2,
+                        offset: Offset(1, 1),
+                      ),
+                    ],
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 6),
+                // 詳細コンテナ
+                Center(
+                  child: Container(
+                    width: screenWidth * 0.45,
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.35),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.2),
+                        width: 0.5,
+                      ),
+                    ),
+                    child: Text(
+                      "課題: $taskName\n詳細: $taskDetails\n期限: ${DateFormat('MM/dd HH:mm', 'ja').format(taskDeadline)}",
+                      style: TextStyle(
+                        fontSize: screenHeight * 0.020,
+                        color: Colors.grey[100]!.withOpacity(0.95),
+                        height: 1.4,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 
   // 1. 学生団体ロゴ用のダイアログ
   void _showOztechDialog(BuildContext context) {
@@ -359,30 +563,41 @@ class _ParkPageState extends State<ParkPage> {
     });
   }
 
+  // ★★★ このメソッドを丸ごと置き換え ★★★
+  // ★★★ このメソッドを丸ごと置き換え ★★★
   void _updateCountdownText() {
+    if (_tasks.isEmpty || _currentPage >= _tasks.length) return;
+    final currentTask = _tasks[_currentPage];
+    final DateTime taskDeadline = currentTask['deadline'];
+
     final now = DateTime.now();
-    final difference = _taskDeadline.difference(now);
-    String newText;
+    final difference = taskDeadline.difference(now);
+
     if (difference.isNegative) {
-      newText = "limit: 0日 00時00分00秒";
-      if (_timer?.isActive ?? false) {
-        _timer?.cancel();
+      if (mounted) {
+        setState(() {
+          _daysStr = "0";
+          _hoursStr = "00";
+          _minutesStr = "00";
+          _secondsStr = "00";
+        });
       }
+      _timer?.cancel();
     } else {
       final days = difference.inDays;
       final hours = difference.inHours.remainder(24);
       final minutes = difference.inMinutes.remainder(60);
       final seconds = difference.inSeconds.remainder(60);
-      final daysStr = days.toString();
-      final hoursStr = hours.toString().padLeft(2, '0');
-      final minutesStr = minutes.toString().padLeft(2, '0');
-      final secondsStr = seconds.toString().padLeft(2, '0');
-      newText = "${daysStr}:${hoursStr}:${minutesStr}:${secondsStr}";
-    }
-    if (mounted && _countdownText != newText) {
-      setState(() {
-        _countdownText = newText;
-      });
+
+      // 新しいState変数に値をセット
+      if (mounted) {
+        setState(() {
+          _daysStr = days.toString();
+          _hoursStr = hours.toString().padLeft(2, '0');
+          _minutesStr = minutes.toString().padLeft(2, '0');
+          _secondsStr = seconds.toString().padLeft(2, '0');
+        });
+      }
     }
   }
 
@@ -620,126 +835,24 @@ class _ParkPageState extends State<ParkPage> {
                   alignment: Alignment.center,
                   children: [
                     // === 電子掲示板 (背景) ===
-                    Positioned(
-                      top: -(screenHeight * 0.1),
-                      left: screenWidth * 0.02,
-                      right: screenWidth * 0.02,
-                      height: screenHeight * 1.0,
-                      child: Opacity(
-                        opacity: 0.6,
-                        child: Image.asset(
-                          'assets/countdown.png',
-                          fit: BoxFit.fill,
-                        ),
-                      ),
-                    ),
-                    // === 電子掲示板の情報表示エリア ===
-                    Positioned(
-                      top: screenHeight * 0.169,
-                      left: screenWidth * 0.10, // 左右の余白を少し広げる
-                      right: screenWidth * 0.10,
-                      height: screenHeight * 0.28, // 表示エリアの高さを確保
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12.0,
-                          vertical: 8.0,
-                        ), // パディング調整
-                        child: SingleChildScrollView(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.start,
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              // ★★★ このTextウィジェットを修正 ★★★
-                              Text(
-                                _countdownText,
+                    SizedBox(
+                      height: screenHeight, // PageViewの領域の高さを画面全体に
+                      child: PageView(
+                        controller: _pageController,
 
-                                textAlign: TextAlign.center,
-
-                                style: TextStyle(
-                                  fontFamily: 'display_free_tfb',
-
-                                  fontSize: screenHeight * 0.05,
-
-                                  fontWeight: FontWeight.bold,
-
-                                  color: Colors.cyanAccent.withOpacity(0.95),
-
-                                  letterSpacing: 2.0,
-
-                                  shadows: [
-                                    BoxShadow(
-                                      color: Colors.blue.withOpacity(0.8),
-
-                                      blurRadius: 8,
-
-                                      spreadRadius: 1,
-                                    ),
-
-                                    BoxShadow(
-                                      color: Colors.cyanAccent.withOpacity(0.6),
-
-                                      blurRadius: 12,
-
-                                      spreadRadius: 4,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(height: 4), // 少し間隔を詰める
-                              Text(
-                                _taskSubject,
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontSize: screenHeight * 0.030,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.lightBlue[100]!.withOpacity(
-                                    0.95,
-                                  ),
-                                  fontFamily: 'misaki',
-                                  shadows: [
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(0.5),
-                                      blurRadius: 2,
-                                      offset: Offset(1, 1),
-                                    ),
-                                  ],
-                                ),
-                                overflow: TextOverflow.ellipsis, // 教科名が長い場合
-                              ),
-                              const SizedBox(height: 6), // 少し間隔を詰める
-                              Center(
-                                // ★ ContainerをCenterで囲んで中央寄せにする (任意)
-                                child: Container(
-                                  width:
-                                      screenWidth *
-                                      0.55, // ★ 横幅を画面幅の65%に設定 (掲示板の幅より小さく)
-                                  // この値を調整してください
-                                  padding: const EdgeInsets.all(10),
-                                  decoration: BoxDecoration(
-                                    color: Colors.black.withOpacity(0.35),
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(
-                                      color: Colors.white.withOpacity(0.2),
-                                      width: 0.5,
-                                    ),
-                                  ),
-                                  child: SingleChildScrollView(
-                                    child: Text(
-                                      "課題: $_taskName\n詳細: $_taskDetails\n期限: ${DateFormat('MM/dd HH:mm', 'ja').format(_taskDeadline)}",
-                                      style: TextStyle(
-                                        fontSize: screenHeight * 0.020,
-                                        color: Colors.grey[100]!.withOpacity(
-                                          0.95,
-                                        ),
-                                        height: 1.4,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
+                        onPageChanged: (int page) {
+                          // ページが切り替わったら、現在のページ番号を更新し、
+                          // カウントダウン表示も更新する
+                          setState(() {
+                            _currentPage = page;
+                            _updateCountdownText();
+                          });
+                        },
+                        children:
+                            _tasks.map((taskData) {
+                              // 各タスクデータから1ページ分の掲示板を生成
+                              return _buildBulletinBoardPage(taskData);
+                            }).toList(),
                       ),
                     ),
                     // === 中央のキャラクター ===
