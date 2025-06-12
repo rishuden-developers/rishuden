@@ -197,7 +197,7 @@ class _ParkPageState extends State<ParkPage> {
           left: screenWidth * 0.02, // 左から5%内側に寄せる
           right: screenWidth * 0.04, // 右から5%内側に寄せる
           child: Opacity(
-            opacity: 0.6,
+            opacity: 0.4,
             child: Image.asset(
               'assets/countdown.png',
               fit: BoxFit.contain,
@@ -228,7 +228,7 @@ class _ParkPageState extends State<ParkPage> {
                     style: TextStyle(
                       fontSize: screenHeight * 0.05,
                       fontWeight: FontWeight.bold,
-                      color: Colors.cyanAccent.withOpacity(0.95),
+                      color: Colors.cyanAccent.withOpacity(0.85),
                       letterSpacing: 1.0,
                       fontFamily: 'display_free_tfb', // 数字用のフォント
                       shadows: [
