@@ -104,12 +104,33 @@ class LiquidLevelGaugeState extends State<LiquidLevelGauge> {
       duration: const Duration(milliseconds: 500),
       curve: Curves.easeOut,
       width: gaugeInnerWidth * progress,
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
+        // ★ constを削除
         gradient: LinearGradient(
-          colors: [Color(0xFF00FFFF), Color.fromARGB(255, 153, 36, 221)],
+          colors: [
+            const Color(0xFF00FFFF).withOpacity(0.2), // 開始：薄いシアン
+            const Color(0xFF00FFFF).withOpacity(0.6), // 中間：濃いめのシアン
+            const Color.fromARGB(255, 153, 36, 221).withOpacity(1.0), // 終了：パープル
+          ],
+          stops: [0.0, 0.5, 1.0],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
+        // ★★★ 光沢感（boxShadow）を追加 ★★★
+        boxShadow: [
+          // 1層目: グラデーションの色に合わせた内側の光
+          BoxShadow(
+            color: const Color(0xFF00FFFF).withOpacity(0.5), // 明るい水色の光
+            blurRadius: 12.0,
+            spreadRadius: 3.0,
+          ),
+          // 2層目: 外側に大きく広がる白い光
+          BoxShadow(
+            color: Colors.white.withOpacity(0.45),
+            blurRadius: 50.0,
+            spreadRadius: 40.0,
+          ),
+        ],
       ),
     );
 

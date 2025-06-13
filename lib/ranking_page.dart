@@ -2,47 +2,42 @@ import 'package:flutter/material.dart';
 import 'ranking_trending_page.dart'; // 急上昇ランキングページ
 import 'ranking_explore_page.dart'; // 検索ランキングページ
 import 'ranking_vote_page.dart'; // 投票ランキングページ
+import 'dart:ui'; // すりガラス効果(ImageFilter)のために必要
 
 // ★★★ 共通フッターと遷移先ページをインポート ★★★
-import 'common_bottom_navigation.dart'; // common_bottom_navigation.dart のパスを正しく指定してください
+import 'common_bottom_navigation.dart';
 import 'park_page.dart';
 import 'time_schedule_page.dart';
 import 'credit_review_page.dart';
-// import 'ranking_page.dart'; // 自分自身は不要
 import 'item_page.dart';
+import 'mail_page.dart'; // MailPageをインポート
 
 class RankingPage extends StatelessWidget {
   const RankingPage({super.key});
 
-  // ランキングボタンの共通ウィジェット (変更なし)
+  // ランキングボタンの共通ウィジェット
   Widget _buildRankingButton(
     BuildContext context,
     String text,
     VoidCallback onPressed,
   ) {
     return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 40.0,
-        vertical: 8.0,
-      ), // ボタン間の縦のスペースも少し調整
+      padding: const EdgeInsets.symmetric(horizontal: 40.0, vertical: 8.0),
       child: ElevatedButton(
         onPressed: onPressed,
         style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.brown[700]?.withOpacity(0.9), // 少し透明度を追加
+          backgroundColor: Colors.brown[700]?.withOpacity(0.9),
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(vertical: 18),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12), // 角丸を少し調整
-            side: BorderSide(
-              color: Colors.orangeAccent[100]!,
-              width: 1.5,
-            ), // 枠線の色を調整
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(color: Colors.orangeAccent[100]!, width: 1.5),
           ),
-          elevation: 6, // 影を少し調整
+          elevation: 6,
           textStyle: const TextStyle(
-            fontSize: 18, // テキストサイズ調整
+            fontSize: 18,
             fontWeight: FontWeight.bold,
-            fontFamily: 'misaki', // フォント指定例
+            fontFamily: 'misaki',
           ),
         ),
         child: Text(text),
@@ -54,13 +49,11 @@ class RankingPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final double maxContentWidth = 600.0;
-    // CommonBottomNavigationの高さに合わせて調整
     final double bottomNavBarHeight = 95.0;
 
     return Scaffold(
       extendBodyBehindAppBar: true,
       extendBody: true,
-
       appBar: AppBar(
         title: const Text('ランキング'),
         backgroundColor: Colors.transparent,
@@ -73,8 +66,6 @@ class RankingPage extends StatelessWidget {
           fontWeight: FontWeight.bold,
         ),
       ),
-
-      // ★★★ 1. ここにあった bottomNavigationBar プロパティは削除します ★★★
       body: Container(
         width: double.infinity,
         height: double.infinity,
@@ -84,7 +75,6 @@ class RankingPage extends StatelessWidget {
             fit: BoxFit.cover,
           ),
         ),
-        // ★★★ 2. Containerの子をStackにして、コンテンツとナビゲーションバーを重ねます ★★★
         child: Stack(
           children: [
             // --- レイヤー1: 元々のページコンテンツ ---
@@ -158,14 +148,87 @@ class RankingPage extends StatelessWidget {
               ),
             ),
 
-            // ★★★ 3. レイヤー2: フローティングナビゲーションバー ★★★
+            // ★★★ レイヤー2: 後ろを暗くするオーバーレイ ★★★
+            Positioned.fill(
+              child: Container(color: Colors.black.withOpacity(0.5)),
+            ),
+
+            // ★★★ レイヤー3: 常に表示するすりガラスのコンテンツ ★★★
+            Positioned.fill(
+              child: Align(
+                alignment: Alignment.center,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(15.0),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
+                    child: Container(
+                      width: MediaQuery.of(context).size.width * 0.85,
+                      padding: const EdgeInsets.all(24.0),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(15.0),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.3),
+                        ),
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text(
+                            'Ver.2.0で実装予定！',
+                            style: TextStyle(
+                              fontFamily: 'misaki',
+                              fontSize: 28,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          const Text(
+                            '現在、アプリのバージョン2.0を開発中です。\nみんなが欲しい機能や改善点など、ぜひご意見をお聞かせください！',
+                            style: TextStyle(
+                              fontFamily: 'misaki',
+                              fontSize: 16,
+                              color: Colors.white,
+                              height: 1.5,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 24),
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.orangeAccent,
+                              foregroundColor: Colors.white,
+                              textStyle: const TextStyle(
+                                fontFamily: 'misaki',
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const MailPage(),
+                                ),
+                              );
+                            },
+                            child: const Text('ご意見を送る'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
+            // ★★★ レイヤー4: フローティングナビゲーションバー ★★★
             Positioned(
               bottom: 0,
               left: 0,
               right: 0,
               child: CommonBottomNavigation(
-                currentPage: AppPage.ranking, // このページの種別を指定
-                // --- アイコンのパスを指定 ---
+                currentPage: AppPage.ranking,
                 parkIconAsset: 'assets/button_park_icon.png',
                 parkIconActiveAsset: 'assets/button_park_icon_active.png',
                 timetableIconAsset: 'assets/button_timetable.png',
@@ -176,8 +239,6 @@ class RankingPage extends StatelessWidget {
                 rankingIconActiveAsset: 'assets/button_ranking_active.png',
                 itemIconAsset: 'assets/button_dressup.png',
                 itemIconActiveAsset: 'assets/button_dressup_active.png',
-
-                // --- タップ時の処理 ---
                 onParkTap: () {
                   Navigator.pushReplacement(
                     context,

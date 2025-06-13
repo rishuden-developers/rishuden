@@ -58,6 +58,9 @@ flutter:
     - assets/oztech.png
     - assets/potipoti.png
     - assets/bottom_bar_bg.png
+    - assets/stage.png
+    - assets/make_quest.png
+    - assets/takoyaki.png
   fonts:
     - family: Noto Sans JP
       fonts:
@@ -66,5 +69,8 @@ flutter:
       fonts:
         - asset: fonts/misaki_gothic.ttf
     - family: display_free_tfb
+      fonts:
+        - asset: fonts/DISPLAY FREE TFB.ttf
+    - family: DISPLAY FREE TFB
       fonts:
         - asset: fonts/DISPLAY FREE TFB.ttf

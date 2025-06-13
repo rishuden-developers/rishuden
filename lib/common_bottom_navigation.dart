@@ -101,16 +101,16 @@ class CommonBottomNavigation extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: <Widget>[
               _buildNavItem(
-                inactiveIconAsset: creditReviewIconAsset,
-                activeIconAsset: creditReviewActiveAsset,
-                onPressed: onCreditReviewTap,
-                isActive: currentPage == AppPage.creditReview,
-              ),
-              _buildNavItem(
                 inactiveIconAsset: rankingIconAsset,
                 activeIconAsset: rankingIconActiveAsset,
                 onPressed: onRankingTap,
                 isActive: currentPage == AppPage.ranking,
+              ),
+              _buildNavItem(
+                inactiveIconAsset: creditReviewIconAsset,
+                activeIconAsset: creditReviewActiveAsset,
+                onPressed: onCreditReviewTap,
+                isActive: currentPage == AppPage.creditReview,
               ),
               _buildNavItem(
                 inactiveIconAsset: parkIconAsset,
