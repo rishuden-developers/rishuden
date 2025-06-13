@@ -17,6 +17,7 @@ dependencies:
   flutter_rating_bar: ^4.0.0 # ★これを追加してください★
   provider: ^6.0.0
   url_launcher: ^6.3.1
+  shared_preferences: ^2.2.3
 
 dev_dependencies:
   flutter_test:
@@ -59,6 +60,8 @@ flutter:
     - assets/stage.png
     - assets/make_quest.png
     - assets/takoyaki.png
+    - assets/crack_overlay.png
+    - assets/takoyaki_off.png
   fonts:
     - family: Noto Sans JP
       fonts:
