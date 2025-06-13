@@ -57,6 +57,8 @@ flutter:
     - assets/potipoti.png
     - assets/bottom_bar_bg.png
     - assets/stage.png
+    - assets/make_quest.png
+    - assets/takoyaki.png
   fonts:
     - family: Noto Sans JP
       fonts:

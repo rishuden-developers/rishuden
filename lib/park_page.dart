@@ -15,6 +15,7 @@ import 'time_schedule_page.dart';
 import 'news_page.dart';
 import 'mail_page.dart';
 import 'level_gauge.dart';
+import 'quest_create.dart'; // QuestCreationWidgetのインポート
 // park_page.dart の一番上に追加
 import 'dart:ui';
 
@@ -70,6 +71,7 @@ class _ParkPageState extends State<ParkPage> {
   int _maxExp = 2000;
 
   bool _isCharacterInfoInitialized = false;
+  bool isQuestCreationVisible = false;
 
   Future<void> _launchURL(String url) async {
     final Uri uri = Uri.parse(url);
@@ -180,31 +182,35 @@ class _ParkPageState extends State<ParkPage> {
     final screenHeight = MediaQuery.of(context).size.height;
     final screenWidth = MediaQuery.of(context).size.width;
 
-    // データを取り出す
+    // データ取り出し
     final String taskSubject = taskData['subject'];
     final String taskName = taskData['name'];
     final String taskDetails = taskData['details'];
     final DateTime taskDeadline = taskData['deadline'];
 
+    // 追加データ（仮）
+    final int defeatedCount = taskData['defeatedCount'] ?? 3; // 討伐済み人数
+    final int totalParticipants = taskData['totalParticipants'] ?? 5; // 総参加者数
+    final String creatorCharacterImage =
+        taskData['creatorCharacterImage'] ?? 'assets/creator.png'; // 作成者キャラ画像パス
+    final String creatorComment = taskData['creatorComment'] ?? 'よろしくお願いします！';
+
     return Stack(
       alignment: Alignment.center,
       children: [
-        // 背景の掲示板画像
+        // 背景掲示板画像
         Positioned(
           top: 0,
           bottom: 0,
-          // ★★★ これらの値を調整して横幅を狭めます ★★★
-          left: screenWidth * 0.02, // 左から5%内側に寄せる
-          right: screenWidth * 0.04, // 右から5%内側に寄せる
+          left: screenWidth * 0.02,
+          right: screenWidth * 0.04,
           child: Opacity(
             opacity: 0.4,
-            child: Image.asset(
-              'assets/countdown.png',
-              fit: BoxFit.contain,
-            ), // fitも変更推奨
+            child: Image.asset('assets/countdown.png', fit: BoxFit.contain),
           ),
         ),
-        // 情報表示エリア
+
+        // 情報表示エリア（既存）
         Positioned(
           top: screenHeight * 0.227,
           left: screenWidth * 0.0,
@@ -219,34 +225,35 @@ class _ParkPageState extends State<ParkPage> {
               mainAxisAlignment: MainAxisAlignment.start,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // カウントダウンタイマー
-                // 注: このTextは、State変数(_countdownText)を直接参照するため、
-                // 表示される内容は全ページで同じになります。
+                // カウントダウンタイマー（既存）
                 RichText(
                   textAlign: TextAlign.center,
                   text: TextSpan(
                     style: TextStyle(
                       fontSize: screenHeight * 0.05,
                       fontWeight: FontWeight.bold,
-                      color: Colors.cyanAccent.withOpacity(0.85),
+                      color: Colors.cyanAccent.withOpacity(0.9), // ボタンと統一
                       letterSpacing: 1.0,
-                      fontFamily: 'display_free_tfb', // 数字用のフォント
+                      fontFamily: 'display_free_tfb',
                       shadows: [
                         BoxShadow(
-                          color: Colors.blue.withOpacity(0.8),
-                          blurRadius: 8,
-                          spreadRadius: 1,
-                        ),
-                        BoxShadow(
-                          color: Colors.cyanAccent.withOpacity(0.6),
+                          color: Colors.cyanAccent.withOpacity(
+                            0.6,
+                          ), // ボタンのshadowColorと統一
                           blurRadius: 12,
                           spreadRadius: 4,
+                          offset: Offset(0, 2),
+                        ),
+                        BoxShadow(
+                          color: Colors.blue.withOpacity(0.5), // 補助的なグロー
+                          blurRadius: 8,
+                          spreadRadius: 2,
+                          offset: Offset(0, 0),
                         ),
                       ],
                     ),
-                    // ... RichTextの中
+
                     children: <InlineSpan>[
-                      // ★ List<InlineSpan> に変更
                       TextSpan(text: _daysStr),
                       TextSpan(
                         text: 'd',
@@ -256,10 +263,7 @@ class _ParkPageState extends State<ParkPage> {
                           color: Colors.white,
                         ),
                       ),
-
-                      // ★★★ スペースの作り方をWidgetSpan + SizedBoxに変更 ★★★
                       const WidgetSpan(child: SizedBox(width: 12)),
-
                       TextSpan(text: _hoursStr),
                       TextSpan(
                         text: 'h',
@@ -269,9 +273,7 @@ class _ParkPageState extends State<ParkPage> {
                           color: Colors.white,
                         ),
                       ),
-
                       const WidgetSpan(child: SizedBox(width: 12)),
-
                       TextSpan(text: _minutesStr),
                       TextSpan(
                         text: 'm',
@@ -281,9 +283,7 @@ class _ParkPageState extends State<ParkPage> {
                           color: Colors.white,
                         ),
                       ),
-
                       const WidgetSpan(child: SizedBox(width: 12)),
-
                       TextSpan(text: _secondsStr),
                       TextSpan(
                         text: 's',
@@ -294,11 +294,10 @@ class _ParkPageState extends State<ParkPage> {
                         ),
                       ),
                     ],
-                    // ...
                   ),
                 ),
                 const SizedBox(height: 4),
-                // 教科名
+                // 教科名（既存）
                 Text(
                   taskSubject,
                   textAlign: TextAlign.center,
@@ -318,7 +317,7 @@ class _ParkPageState extends State<ParkPage> {
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 6),
-                // 詳細コンテナ
+                // 詳細コンテナ（既存）
                 Center(
                   child: Container(
                     width: screenWidth * 0.45,
@@ -339,6 +338,201 @@ class _ParkPageState extends State<ParkPage> {
                         height: 1.4,
                       ),
                     ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+
+        // 左上：作成者キャラ画像＋一言コメント
+        Positioned(
+          top: screenHeight * 0.14,
+          left: screenWidth * 0.03,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                width: screenWidth * 0.12,
+                height: screenWidth * 0.12,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: Colors.white.withOpacity(0.5),
+                    width: 1.2,
+                  ),
+                  image: const DecorationImage(
+                    image: AssetImage('assets/character_gorilla.png'),
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                constraints: BoxConstraints(maxWidth: screenWidth * 0.3),
+                child: Text(
+                  creatorComment,
+                  style: TextStyle(
+                    fontSize: screenHeight * 0.018,
+                    color: Colors.white.withOpacity(0.9),
+                    fontFamily: 'misaki',
+                    shadows: [
+                      Shadow(
+                        color: Colors.black.withOpacity(0.7),
+                        offset: Offset(1, 1),
+                        blurRadius: 3,
+                      ),
+                    ],
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // 右上：たこ焼きボタン
+        Positioned(
+          top: screenHeight * 0.30,
+          left: screenWidth * 0.11,
+          child: GestureDetector(
+            onTap: () {
+              // たこ焼きボタン押下時の処理
+              print('たこ焼きボタンが押されました');
+              // ここに感謝のアイテム贈呈処理など実装
+            },
+            child: Container(
+              width: screenWidth * 0.10,
+              height: screenWidth * 0.10,
+              decoration: BoxDecoration(
+                image: DecorationImage(
+                  image: AssetImage('assets/takoyaki.png'), // たこ焼き画像パス
+                  fit: BoxFit.contain,
+                ),
+              ),
+            ),
+          ),
+        ),
+
+        Positioned(
+          top: screenHeight * 0.43,
+          left: screenWidth * 0.1,
+          width: screenWidth * 0.18,
+          height: screenHeight * 0.12,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '討伐人数',
+                style: TextStyle(
+                  fontSize: screenHeight * 0.018,
+                  color: Colors.white.withOpacity(0.85),
+                  fontFamily: 'misaki',
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 1),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Text(
+                    '$defeatedCount / $totalParticipants',
+                    style: TextStyle(
+                      fontSize: screenHeight * 0.017,
+                      color: Colors.white.withOpacity(0.85),
+                      fontFamily: 'misaki',
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Container(
+                      height: screenHeight * 0.03,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.6),
+                          width: 1,
+                        ),
+                        color: Colors.white.withOpacity(0.15),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.cyanAccent.withOpacity(
+                              0.6,
+                            ), // 討伐ボタンのshadowColor
+                            blurRadius: 6,
+                            spreadRadius: 1,
+                            offset: Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: FractionallySizedBox(
+                          alignment: Alignment.centerLeft,
+                          widthFactor:
+                              totalParticipants > 0
+                                  ? defeatedCount / totalParticipants
+                                  : 0,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Colors.cyanAccent.withOpacity(
+                                0.9,
+                              ), // 討伐ボタンの背景色
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+
+        // 右下：課題提出ボタン（討伐ボタン）
+        Positioned(
+          top: screenHeight * 0.315,
+          right: screenWidth * 0.1,
+          child: ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.cyanAccent.withOpacity(0.9),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 10,
+                vertical: 10,
+              ), // 横の余白さらに縮小
+              minimumSize: Size(
+                screenWidth * 0.12,
+                screenHeight * 0.045,
+              ), // 横幅を小さく
+              elevation: 8,
+              shadowColor: Colors.cyanAccent.withOpacity(0.6),
+            ),
+            onPressed: () {
+              print('討伐ボタンが押されました');
+              // TODO: 提出処理などをここに書く
+            },
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.check_circle_outline,
+                  color: Colors.white,
+                  size: screenHeight * 0.021,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  '討伐',
+                  style: TextStyle(
+                    fontSize: screenHeight * 0.02,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                    fontFamily: 'misaki',
                   ),
                 ),
               ],
@@ -879,8 +1073,8 @@ class _ParkPageState extends State<ParkPage> {
                           ), // Y位置調整
                           child: Image.asset(
                             _currentParkCharacterImage,
-                            width: screenWidth * 0.7,
-                            height: screenHeight * 0.6,
+                            width: screenWidth * 0.65,
+                            height: screenHeight * 0.55,
                             fit: BoxFit.contain,
                           ),
                         ),
@@ -1146,6 +1340,24 @@ class _ParkPageState extends State<ParkPage> {
                         ),
                       ),
                     ),
+                    Positioned(
+                      bottom: 40, // もとの120より下へ。必要に応じて調整
+
+                      child: GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            isQuestCreationVisible =
+                                true; // クエスト作成Widget表示用のstate変更
+                          });
+                        },
+                        child: Image.asset(
+                          'assets/make_quest.png',
+                          width: 360, // 幅
+                          height: 120, // 高さ（省略すれば縦横比に合わせて自動）
+                          fit: BoxFit.contain, // 画像が潰れないように調整),
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -1214,6 +1426,32 @@ class _ParkPageState extends State<ParkPage> {
               },
             ),
           ),
+          if (isQuestCreationVisible)
+            Positioned.fill(
+              child: Container(
+                color: Colors.black54,
+                alignment: Alignment.center,
+                child: QuestCreationWidget(
+                  classes: ['線形代数', '英語A', 'プログラミング演習'],
+                  onCancel: () {
+                    setState(() {
+                      isQuestCreationVisible = false;
+                    });
+                  },
+                  onCreate: (selectedClass, taskType, deadline, comment) {
+                    // 例: comment を使わない場合は無視してもOK
+                    print('授業: $selectedClass');
+                    print('タスク: $taskType');
+                    print('締切: $deadline');
+                    print('コメント: $comment');
+
+                    setState(() {
+                      isQuestCreationVisible = false;
+                    });
+                  },
+                ),
+              ),
+            ),
         ],
       ),
     );
