@@ -106,8 +106,13 @@ class LiquidLevelGaugeState extends State<LiquidLevelGauge> {
       width: gaugeInnerWidth * progress,
       decoration: BoxDecoration(
         // ★ constを削除
-        gradient: const LinearGradient(
-          colors: [Color(0xFF00FFFF), Color.fromARGB(255, 153, 36, 221)],
+        gradient: LinearGradient(
+          colors: [
+            const Color(0xFF00FFFF).withOpacity(0.2), // 開始：薄いシアン
+            const Color(0xFF00FFFF).withOpacity(0.6), // 中間：濃いめのシアン
+            const Color.fromARGB(255, 153, 36, 221).withOpacity(1.0), // 終了：パープル
+          ],
+          stops: [0.0, 0.5, 1.0],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),

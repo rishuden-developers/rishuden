@@ -944,51 +944,6 @@ class _TimeSchedulePageState extends State<TimeSchedulePage> {
       ),
     );
   }
-  // ★★★ この新しいメソッドをクラス内に丸ごと追加してください ★★★
-
-  List<Widget> _buildCharactersAsPositioned(int dayIndex, double totalHeight) {
-    List<Widget> positionedWidgets = [];
-    final double rowHeight = totalHeight / 8.0;
-
-    for (final charInfo in _displayedCharacters) {
-      if (charInfo['day'] == dayIndex.toString()) {
-        // 'period' は現在 0〜5 の学期インデックスで保存されています
-        final int periodIndex = int.parse(charInfo['period']!);
-
-        // 学期インデックス(0-5)を、見た目の行インデックス(0-7)に変換します
-        int visualRowIndex;
-        if (periodIndex <= 1) {
-          // 1限 or 2限 (period 0 or 1)
-          visualRowIndex = periodIndex;
-        } else {
-          // 3限〜6限 (period 2, 3, 4, 5)
-          visualRowIndex = periodIndex + 1; // 昼休みの行(インデックス2)をスキップ
-        }
-
-        final top = visualRowIndex * rowHeight;
-
-        positionedWidgets.add(
-          Positioned(
-            top: top,
-            left: 0,
-            right: 0,
-            height: rowHeight,
-            // IgnorePointerでキャラクターのタップを無効にし、背景のタップが反応するようにする
-            child: IgnorePointer(
-              child: Padding(
-                padding: const EdgeInsets.all(4.0),
-                child: Image.asset(
-                  charInfo['path']!,
-                  fit: BoxFit.contain, // ★★★ この一行がオーバーフローを防ぎます
-                ),
-              ),
-            ),
-          ),
-        );
-      }
-    }
-    return positionedWidgets;
-  }
 
   Widget _buildNewTimetableGrid({
     required double periodRowHeight,
