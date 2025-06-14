@@ -12,29 +12,7 @@ import 'park_page.dart';
 import 'credit_review_page.dart';
 import 'ranking_page.dart';
 import 'item_page.dart';
-
-// データモデル定義
-enum AttendancePolicy { mandatory, flexible, skip, none }
-
-class TimetableEntry {
-  final String id;
-  final String subjectName;
-  final String classroom;
-  final int dayOfWeek;
-  final int period;
-  final Color color;
-  final AttendancePolicy initialPolicy;
-
-  TimetableEntry({
-    required this.id,
-    required this.subjectName,
-    required this.classroom,
-    required this.dayOfWeek,
-    required this.period,
-    this.color = Colors.white,
-    this.initialPolicy = AttendancePolicy.flexible,
-  });
-}
+import 'timetable_entry.dart';
 
 enum AttendanceStatus { present, absent, late, none }
 
