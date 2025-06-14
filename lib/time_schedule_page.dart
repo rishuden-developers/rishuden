@@ -3,6 +3,8 @@ import 'dart:async';
 import 'dart:math';
 import 'dart:ui';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -63,8 +65,6 @@ class _TimeSchedulePageState extends State<TimeSchedulePage> {
   List<Map<String, dynamic>> _sundayEvents = [];
   Map<int, List<Map<String, dynamic>>> _weekdayEvents = {};
   double _timeGaugeProgress = 0.0;
-  String _selectedCharacter = 'swordman';
-  bool _isLoading = true;
 
   @override
   void initState() {
@@ -80,31 +80,34 @@ class _TimeSchedulePageState extends State<TimeSchedulePage> {
     _highlightTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
       _updateHighlight();
     });
-    _updateCharacterInfo();
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // キャラクター情報を更新
-    _updateCharacterInfo();
+    _fetchCharacterInfoFromFirebase();
   }
 
-  Future<void> _updateCharacterInfo() async {
+  Future<void> _fetchCharacterInfoFromFirebase() async {
     try {
-      // デバッグ用に固定のキャラクターを設定
-      _mainCharacterName = '剣士';
-      _mainCharacterImagePath = 'assets/character_swordman.png';
-
-      if (_displayedCharacters.isEmpty) {
-        if (mounted) {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        final doc =
+            await FirebaseFirestore.instance
+                .collection('users')
+                .doc(user.uid)
+                .get();
+        if (doc.exists) {
+          final data = doc.data() as Map<String, dynamic>;
           setState(() {
-            _placeCharactersRandomly();
+            _mainCharacterName = data['character'] ?? '剣士';
+            _mainCharacterImagePath =
+                data['characterImage'] ?? 'assets/character_swordman.png';
           });
         }
       }
     } catch (e) {
-      print('Error updating character info: $e');
+      print('Error fetching character info: $e');
     }
   }
 
@@ -442,35 +445,10 @@ class _TimeSchedulePageState extends State<TimeSchedulePage> {
                         ],
                       ),
                     ),
-                    _buildAttendancePopupMenu(uniqueKey, entry),
                   ],
                 ),
               ],
             ),
-            if (policy == AttendancePolicy.mandatory && hasCount)
-              Positioned(
-                top: 2,
-                right: 2,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 4,
-                    vertical: 1,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.7),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(
-                    "欠$absenceCount 遅$lateCount",
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 8,
-                      fontFamily: 'misaki',
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ),
           ],
         ),
       );
@@ -482,13 +460,46 @@ class _TimeSchedulePageState extends State<TimeSchedulePage> {
           right: 0,
           height: height,
           child: InkWell(
-            onTap:
-                () => _showNoteDialog(
-                  context,
-                  dayIndex,
-                  academicPeriodIndex: periodIndex,
+            onTap: () {
+              _showNoteDialog(
+                context,
+                dayIndex,
+                academicPeriodIndex: periodIndex,
+              );
+            },
+            child: Stack(
+              children: [
+                classWidget,
+                // 出席状態アイコンを右上に表示
+                Positioned(
+                  top: 2,
+                  right: 2,
+                  child:
+                      _attendanceStatus[uniqueKey] != null &&
+                              _attendanceStatus[uniqueKey] !=
+                                  AttendanceStatus.none
+                          ? Icon(
+                            _attendanceStatus[uniqueKey] ==
+                                    AttendanceStatus.present
+                                ? Icons.check_circle
+                                : _attendanceStatus[uniqueKey] ==
+                                    AttendanceStatus.absent
+                                ? Icons.cancel
+                                : Icons.access_time,
+                            color:
+                                _attendanceStatus[uniqueKey] ==
+                                        AttendanceStatus.present
+                                    ? Colors.green
+                                    : _attendanceStatus[uniqueKey] ==
+                                        AttendanceStatus.absent
+                                    ? Colors.red
+                                    : Colors.orange,
+                            size: 16,
+                          )
+                          : const SizedBox.shrink(),
                 ),
-            child: classWidget,
+              ],
+            ),
           ),
         ),
       );
@@ -1225,6 +1236,34 @@ class _TimeSchedulePageState extends State<TimeSchedulePage> {
                         selectedForegroundColor: Colors.white,
                       ),
                     ),
+                    // 出席確認
+                    Row(
+                      children: [
+                        Text('出席確認:'),
+                        DropdownButton<AttendanceStatus>(
+                          value:
+                              _attendanceStatus[oneTimeNoteKey] ??
+                              AttendanceStatus.none,
+                          items:
+                              AttendanceStatus.values.map((status) {
+                                return DropdownMenuItem(
+                                  value: status,
+                                  child: Text(_attendanceStatusLabel(status)),
+                                );
+                              }).toList(),
+                          onChanged: (newStatus) {
+                            setState(() {
+                              _setAttendanceStatus(
+                                oneTimeNoteKey,
+                                entry!.id,
+                                newStatus!,
+                              );
+                            });
+                            Navigator.pop(context); // 必要に応じて
+                          },
+                        ),
+                      ],
+                    ),
                   ],
                 ),
               ),
@@ -1505,7 +1544,7 @@ class _TimeSchedulePageState extends State<TimeSchedulePage> {
     }
 
     return Container(
-      width: 65,
+      width: 45,
       // ★★★ 修正点：オーバーフローを確実に防ぐため、高さを1ピクセル減らす ★★★
       height:
           totalColumnHeight > 1 ? totalColumnHeight - 1.0 : totalColumnHeight,
@@ -1525,6 +1564,8 @@ class _TimeSchedulePageState extends State<TimeSchedulePage> {
                 duration: const Duration(milliseconds: 500),
                 curve: Curves.easeOut,
                 height: totalColumnHeight * _timeGaugeProgress,
+                width: 40,
+                margin: const EdgeInsets.only(bottom: 8),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(10),
                   gradient: LinearGradient(
@@ -1616,7 +1657,9 @@ class _TimeSchedulePageState extends State<TimeSchedulePage> {
                         ),
                       ],
                       Text(
-                        periodLabels[index],
+                        periodLabels[index] == '放課後'
+                            ? periodLabels[index].split('').join('\n')
+                            : periodLabels[index],
                         style: TextStyle(
                           fontFamily: 'misaki',
                           fontSize: periodLabels[index].length > 1 ? 12 : 18,
@@ -1630,6 +1673,10 @@ class _TimeSchedulePageState extends State<TimeSchedulePage> {
                             ),
                           ],
                         ),
+                        textAlign:
+                            periodLabels[index] == '放課後'
+                                ? TextAlign.center
+                                : TextAlign.start,
                       ),
                     ],
                   ),
@@ -1825,6 +1872,20 @@ class _TimeSchedulePageState extends State<TimeSchedulePage> {
         ),
       ),
     );
+  }
+
+  String _attendanceStatusLabel(AttendanceStatus status) {
+    switch (status) {
+      case AttendanceStatus.present:
+        return '出席';
+      case AttendanceStatus.absent:
+        return '欠席';
+      case AttendanceStatus.late:
+        return '遅刻';
+      case AttendanceStatus.none:
+      default:
+        return '未設定';
+    }
   }
 }
 
