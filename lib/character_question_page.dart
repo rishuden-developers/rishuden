@@ -5,6 +5,8 @@ import 'package:provider/provider.dart';
 import 'character_decide_page.dart';
 import 'character_provider.dart';
 import 'character_data.dart'; // characterFullDataGlobal を使用するため
+import 'package:firebase_auth/firebase_auth.dart';
+import 'user_profile_page.dart';
 
 // 各質問の選択肢を定義 (ドロップダウン用 - 新しいインデックス10から19)
 final Map<int, List<String>> questionOptions = {
@@ -126,6 +128,25 @@ class _CharacterQuestionPageState extends State<CharacterQuestionPage> {
   late List<bool> _isQuestionAnswered;
   int _answeredQuestionsCount = 0;
   final int _totalQuestions = 20;
+  String? _selectedCharacter;
+  final _nameController = TextEditingController();
+  String? _selectedGrade;
+  String? _selectedDepartment;
+  String? _error;
+
+  final List<String> _grades = ['1年', '2年', '3年', '4年', '院1年', '院2年'];
+  final List<String> _departments = [
+    '工学部',
+    '理学部',
+    '医学部',
+    '歯学部',
+    '薬学部',
+    '文学部',
+    '法学部',
+    '経済学部',
+    '商学部',
+    '基礎工学部',
+  ];
 
   @override
   void initState() {
@@ -881,5 +902,56 @@ class _CharacterQuestionPageState extends State<CharacterQuestionPage> {
         ],
       ),
     );
+  }
+
+  void _submitCharacter() async {
+    if (_selectedCharacter == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('キャラクターを選択してください')));
+      return;
+    }
+
+    if (_nameController.text.isEmpty ||
+        _selectedGrade == null ||
+        _selectedDepartment == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('すべての項目を入力してください')));
+      return;
+    }
+
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    try {
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+        'character': _selectedCharacter,
+        'characterSelected': true,
+        'name': _nameController.text.trim(),
+        'grade': _selectedGrade,
+        'department': _selectedDepartment,
+        'profileCompleted': true,
+      }, SetOptions(merge: true));
+
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const UserProfilePage()),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('エラーが発生しました: $e')));
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    super.dispose();
   }
 }

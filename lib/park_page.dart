@@ -1,16 +1,14 @@
 import 'package:flutter/material.dart';
 import 'dart:async'; // Timer.periodic のために必要
 import 'package:intl/intl.dart';
-import 'package:provider/provider.dart'; // ★ Providerをインポート
-import 'character_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:math';
 import 'task_progress_gauge.dart';
-// park_page.dart の一番上
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-// DateFormat のために必要
-
-// 共通フッターと遷移先ページのインポート (パスは実際の構成に合わせてください)
+import 'user_page.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'character_data.dart';
 import 'common_bottom_navigation.dart';
 import 'credit_review_page.dart';
 import 'item_page.dart';
@@ -20,7 +18,6 @@ import 'news_page.dart';
 import 'mail_page.dart';
 import 'level_gauge.dart';
 import 'quest_create.dart'; // QuestCreationWidgetのインポート
-// park_page.dart の一番上に追加
 import 'dart:ui';
 
 class ParkPage extends StatefulWidget {
@@ -726,29 +723,6 @@ class _ParkPageState extends State<ParkPage> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-
-    // ★★★ Providerからキャラクター情報を取得してStateを更新 ★★★
-    // listen: true を使うことで、Providerの値が変更されたらこのメソッドが再度呼ばれ、
-    // UIが最新の状態に追従するようになります。
-    final characterProvider = Provider.of<CharacterProvider>(context);
-    // Providerの値が現在のStateと異なる場合、または初回読み込み時にStateを更新
-    if (!_isCharacterInfoInitialized ||
-        _currentParkCharacterName != characterProvider.characterName ||
-        _currentParkCharacterImage != characterProvider.characterImage) {
-      // didChangeDependencies内で直接setStateを呼ぶのは通常問題ありませんが、
-      // より安全に、かつビルド完了後に行いたい場合はaddPostFrameCallbackを使います。
-      // 今回は、依存関係の変更を検知して即座にStateを更新する形にします。
-      // ただし、これがビルド中に呼ばれると問題なので、初回はフラグで制御
-      if (mounted) {
-        // mountedチェックは常に良い習慣
-        setState(() {
-          _currentParkCharacterImage = characterProvider.characterImage;
-          _currentParkCharacterName = characterProvider.characterName;
-          _isCharacterInfoInitialized = true; // 初回読み込み完了
-        });
-      }
-    }
-    // ★ ルート引数からのキャラクター情報取得は削除します ★
   }
 
   // ★★★ disposeメソッドを、以下のコードに置き換えてください ★★★

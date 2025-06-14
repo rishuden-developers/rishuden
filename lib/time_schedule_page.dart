@@ -3,8 +3,8 @@ import 'dart:async';
 import 'dart:math';
 import 'dart:ui';
 import 'package:intl/intl.dart';
-import 'package:provider/provider.dart';
-import 'character_provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 // 共通フッターと遷移先ページのインポート
 import 'common_bottom_navigation.dart';
@@ -63,6 +63,8 @@ class _TimeSchedulePageState extends State<TimeSchedulePage> {
   List<Map<String, dynamic>> _sundayEvents = [];
   Map<int, List<Map<String, dynamic>>> _weekdayEvents = {};
   double _timeGaugeProgress = 0.0;
+  String _selectedCharacter = 'swordman';
+  bool _isLoading = true;
 
   @override
   void initState() {
@@ -78,27 +80,31 @@ class _TimeSchedulePageState extends State<TimeSchedulePage> {
     _highlightTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
       _updateHighlight();
     });
+    _updateCharacterInfo();
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final characterProvider = Provider.of<CharacterProvider>(context);
-    bool characterInfoChanged = false;
-    if (_mainCharacterName != characterProvider.characterName ||
-        _mainCharacterImagePath != characterProvider.characterImage) {
-      _mainCharacterName = characterProvider.characterName;
-      _mainCharacterImagePath = characterProvider.characterImage;
-      characterInfoChanged = true;
-    }
-    if (_displayedCharacters.isEmpty || characterInfoChanged) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
+    // キャラクター情報を更新
+    _updateCharacterInfo();
+  }
+
+  Future<void> _updateCharacterInfo() async {
+    try {
+      // デバッグ用に固定のキャラクターを設定
+      _mainCharacterName = '剣士';
+      _mainCharacterImagePath = 'assets/character_swordman.png';
+
+      if (_displayedCharacters.isEmpty) {
         if (mounted) {
           setState(() {
             _placeCharactersRandomly();
           });
         }
-      });
+      }
+    } catch (e) {
+      print('Error updating character info: $e');
     }
   }
 

@@ -1,36 +1,34 @@
 import 'dart:math'; // mathライブラリをインポートしてcos, sin関数を使う
 
 import 'package:flutter/material.dart';
-import 'package:rishuden/character_question_page.dart';
+import 'package:intl/date_symbol_data_local.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'login_page.dart';
 import 'mail_page.dart';
 import 'news_page.dart';
-import 'park_page.dart'; // ParkPageは広場画面
-import 'package:intl/date_symbol_data_local.dart';
-
-import 'package:firebase_core/firebase_core.dart';
+import 'park_page.dart';
+import 'character_question_page.dart';
+import 'user_profile_page.dart';
 import 'firebase_options.dart';
-import 'package:provider/provider.dart';
-import 'character_provider.dart'; // 作成したProviderファイルをインポート
 
 void main() async {
-  // main関数をasyncに変更
-  // Flutterエンジンとウィジェットツリーのバインディングを保証
-  WidgetsFlutterBinding.ensureInitialized();
-
-  // 日本語ロケールの日付フォーマット情報を初期化 (runAppより前、awaitで完了を待つ)
-  await initializeDateFormatting('ja_JP', null);
-
-  // Firebaseの初期化 (これもrunAppより前、awaitで完了を待つ)
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-
-  // アプリケーションの実行
-  runApp(
-    ChangeNotifierProvider(
-      create: (context) => CharacterProvider(), // CharacterProviderを提供
-      child: MyApp(), // MyAppウィジェットをラップ
-    ),
-  );
+  try {
+    WidgetsFlutterBinding.ensureInitialized();
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    await initializeDateFormatting('ja_JP', null);
+    runApp(const MyApp());
+  } catch (e) {
+    print('Error initializing app: $e');
+    runApp(
+      MaterialApp(
+        home: Scaffold(body: Center(child: Text('アプリの初期化に失敗しました: $e'))),
+      ),
+    );
+  }
 }
 
 class MyApp extends StatelessWidget {
@@ -39,13 +37,12 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: '履修伝説', // アプリのタイトル
+      title: '履修伝説',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true, // Material 3 デザインを使用
-        fontFamily: 'NotoSansJP', // アプリ全体のフォントを設定
+        useMaterial3: true,
+        fontFamily: 'NotoSansJP',
       ),
-      // アプリのホーム画面としてMyHomePageを設定
       home: MyHomePage(title: '履修伝説'),
     );
   }
@@ -319,15 +316,14 @@ class _MyHomePageState extends State<MyHomePage> {
           }),
 
           // === 6. 丸い「冒険に出る」ボタン (最手前で、タップ可能) ===
-          // ここが非常に重要！Stackの最後に近い位置に配置する
           Positioned(
-            left: (screenWidth - buttonSize) / 2, // 画面中央に配置
-            top: (screenHeight - buttonSize) / 2, // 画面中央に配置
+            left: (screenWidth - buttonSize) / 2,
+            top: (screenHeight - buttonSize) / 2,
             child: Container(
               width: buttonSize,
               height: buttonSize,
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(buttonRadius), // 円形にする
+                borderRadius: BorderRadius.circular(buttonRadius),
                 gradient: LinearGradient(
                   colors: [Colors.orange.shade600, Colors.deepOrange.shade800],
                   begin: Alignment.topLeft,
@@ -342,38 +338,117 @@ class _MyHomePageState extends State<MyHomePage> {
                   ),
                 ],
               ),
-              child: ElevatedButton(
-                onPressed: () {
-                  print('冒険に出るボタンが押されました！'); // ★確認用のprint★
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const ParkPage()),
+              child: StreamBuilder<User?>(
+                stream: FirebaseAuth.instance.authStateChanges(),
+                builder: (context, snapshot) {
+                  return ElevatedButton(
+                    onPressed: () {
+                      if (!snapshot.hasData) {
+                        // 未ログイン時はログインページへ
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const LoginPage(),
+                          ),
+                        );
+                      } else {
+                        // ログイン済みの場合は広場画面へ
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const ParkPage(),
+                          ),
+                        );
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.transparent,
+                      shadowColor: Colors.transparent,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(buttonRadius),
+                      ),
+                      padding: EdgeInsets.zero,
+                    ),
+                    child: Text(
+                      !snapshot.hasData ? 'アカウント作成' : '冒険に出る',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        shadows: [
+                          Shadow(
+                            blurRadius: 5.0,
+                            color: Colors.black,
+                            offset: Offset(1.0, 1.0),
+                          ),
+                        ],
+                      ),
+                    ),
                   );
                 },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.transparent, // 背景はグラデーションを使うため透明に
-                  shadowColor: Colors.transparent, // 影を消す
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(buttonRadius),
-                  ),
-                  padding: EdgeInsets.zero, // Paddingを0にしてContainerに任せる
-                ),
-                child: const Text(
-                  '冒険に出る',
-                  textAlign: TextAlign.center, // テキストを中央揃え
-                  style: TextStyle(
-                    fontSize: 20, // フォントサイズはボタンサイズに合わせて調整
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                    shadows: [
-                      Shadow(
-                        blurRadius: 5.0,
-                        color: Colors.black,
-                        offset: Offset(1.0, 1.0),
+              ),
+            ),
+          ),
+
+          // === デバッグ用の広場画面遷移ボタン ===
+          Positioned(
+            left: 16,
+            right: 16,
+            bottom: 16,
+            child: ElevatedButton(
+              onPressed: () async {
+                try {
+                  print('Debug button pressed');
+
+                  // テスト用の固定ユーザーIDを使用
+                  const String testUserId = 'test_user_001';
+                  print('Using test user ID: $testUserId');
+
+                  // テスト用のユーザー情報を設定
+                  print('Saving user data to Firestore');
+                  await FirebaseFirestore.instance
+                      .collection('users')
+                      .doc(testUserId)
+                      .set({
+                        'character': 'キャラクター1',
+                        'characterSelected': true,
+                        'name': 'テストユーザー',
+                        'grade': '1年',
+                        'department': '工学部',
+                        'profileCompleted': true,
+                      }, SetOptions(merge: true));
+                  print('User data saved successfully');
+
+                  if (mounted) {
+                    print('Navigating to ParkPage');
+                    // 広場画面に遷移
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (context) => const ParkPage()),
+                    );
+                  }
+                } catch (e, stackTrace) {
+                  print('Debug button error: $e');
+                  print('Stack trace: $stackTrace');
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('エラーが発生しました: $e'),
+                        backgroundColor: Colors.red,
+                        duration: const Duration(seconds: 5),
                       ),
-                    ],
-                  ),
-                ),
+                    );
+                  }
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.grey.withOpacity(0.7),
+                padding: const EdgeInsets.symmetric(vertical: 8),
+              ),
+              child: const Text(
+                'デバッグ: 広場画面へ',
+                style: TextStyle(fontSize: 14, color: Colors.white),
               ),
             ),
           ),
@@ -391,6 +466,66 @@ class _MyHomePageState extends State<MyHomePage> {
           ),
         ],
       ),
+    );
+  }
+
+  void _navigateToCharacterQuestion() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => CharacterQuestionPage()),
+    );
+  }
+}
+
+class AuthWrapper extends StatelessWidget {
+  const AuthWrapper({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<User?>(
+      stream: FirebaseAuth.instance.authStateChanges(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (!snapshot.hasData) {
+          return const LoginPage();
+        }
+
+        return FutureBuilder<DocumentSnapshot>(
+          future:
+              FirebaseFirestore.instance
+                  .collection('users')
+                  .doc(snapshot.data!.uid)
+                  .get(),
+          builder: (context, userSnapshot) {
+            if (userSnapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
+            if (!userSnapshot.hasData) {
+              return const LoginPage();
+            }
+
+            final userData = userSnapshot.data!.data() as Map<String, dynamic>?;
+
+            // キャラクターが選択されていない場合
+            if (userData == null || !userData.containsKey('character')) {
+              return CharacterQuestionPage();
+            }
+
+            // プロフィールが未完了の場合
+            if (!userData.containsKey('profileCompleted') ||
+                userData['profileCompleted'] != true) {
+              return const UserProfilePage();
+            }
+
+            // すべての設定が完了している場合
+            return const ParkPage();
+          },
+        );
+      },
     );
   }
 }
