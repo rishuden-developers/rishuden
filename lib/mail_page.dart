@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class MailPage extends StatefulWidget {
   const MailPage({super.key});
@@ -17,12 +18,16 @@ class _MailPageState extends State<MailPage> {
     super.dispose();
   }
 
-  void _sendFeedback() {
+  Future<void> _sendFeedback() async {
+    final text = _controller.text.trim();
+    if (text.isEmpty) return;
+    await FirebaseFirestore.instance.collection('feedback').add({
+      'text': text,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
     setState(() {
       _sent = true;
     });
-    // ここでFirebaseやメール送信APIに連携する処理を追加できます
-    // 例: FirebaseFirestore.instance.collection('feedback').add({'text': _controller.text, ...});
   }
 
   @override

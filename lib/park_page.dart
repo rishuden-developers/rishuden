@@ -30,6 +30,7 @@ class ParkPage extends StatefulWidget {
 class _ParkPageState extends State<ParkPage> {
   String _currentParkCharacterImage = ''; // 空の初期値に変更
   String _currentParkCharacterName = ''; // 空の初期値に変更
+  String _userName = '';
 
   // 課題情報とカウントダウンのためのState変数
   // ★★★ 課題情報をリストで管理するように変更 ★★★
@@ -724,6 +725,7 @@ class _ParkPageState extends State<ParkPage> {
         if (doc.exists) {
           final data = doc.data() as Map<String, dynamic>;
           final String characterName = data['character'] ?? '';
+          final String userName = data['name'] ?? '';
 
           if (characterName.isNotEmpty &&
               characterFullDataGlobal.containsKey(characterName)) {
@@ -731,7 +733,8 @@ class _ParkPageState extends State<ParkPage> {
               setState(() {
                 _currentParkCharacterName = characterName;
                 _currentParkCharacterImage =
-                    characterFullDataGlobal[characterName]!["image"];
+                    characterFullDataGlobal[characterName]!['image'];
+                _userName = userName;
                 _isCharacterInfoInitialized = true;
               });
             }
@@ -1093,174 +1096,109 @@ class _ParkPageState extends State<ParkPage> {
                         ),
                       ),
                     ),
+
                     Positioned(
-                      top: 120,
-                      right: 15,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.black.withOpacity(0.4),
-                          foregroundColor: Colors.white.withOpacity(0.8),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
+                      top: 0,
+                      left: 0,
+                      child: Column(
+                        children: [
+                          if (_userName.isNotEmpty)
+                            Text(
+                              _userName,
+                              style: TextStyle(
+                                fontFamily: 'misaki',
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                                shadows: [
+                                  Shadow(color: Colors.black54, blurRadius: 2),
+                                ],
+                              ),
+                            ),
+
+                          LiquidLevelGauge(
+                            key: _gaugeKey,
+                            width: screenWidth * 0.28,
+                            height: topBarHeight * 0.70,
                           ),
-                          textStyle: const TextStyle(fontSize: 12),
-                        ),
-                        onPressed:
-                            () => _gaugeKey.currentState?.addExperience(20),
-                        child: const Text('EXP+20'),
+                        ],
                       ),
                     ),
                     Positioned(
                       top: 0,
-                      left: 0,
-                      right: 0,
-                      child: Container(
-                        height: topBarHeight,
-                        decoration: const BoxDecoration(
-                          image: DecorationImage(
-                            image: AssetImage('assets/ui_top_bar.png'),
-                            fit: BoxFit.fill,
-                          ),
+                      right: 20,
+                      child: IconButton(
+                        icon: Icon(
+                          Icons.menu,
+                          color: Colors.white,
+                          size: topBarHeight * 0.50,
                         ),
-                        child: Padding(
-                          padding: EdgeInsets.only(
-                            left: 8.0,
-                            right: 4.0,
-                            top: MediaQuery.of(context).padding.top * 0.2 + 2.0,
-                            bottom: 2.0,
-                          ),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              LiquidLevelGauge(
-                                key: _gaugeKey,
-                                width: screenWidth * 0.28,
-                                height: topBarHeight * 0.70,
-                              ),
-                              const Spacer(),
-                              GestureDetector(
-                                onTap:
-                                    () => Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) => const NewsPage(),
-                                      ),
-                                    ),
-                                child: SizedBox(
-                                  width: singleBannerWidth,
-                                  height: topBarHeight * 0.75,
-                                  child: Image.asset(
-                                    'assets/banner_news.png',
-                                    fit: BoxFit.contain,
-                                  ),
-                                ),
-                              ),
-                              const Spacer(),
-                              Stack(
-                                alignment: Alignment.center,
-                                children: [
-                                  Container(
-                                    width: screenWidth * 0.25,
-                                    height: topBarHeight * 0.5,
-                                    decoration: const BoxDecoration(
-                                      image: DecorationImage(
-                                        image: AssetImage(
-                                          'assets/ui_takoyaki_bar.png',
-                                        ),
-                                        fit: BoxFit.fill,
-                                      ),
-                                    ),
-                                    padding: const EdgeInsets.only(
-                                      left: 30.0,
-                                      right: 20.0,
-                                    ),
-                                    alignment: Alignment.center,
-                                    child: Text(
-                                      '$_takoyakiCount',
-                                      style: TextStyle(
-                                        color: Colors.black,
-                                        fontSize: topBarHeight * 0.26,
-                                        fontWeight: FontWeight.bold,
-                                        fontFamily: 'misaki',
-                                      ),
-                                      overflow: TextOverflow.ellipsis,
-                                      softWrap: false,
-                                    ),
-                                  ),
-                                  Positioned(
-                                    right: -3,
-                                    child: GestureDetector(
-                                      onTap: () => _showPurchaseDialog(context),
-                                      child: Container(
-                                        padding: const EdgeInsets.all(1.0),
-                                        child: Image.asset(
-                                          'assets/icon_plus.png',
-                                          width: topBarHeight * 0.5,
-                                          height: topBarHeight * 0.5,
-                                          fit: BoxFit.contain,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              IconButton(
-                                icon: Icon(
-                                  Icons.menu,
-                                  color: Colors.white,
-                                  size: topBarHeight * 0.50,
-                                ),
-                                onPressed:
-                                    () =>
-                                        _scaffoldKey.currentState
-                                            ?.openEndDrawer(),
-                                padding: const EdgeInsets.only(left: 4.0),
-                                constraints: BoxConstraints(
-                                  minWidth: topBarHeight * 0.5,
-                                ),
-                              ),
-                            ],
-                          ),
+                        onPressed:
+                            () => _scaffoldKey.currentState?.openEndDrawer(),
+                        padding: const EdgeInsets.only(left: 4.0),
+                        constraints: BoxConstraints(
+                          minWidth: topBarHeight * 0.5,
                         ),
                       ),
                     ),
+                    //Positioned(
+                    //top: 20,
+                    //left: MediaQuery.of(context).size.width * 0.3,
+                    //child: Image.asset(
+                    //'assets/banner_news.png',
+                    //width: singleBannerWidth,
+                    //height: topBarHeight * 0.75,
+                    //fit: BoxFit.contain,
+                    //),
+                    //),
                     Positioned(
-                      left: 15,
-                      top: 60,
-                      child: GestureDetector(
-                        onTap: () => _showOztechDialog(context),
-                        child: Opacity(
-                          opacity: 1.0,
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(12.0),
-                            child: Image.asset(
-                              'assets/oztech.png',
-                              width: logoSize,
-                              height: logoSize,
-                              fit: BoxFit.cover,
+                      top: 70,
+                      left: -1,
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          Container(
+                            width: screenWidth * 0.28,
+                            height: topBarHeight * 0.50,
+                            decoration: const BoxDecoration(
+                              image: DecorationImage(
+                                image: AssetImage('assets/ui_takoyaki_bar.png'),
+                                fit: BoxFit.fill,
+                              ),
+                            ),
+                            padding: const EdgeInsets.only(
+                              left: 30.0,
+                              right: 20.0,
+                            ),
+                            alignment: Alignment.center,
+                            child: Text(
+                              '$_takoyakiCount',
+                              style: TextStyle(
+                                color: Colors.black,
+                                fontSize: topBarHeight * 0.26,
+                                fontWeight: FontWeight.bold,
+                                fontFamily: 'misaki',
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                              softWrap: false,
                             ),
                           ),
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                      right: 15,
-                      top: 60,
-                      child: GestureDetector(
-                        onTap: () => _showPotiPotiDialog(context),
-                        child: Opacity(
-                          opacity: 1.0,
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(12.0),
-                            child: Image.asset(
-                              'assets/potipoti.png',
-                              width: logoSize,
-                              height: logoSize,
-                              fit: BoxFit.cover,
+                          Positioned(
+                            right: -1,
+                            child: GestureDetector(
+                              onTap: () => _showPurchaseDialog(context),
+                              child: Container(
+                                padding: const EdgeInsets.all(1.0),
+                                child: Image.asset(
+                                  'assets/icon_plus.png',
+                                  width: topBarHeight * 0.5,
+                                  height: topBarHeight * 0.5,
+                                  fit: BoxFit.contain,
+                                ),
+                              ),
                             ),
                           ),
-                        ),
+                        ],
                       ),
                     ),
                     Positioned(
@@ -1361,6 +1299,45 @@ class _ParkPageState extends State<ParkPage> {
                           ),
                         ),
                       ),
+
+                    Positioned(
+                      right: 140,
+                      top: 0,
+                      child: GestureDetector(
+                        onTap: () => _showOztechDialog(context),
+                        child: Opacity(
+                          opacity: 1.0,
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(12.0),
+                            child: Image.asset(
+                              'assets/oztech.png',
+                              width: logoSize,
+                              height: logoSize,
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      right: 70,
+                      top: 0,
+                      child: GestureDetector(
+                        onTap: () => _showPotiPotiDialog(context),
+                        child: Opacity(
+                          opacity: 1.0,
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(12.0),
+                            child: Image.asset(
+                              'assets/potipoti.png',
+                              width: logoSize,
+                              height: logoSize,
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
