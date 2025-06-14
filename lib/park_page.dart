@@ -8,7 +8,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'user_page.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'character_data.dart';
+import 'character_data.dart' show characterFullDataGlobal;
 import 'common_bottom_navigation.dart';
 import 'credit_review_page.dart';
 import 'item_page.dart';
@@ -28,9 +28,8 @@ class ParkPage extends StatefulWidget {
 }
 
 class _ParkPageState extends State<ParkPage> {
-  String _currentParkCharacterImage =
-      'assets/character_swordman.png'; // デフォルト画像
-  String _currentParkCharacterName = '勇者'; // デフォルト名
+  String _currentParkCharacterImage = ''; // 空の初期値に変更
+  String _currentParkCharacterName = ''; // 空の初期値に変更
 
   // 課題情報とカウントダウンのためのState変数
   // ★★★ 課題情報をリストで管理するように変更 ★★★
@@ -705,16 +704,43 @@ class _ParkPageState extends State<ParkPage> {
   @override
   void initState() {
     super.initState();
-    _pageController.addListener(() {
-      if (_pageController.hasClients) {
-        setState(() {
-          _pageOffset = _pageController.page!;
-        });
-      }
-    });
-    _calculateWeekDateRange();
-    _startCountdownTimer();
     _loadTakoyakiStatus();
+    _loadCharacterInfo();
+    _startCountdownTimer();
+    _calculateWeekDateRange();
+  }
+
+  // キャラクター情報を読み込む
+  Future<void> _loadCharacterInfo() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        final doc =
+            await FirebaseFirestore.instance
+                .collection('users')
+                .doc(user.uid)
+                .get();
+
+        if (doc.exists) {
+          final data = doc.data() as Map<String, dynamic>;
+          final String characterName = data['character'] ?? '';
+
+          if (characterName.isNotEmpty &&
+              characterFullDataGlobal.containsKey(characterName)) {
+            if (mounted) {
+              setState(() {
+                _currentParkCharacterName = characterName;
+                _currentParkCharacterImage =
+                    characterFullDataGlobal[characterName]!["image"];
+                _isCharacterInfoInitialized = true;
+              });
+            }
+          }
+        }
+      }
+    } catch (e) {
+      print('Error loading character info: $e');
+    }
   }
 
   final GlobalKey<LiquidLevelGaugeState> _gaugeKey =

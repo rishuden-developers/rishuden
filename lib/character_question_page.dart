@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'dart:math'; // For max/min
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:provider/provider.dart';
+
 import 'character_decide_page.dart';
-import 'character_provider.dart';
-import 'character_data.dart'; // characterFullDataGlobal を使用するため
+
+// characterFullDataGlobal を使用するため
 import 'package:firebase_auth/firebase_auth.dart';
 import 'user_profile_page.dart';
 
@@ -178,30 +178,31 @@ class _CharacterQuestionPageState extends State<CharacterQuestionPage> {
     List<int> userAnswers,
     String diagnosedCharacter,
   ) async {
-    // String userID = 'u245319i'; // このハードコードはテスト用。実際は認証などから取得。
-    // ProviderなどからユーザーIDを取得する方が望ましい
-    final characterProvider = Provider.of<CharacterProvider>(
-      context,
-      listen: false,
-    );
-    String? userID =
-        characterProvider.userId; // CharacterProviderにuserIdを持たせる想定
-
-    if (userID == null) {
-      print('ユーザーIDが取得できませんでした。Firestoreへの保存をスキップします。');
-      return;
-    }
-    print('--- Firestoreへの保存処理を開始します (QuestionPageから) ---');
     try {
-      // 特定のユーザーIDのドキュメントに直接書き込む
-      await FirebaseFirestore.instance.collection('users').doc(userID).set({
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        print('ユーザーがログインしていません。Firestoreへの保存をスキップします。');
+        return;
+      }
+
+      print('--- Firestoreへの保存処理を開始します (QuestionPageから) ---');
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
         'character': diagnosedCharacter,
-        'diagnostics': userAnswers, // userAnswers は List<int>
-        'lastDiagnosed': FieldValue.serverTimestamp(), // 最後に診断した日時
-      }, SetOptions(merge: true)); // merge:true で既存のフィールドを上書きせずに追加・更新
-      print('診断結果をFirestoreに保存しました。UserID: $userID');
+        'diagnostics': userAnswers,
+        'lastDiagnosed': FieldValue.serverTimestamp(),
+        'name': _nameController.text,
+        'grade': _selectedGrade,
+        'department': _selectedDepartment,
+      }, SetOptions(merge: true));
+
+      print('--- Firestoreへの保存が完了しました ---');
     } catch (e) {
-      print('Firestoreへの保存に失敗しました: $e');
+      print('Firestoreへの保存中にエラーが発生しました: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('エラーが発生しました: $e')));
+      }
     }
   }
 
