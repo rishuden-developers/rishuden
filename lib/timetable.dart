@@ -1,6 +1,7 @@
 import 'package:http/http.dart' as http;
 import 'package:icalendar_parser/icalendar_parser.dart';
 import 'dart:convert';
+import 'timetable_entry.dart';
 
 final urlStr =
     "https://g-calendar.koan.osaka-u.ac.jp/calendar/ebe7de71ce859c00d7fdb647a65002b03694b867-J.ics";
@@ -72,7 +73,7 @@ Future<List<Map<String, dynamic>>> _getWeeklyEventList(DateTime date) async {
           .map<Map<String, dynamic>>((e) {
             final start = _parseIcsDate(e['dtstart'].dt);
             return {
-              'weekday': start.weekday, // 1=月曜, 7=日曜
+              'weekday': start.weekday - 1, // 0=月曜, 6=日曜
               'classPeriodNumber': _getClassPeriodNumber(start),
               'location': e["location"] ?? '（場所未定）',
               'summary': e['summary'] ?? '（タイトルなし）',
@@ -85,7 +86,7 @@ Future<List<Map<String, dynamic>>> _getWeeklyEventList(DateTime date) async {
           )
           .toList()
         ..sort((a, b) {
-          // まず曜日で比較（1=月曜, 7=日曜）
+          // まず曜日で比較（0=月曜, 6=日曜）
           int cmp = a['weekday'].compareTo(b['weekday']);
           if (cmp != 0) return cmp;
           // 曜日が同じならclassPeriodNumber（時限）で比較
@@ -95,24 +96,23 @@ Future<List<Map<String, dynamic>>> _getWeeklyEventList(DateTime date) async {
   return events;
 }
 
-/// 今週のイベントを曜日・時限ごとのネストMapで返す
-Future<Map<int, Map<int, List<Map<String, String>>>>>
-getWeeklyTimetable(DateTime date) async {
+Future<List<TimetableEntry>> getWeeklyTimetableEntries(DateTime date) async {
   final events = await _getWeeklyEventList(date);
 
-  final Map<int, Map<int, List<Map<String, String>>>> timetable = {};
+  final List<TimetableEntry> timetableEntries = [];
 
   for (final ev in events) {
     final int weekday = ev['weekday'];
     final int period = ev['classPeriodNumber'];
-    final info = {
-      'title': ev['summary'] as String,
-      'location': ev['location'] as String,
-    };
-    timetable.putIfAbsent(weekday, () => {});
-    timetable[weekday]!.putIfAbsent(period, () => []);
-    timetable[weekday]![period]!.add(info);
+    final info = TimetableEntry(
+      id: '${weekday * 10 + period}', // IDは曜日と時限の組み合わせ
+      subjectName: ev['summary'] as String,
+      classroom: ev['location'] as String,
+      dayOfWeek: weekday, // 曜日（0=月曜, 6=日曜）
+      period: period, // 時限（1〜6）
+    );
+    timetableEntries.add(info);
   }
 
-  return timetable;
+  return timetableEntries;
 }
