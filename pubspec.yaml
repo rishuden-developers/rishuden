@@ -19,6 +19,7 @@ dependencies:
   http: ^1.4.0
   icalendar_parser: ^2.1.0
   url_launcher: ^6.3.1
+  shared_preferences: ^2.2.3
 
 dev_dependencies:
   flutter_test:
@@ -61,6 +62,8 @@ flutter:
     - assets/stage.png
     - assets/make_quest.png
     - assets/takoyaki.png
+    - assets/crack_overlay.png
+    - assets/takoyaki_off.png
   fonts:
     - family: Noto Sans JP
       fonts:

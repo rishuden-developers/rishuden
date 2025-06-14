@@ -5,12 +5,7 @@ class QuestCreationWidget extends StatefulWidget {
   final void Function() onCancel;
 
   // 作成時の引数に「一言コメント」を追加
-  final void Function(
-    String selectedClass,
-    String taskType,
-    DateTime deadline,
-    String comment,
-  )
+  final void Function(String selectedClass, String taskType, DateTime deadline)
   onCreate;
 
   const QuestCreationWidget({
@@ -28,7 +23,6 @@ class _QuestCreationWidgetState extends State<QuestCreationWidget> {
   String? selectedClass;
   String? selectedTaskType;
   DateTime? selectedDeadline;
-  String creatorComment = ''; // ← 追加: 一言コメント
 
   final List<String> taskTypes = ['レポート', '出席', '発表', '試験', 'その他'];
 
@@ -128,23 +122,6 @@ class _QuestCreationWidgetState extends State<QuestCreationWidget> {
                 ],
               ),
 
-              const SizedBox(height: 12),
-
-              // 一言入力
-              TextFormField(
-                maxLength: 30,
-                decoration: InputDecoration(
-                  labelText: "作成者からの一言（任意）",
-                  hintText: "例：みんなで頑張ろう！",
-                  border: OutlineInputBorder(),
-                ),
-                onChanged: (value) {
-                  setState(() {
-                    creatorComment = value;
-                  });
-                },
-              ),
-
               const SizedBox(height: 24),
 
               // ボタン
@@ -168,7 +145,7 @@ class _QuestCreationWidgetState extends State<QuestCreationWidget> {
                                 selectedClass!,
                                 selectedTaskType!,
                                 selectedDeadline!,
-                                creatorComment, // ← 一言も渡す
+                                // ← 一言も渡す
                               );
                             }
                             : null,
