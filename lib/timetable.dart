@@ -2,6 +2,7 @@ import 'package:http/http.dart' as http;
 import 'package:icalendar_parser/icalendar_parser.dart';
 import 'dart:convert';
 import 'timetable_entry.dart';
+import 'package:flutter/material.dart';
 
 final urlStr =
     "https://g-calendar.koan.osaka-u.ac.jp/calendar/ebe7de71ce859c00d7fdb647a65002b03694b867-J.ics";
@@ -19,9 +20,9 @@ DateTime _getThisSunday(DateTime date) {
   return DateTime(sunday.year, sunday.month, sunday.day);
 }
 
-// icsのdtstart->dtをDateTimeに変換する関数
-DateTime _parseIcsDate(String dtStr) {
-  // dtStrの形式は "20231001T120000Z" のような形式
+// icsの表記形式をDateTimeに変換する関数
+DateTime _parseIcsDateToDateTime(String dtStr) {
+  // icsの表記形式は "20231001T120000Z" のような形式
   // これをiso8601形式に変換した後、DateTimeに変換する
   return DateTime.parse(
     '${dtStr.substring(0, 4)}-${dtStr.substring(4, 6)}-${dtStr.substring(6, 8)}'
@@ -66,23 +67,40 @@ Future<List<Map<String, dynamic>>> _getWeeklyEventList(DateTime date) async {
   final monday = _getThisMonday(date);
   final sunday = _getThisSunday(date);
 
+  final List<Map<String, dynamic>> holidays = [];
+  final RegExp holidayReg = RegExp(r'^\[休\](\d+)限(.+)$');
+
   // 今週のイベントを抽出
   final events =
       calenderData.data
           .where((e) => e['dtend'] != null && e['type'] == 'VEVENT')
-          .map<Map<String, dynamic>>((e) {
-            final start = _parseIcsDate(e['dtstart'].dt);
+          .map((e) {
+            final start = _parseIcsDateToDateTime(e['dtstart'].dt);
+            final subject = e['summary'];
+            final match = holidayReg.firstMatch(subject);
+            if (match != null) {
+              holidays.add({
+                'date': DateTime(start.year, start.month, start.day),
+                'period': int.parse(match.group(1)!),
+                'subject': match.group(2)!.trim(),
+              });
+              return null; // 休講は除外
+            }
             return {
+              'dtstart': start,
               'weekday': start.weekday - 1, // 0=月曜, 6=日曜
-              'classPeriodNumber': _getClassPeriodNumber(start),
+              'period': _getClassPeriodNumber(start),
               'location': e["location"] ?? '（場所未定）',
-              'summary': e['summary'] ?? '（タイトルなし）',
+              'subject': subject,
             };
           })
+          .whereType<Map<String, dynamic>>() // null(休講)を除外
           .where(
             (ev) =>
-                (ev['weekday'] >= monday.weekday &&
-                    ev['weekday'] <= sunday.weekday),
+                (
+                // その週の月曜から日曜だけ取り出す
+                ev['dtstart'].isAfter(monday) &&
+                    ev['dtstart'].isBefore(sunday)),
           )
           .toList()
         ..sort((a, b) {
@@ -90,8 +108,23 @@ Future<List<Map<String, dynamic>>> _getWeeklyEventList(DateTime date) async {
           int cmp = a['weekday'].compareTo(b['weekday']);
           if (cmp != 0) return cmp;
           // 曜日が同じならclassPeriodNumber（時限）で比較
-          return a['classPeriodNumber'].compareTo(b['classPeriodNumber']);
+          return a['period'].compareTo(b['period']);
         });
+
+  // 休講情報をイベントに追加
+  for (final ev in events) {
+    ev['isCancelled'] = holidays.any(
+      (h) =>
+          h['date'] ==
+              DateTime(
+                ev['dtstart'].year,
+                ev['dtstart'].month,
+                ev['dtstart'].day,
+              ) &&
+          h['period'] == ev['period'] &&
+          h['subject'] == ev['subject'],
+    );
+  }
 
   return events;
 }
@@ -103,13 +136,14 @@ Future<List<TimetableEntry>> getWeeklyTimetableEntries(DateTime date) async {
 
   for (final ev in events) {
     final int weekday = ev['weekday'];
-    final int period = ev['classPeriodNumber'];
+    final int period = ev['period'];
     final info = TimetableEntry(
       id: '${weekday * 10 + period}', // IDは曜日と時限の組み合わせ
-      subjectName: ev['summary'] as String,
+      subjectName: ev['subject'] as String,
       classroom: ev['location'] as String,
       dayOfWeek: weekday, // 曜日（0=月曜, 6=日曜）
       period: period, // 時限（1〜6）
+      isCancelled: ev['isCancelled'], // 休講フラグ
     );
     timetableEntries.add(info);
   }

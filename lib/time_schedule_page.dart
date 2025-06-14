@@ -13,135 +13,9 @@ import 'credit_review_page.dart';
 import 'ranking_page.dart';
 import 'item_page.dart';
 import 'timetable_entry.dart';
+import 'timetable.dart';
 
 enum AttendanceStatus { present, absent, late, none }
-
-// モックデータ
-final List<TimetableEntry> mockTimetable = [
-  TimetableEntry(
-    id: '1',
-    subjectName: "微分積分学I",
-    classroom: "A-101",
-    dayOfWeek: 0,
-    period: 1,
-    color: Colors.cyanAccent,
-    initialPolicy: AttendancePolicy.mandatory,
-  ),
-  TimetableEntry(
-    id: '2',
-    subjectName: "プログラミング基礎",
-    classroom: "B-203",
-    dayOfWeek: 0,
-    period: 2,
-    color: Colors.lightGreenAccent,
-    initialPolicy: AttendancePolicy.mandatory,
-  ),
-  TimetableEntry(
-    id: '3',
-    subjectName: "文学史",
-    classroom: "共通C301",
-    dayOfWeek: 0,
-    period: 4,
-    color: Colors.amberAccent,
-    initialPolicy: AttendancePolicy.flexible,
-  ),
-  TimetableEntry(
-    id: '12',
-    subjectName: "特別講義X",
-    classroom: "大講義室",
-    dayOfWeek: 0,
-    period: 6,
-    color: Colors.grey[300]!,
-  ),
-  TimetableEntry(
-    id: '4',
-    subjectName: "線形代数学",
-    classroom: "A-102",
-    dayOfWeek: 1,
-    period: 1,
-    color: Colors.orangeAccent,
-    initialPolicy: AttendancePolicy.mandatory,
-  ),
-  TimetableEntry(
-    id: '5',
-    subjectName: "英語コミュニケーション",
-    classroom: "C-301",
-    dayOfWeek: 1,
-    period: 3,
-    color: Colors.purpleAccent,
-  ),
-  TimetableEntry(
-    id: '6',
-    subjectName: "経済学原論",
-    classroom: "D-105",
-    dayOfWeek: 2,
-    period: 2,
-    color: Colors.redAccent,
-    initialPolicy: AttendancePolicy.flexible,
-  ),
-  TimetableEntry(
-    id: '7',
-    subjectName: "健康科学",
-    classroom: "体育館",
-    dayOfWeek: 2,
-    period: 4,
-    color: Colors.limeAccent,
-    initialPolicy: AttendancePolicy.skip,
-  ),
-  TimetableEntry(
-    id: '8',
-    subjectName: "実験物理学",
-    classroom: "E-Lab1",
-    dayOfWeek: 3,
-    period: 3,
-    color: Colors.tealAccent,
-    initialPolicy: AttendancePolicy.mandatory,
-  ),
-  TimetableEntry(
-    id: '9',
-    subjectName: "実験物理学",
-    classroom: "E-Lab1",
-    dayOfWeek: 3,
-    period: 4,
-    color: Colors.tealAccent,
-    initialPolicy: AttendancePolicy.mandatory,
-  ),
-  TimetableEntry(
-    id: '13',
-    subjectName: "ゼミ準備",
-    classroom: "研究室A",
-    dayOfWeek: 3,
-    period: 6,
-    color: Colors.brown[100]!,
-  ),
-  TimetableEntry(
-    id: '10',
-    subjectName: "キャリアデザイン",
-    classroom: "講堂",
-    dayOfWeek: 4,
-    period: 5,
-    color: Colors.pinkAccent,
-    initialPolicy: AttendancePolicy.flexible,
-  ),
-  TimetableEntry(
-    id: '11',
-    subjectName: "第二外国語(独)",
-    classroom: "F-202",
-    dayOfWeek: 4,
-    period: 2,
-    color: Colors.indigoAccent,
-    initialPolicy: AttendancePolicy.skip,
-  ),
-  TimetableEntry(
-    id: '14',
-    subjectName: "統計学",
-    classroom: "Z-101",
-    dayOfWeek: 1,
-    period: 2,
-    color: Colors.cyanAccent,
-    initialPolicy: AttendancePolicy.mandatory,
-  ),
-];
 
 class TimeSchedulePage extends StatefulWidget {
   const TimeSchedulePage({super.key});
@@ -198,7 +72,7 @@ class _TimeSchedulePageState extends State<TimeSchedulePage> {
     final tuesdayDate = _displayedMonday.add(const Duration(days: 1));
     final cancellationKey = "14_${DateFormat('yyyyMMdd').format(tuesdayDate)}";
     _cancellations = {cancellationKey};
-    _initializeTimetableGrid();
+    _initializeTimetableGrid(now);
     _updateWeekDates();
     _updateHighlight();
     _highlightTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
@@ -234,20 +108,21 @@ class _TimeSchedulePageState extends State<TimeSchedulePage> {
     super.dispose();
   }
 
-  void _initializeTimetableGrid() {
-    _timetableGrid = List.generate(
+  void _initializeTimetableGrid(d) async {
+    List<TimetableEntry> timeTableEntries = await getWeeklyTimetableEntries(d);
+    List<List<TimetableEntry?>> grid = List.generate(
       _days.length,
       (dayIndex) => List.generate(_academicPeriods, (periodIndex) => null),
     );
-    for (var entry in mockTimetable) {
-      if (entry.dayOfWeek >= 0 &&
-          entry.dayOfWeek < _days.length &&
-          entry.period > 0 &&
-          entry.period <= _academicPeriods) {
-        _timetableGrid[entry.dayOfWeek][entry.period - 1] = entry;
-        _attendancePolicies[entry.id] = entry.initialPolicy;
-      }
+    Map<String, AttendancePolicy> policies = {};
+    for (var entry in timeTableEntries) {
+      grid[entry.dayOfWeek][entry.period - 1] = entry;
+      policies[entry.id] = entry.initialPolicy;
     }
+    setState(() {
+      _timetableGrid = grid;
+      _attendancePolicies = policies;
+    });
   }
 
   void _updateWeekDates() {
@@ -268,6 +143,7 @@ class _TimeSchedulePageState extends State<TimeSchedulePage> {
     setState(() {
       _displayedMonday = _displayedMonday.subtract(const Duration(days: 7));
       _updateWeekDates();
+      _initializeTimetableGrid(_displayedMonday); // ←ここで新しい週の月曜を渡す
     });
   }
 
@@ -275,6 +151,7 @@ class _TimeSchedulePageState extends State<TimeSchedulePage> {
     setState(() {
       _displayedMonday = _displayedMonday.add(const Duration(days: 7));
       _updateWeekDates();
+      _initializeTimetableGrid(_displayedMonday); // ←ここで新しい週の月曜を渡す
     });
   }
 
@@ -427,8 +304,8 @@ class _TimeSchedulePageState extends State<TimeSchedulePage> {
       periodIndex++
     ) {
       final entry = _timetableGrid[dayIndex][periodIndex];
-      if (entry == null) continue;
 
+      if (entry == null) continue;
       // --- ★★★ ここからが新しい位置計算ロジックです ★★★ ---
       // 授業が何限目かによって、表示する行のインデックス（0〜7）を決定する
       int visualRowIndex;
@@ -449,7 +326,7 @@ class _TimeSchedulePageState extends State<TimeSchedulePage> {
       // 以下、ウィジェットの見た目を定義する部分は変更ありません
       final uniqueKey =
           "${entry.id}_${DateFormat('yyyyMMdd').format(_displayedMonday.add(Duration(days: dayIndex)))}";
-      final policy = _attendancePolicies[entry.id] ?? AttendancePolicy.none;
+      final policy = _attendancePolicies[entry.id] ?? AttendancePolicy.flexible;
       Color textColor = Colors.white;
       BoxDecoration decoration;
 
@@ -482,14 +359,15 @@ class _TimeSchedulePageState extends State<TimeSchedulePage> {
             borderRadius: BorderRadius.circular(6),
           );
           break;
-        case AttendancePolicy.none:
-          textColor = Colors.white;
-          decoration = BoxDecoration(
-            color: entry.color.withOpacity(0.1),
-            border: Border.all(color: entry.color.withOpacity(0.5)),
-            borderRadius: BorderRadius.circular(6),
-          );
-          break;
+      }
+
+      if (entry.isCancelled) {
+        textColor = Colors.red[300]!;
+        decoration = BoxDecoration(
+          color: entry.color.withOpacity(0.1),
+          border: Border.all(color: entry.color.withOpacity(0.5)),
+          borderRadius: BorderRadius.circular(6),
+        );
       }
 
       final int absenceCount = _absenceCount[entry.id] ?? 0;
@@ -514,7 +392,7 @@ class _TimeSchedulePageState extends State<TimeSchedulePage> {
                   entry.subjectName,
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    fontSize: 11,
+                    fontSize: 10,
                     height: 1.2,
                     color: textColor,
                     shadows:
@@ -1414,8 +1292,7 @@ class _TimeSchedulePageState extends State<TimeSchedulePage> {
   }
 
   Widget _buildAttendancePopupMenu(String uniqueKey, TimetableEntry entry) {
-    if ((_attendancePolicies[entry.id] ?? AttendancePolicy.none) !=
-        AttendancePolicy.mandatory) {
+    if (_attendancePolicies[entry.id] != AttendancePolicy.mandatory) {
       return const SizedBox.shrink();
     }
     return Theme(
