@@ -141,19 +141,6 @@ class _MyHomePageState extends State<MyHomePage> {
                 );
               },
             ),
-            ListTile(
-              leading: const Icon(Icons.contact_mail),
-              title: const Text('履修キャラ診断'),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => CharacterQuestionPage(),
-                  ),
-                );
-              },
-            ),
           ],
         ),
       ),
@@ -356,7 +343,12 @@ class _MyHomePageState extends State<MyHomePage> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => const ParkPage(),
+                            builder:
+                                (context) => const ParkPage(
+                                  diagnosedCharacterName: '剣士',
+                                  answers: [],
+                                  userName: '',
+                                ),
                           ),
                         );
                       }
@@ -425,7 +417,14 @@ class _MyHomePageState extends State<MyHomePage> {
                     // 広場画面に遷移
                     Navigator.pushReplacement(
                       context,
-                      MaterialPageRoute(builder: (context) => const ParkPage()),
+                      MaterialPageRoute(
+                        builder:
+                            (context) => const ParkPage(
+                              diagnosedCharacterName: 'swordman',
+                              answers: [],
+                              userName: '',
+                            ),
+                      ),
                     );
                   }
                 } catch (e, stackTrace) {
@@ -521,8 +520,25 @@ class AuthWrapper extends StatelessWidget {
               return const UserProfilePage();
             }
 
+            // キャラクターが選択されていない場合
+            if (userData == null || !userData.containsKey('character')) {
+              return CharacterQuestionPage();
+            }
+
+            // プロフィールが未完了の場合
+            if (!userData.containsKey('profileCompleted') ||
+                userData['profileCompleted'] != true) {
+              return const UserProfilePage();
+            }
+
             // すべての設定が完了している場合
-            return const ParkPage();
+            return ParkPage(
+              diagnosedCharacterName: userData['character'] ?? '剣士',
+              answers: [], // 適切な値を設定
+              userName: userData['name'] ?? '',
+              grade: userData['grade'] ?? '',
+              department: userData['department'] ?? '',
+            );
           },
         );
       },

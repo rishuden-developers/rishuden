@@ -66,6 +66,15 @@ class _TimeSchedulePageState extends State<TimeSchedulePage> {
   Map<int, List<Map<String, dynamic>>> _weekdayEvents = {};
   double _timeGaugeProgress = 0.0;
 
+  final List<Color> _neonColors = [
+    Colors.cyanAccent,
+    Colors.greenAccent[400]!,
+    Colors.yellowAccent,
+    Colors.purpleAccent[100]!,
+    Colors.white,
+    Colors.lightBlueAccent,
+    Colors.limeAccent[400]!,
+  ];
   @override
   void initState() {
     super.initState();
@@ -148,6 +157,7 @@ class _TimeSchedulePageState extends State<TimeSchedulePage> {
     if (mounted) setState(() {});
   }
 
+  final double _timeColumnWidth = 60.0;
   void _goToPreviousWeek() {
     setState(() {
       _displayedMonday = _displayedMonday.subtract(const Duration(days: 7));
@@ -304,7 +314,6 @@ class _TimeSchedulePageState extends State<TimeSchedulePage> {
       return positionedWidgets;
     }
 
-    // 8つの行の、1行あたりの高さを計算
     final double rowHeight = totalHeight / 8.0;
 
     for (
@@ -313,26 +322,18 @@ class _TimeSchedulePageState extends State<TimeSchedulePage> {
       periodIndex++
     ) {
       final entry = _timetableGrid[dayIndex][periodIndex];
-
       if (entry == null) continue;
-      // --- ★★★ ここからが新しい位置計算ロジックです ★★★ ---
-      // 授業が何限目かによって、表示する行のインデックス（0〜7）を決定する
-      int visualRowIndex;
-      final int period = entry.period; // periodは1〜6
 
+      int visualRowIndex;
+      final int period = entry.period;
       if (period <= 2) {
-        // 1, 2限は、そのまま行インデックス0, 1に対応
         visualRowIndex = period - 1;
       } else {
-        // 3, 4, 5, 6限は、昼休みの行(インデックス2)を挟むため、1つ下にズレる
         visualRowIndex = period;
       }
-
       final double top = visualRowIndex * rowHeight;
       final double height = rowHeight;
-      // --- ★★★ 新しい位置計算ロジックはここまで ★★★ ---
 
-      // 以下、ウィジェットの見た目を定義する部分は変更ありません
       final uniqueKey =
           "${entry.id}_${DateFormat('yyyyMMdd').format(_displayedMonday.add(Duration(days: dayIndex)))}";
       final policy = _attendancePolicies[entry.id] ?? AttendancePolicy.flexible;
@@ -341,7 +342,11 @@ class _TimeSchedulePageState extends State<TimeSchedulePage> {
 
       switch (policy) {
         case AttendancePolicy.mandatory:
-          final neonColor = _getNeonWarningColor(entry.color, entry.id);
+          // ★★★ ここからが修正箇所 ★★★
+          final int colorIndex = entry.id.hashCode % _neonColors.length;
+          final Color randomBaseColor = _neonColors[colorIndex];
+          final neonColor = _getNeonWarningColor(randomBaseColor, entry.id);
+          // ★★★ ここまでが修正箇所 ★★★
           textColor = neonColor;
           decoration = BoxDecoration(
             color: neonColor.withOpacity(0.1),
@@ -369,7 +374,6 @@ class _TimeSchedulePageState extends State<TimeSchedulePage> {
           );
           break;
       }
-
       if (entry.isCancelled) {
         textColor = Colors.red[300]!;
         decoration = BoxDecoration(
@@ -412,6 +416,78 @@ class _TimeSchedulePageState extends State<TimeSchedulePage> {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
+                // ★★★ ここからが修正箇所 ★★★
+                if (hasCount) ...[
+                  const SizedBox(height: 2),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    children: [
+                      if (absenceCount > 0)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 4,
+                            vertical: 1,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.red[900]?.withOpacity(0.8),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.cancel,
+                                color: Colors.red[200],
+                                size: 9,
+                              ),
+                              const SizedBox(width: 2),
+                              Text(
+                                '$absenceCount',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 8,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      if (absenceCount > 0 && lateCount > 0)
+                        const SizedBox(width: 3),
+                      if (lateCount > 0)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 4,
+                            vertical: 1,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.orange[900]?.withOpacity(0.8),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.watch_later,
+                                color: Colors.orange[200],
+                                size: 9,
+                              ),
+                              const SizedBox(width: 2),
+                              Text(
+                                '$lateCount',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 8,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
+                // ★★★ ここまでが修正箇所 ★★★
                 const Spacer(),
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.end,
@@ -452,7 +528,6 @@ class _TimeSchedulePageState extends State<TimeSchedulePage> {
           ],
         ),
       );
-
       positionedWidgets.add(
         Positioned(
           top: top,
@@ -470,7 +545,6 @@ class _TimeSchedulePageState extends State<TimeSchedulePage> {
             child: Stack(
               children: [
                 classWidget,
-                // 出席状態アイコンを右上に表示
                 Positioned(
                   top: 2,
                   right: 2,
@@ -1153,7 +1227,7 @@ class _TimeSchedulePageState extends State<TimeSchedulePage> {
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              contentPadding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+              contentPadding: const EdgeInsets.fromLTRB(20, 15, 20, 0),
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -1458,15 +1532,19 @@ class _TimeSchedulePageState extends State<TimeSchedulePage> {
   Widget _buildNewTimetableHeader() {
     return Row(
       children: [
-        const SizedBox(width: 65),
+        SizedBox(width: _timeColumnWidth), // ★ 変数を使用
         Expanded(
           child: Row(
             children: List.generate(7, (dayIndex) {
               final isSunday = dayIndex == 6;
               return Expanded(
                 flex: 1,
-                child: SizedBox(
+                child: Container(
+                  margin: const EdgeInsets.all(1.5),
                   height: 40,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 4.0,
+                  ), // ★ 左右にパディングを追加
                   child: Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -1477,7 +1555,7 @@ class _TimeSchedulePageState extends State<TimeSchedulePage> {
                             fontWeight: FontWeight.bold,
                             fontSize: 12,
                             fontFamily: 'misaki',
-                            color: isSunday ? Colors.red[400] : Colors.white,
+                            color: isSunday ? Colors.red[300] : Colors.white,
                             shadows: const [
                               Shadow(color: Colors.black45, blurRadius: 2),
                             ],
@@ -1489,7 +1567,7 @@ class _TimeSchedulePageState extends State<TimeSchedulePage> {
                           style: TextStyle(
                             fontSize: 10,
                             fontFamily: 'misaki',
-                            color: isSunday ? Colors.red[300] : Colors.white70,
+                            color: isSunday ? Colors.red[200] : Colors.white70,
                           ),
                         ),
                       ],
@@ -1511,8 +1589,21 @@ class _TimeSchedulePageState extends State<TimeSchedulePage> {
     required double periodRowHeight,
     required double lunchRowHeight,
   }) {
-    final double totalColumnHeight = periodRowHeight * 8;
-    final List<double> rowHeights = List.generate(8, (_) => periodRowHeight);
+    // 8つの行の高さリストを作成 (6つの授業コマ + 昼休み + 放課後)
+    final List<double> rowHeights = [
+      periodRowHeight, // 1限
+      periodRowHeight, // 2限
+      lunchRowHeight, // 昼休み
+      periodRowHeight, // 3限
+      periodRowHeight, // 4限
+      periodRowHeight, // 5限
+      periodRowHeight, // 6限
+      periodRowHeight, // 放課後
+    ];
+    final double totalColumnHeight = rowHeights.reduce(
+      (a, b) => a + b,
+    ); // 全ての高さの合計
+
     final List<String> periodLabels = [
       '1',
       '2',
@@ -1524,48 +1615,27 @@ class _TimeSchedulePageState extends State<TimeSchedulePage> {
       '放課後',
     ];
 
-    // 罫線を絶対位置で描画するためのウィジェットリストをここで生成
-    List<Widget> dividers = [];
-    double accumulatedHeight = 0;
-    // 最後のコマの下には線は不要なため、7回繰り返す
-    for (int i = 0; i < 7; i++) {
-      accumulatedHeight += rowHeights[i];
-      dividers.add(
-        Positioned(
-          top: accumulatedHeight - 1, // 各コマの下端に配置
-          left: 0,
-          right: 0,
-          child: Container(
-            height: 1.0, // 線の太さ
-            color: Colors.white.withOpacity(0.3),
-          ),
-        ),
-      );
-    }
-
     return Container(
       width: 45,
-      // ★★★ 修正点：オーバーフローを確実に防ぐため、高さを1ピクセル減らす ★★★
-      height:
-          totalColumnHeight > 1 ? totalColumnHeight - 1.0 : totalColumnHeight,
+      height: totalColumnHeight, // 中身の合計高さと一致させる
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.3),
-        border: Border.all(color: Colors.grey[700]!, width: 2),
+        color: Colors.black.withOpacity(0.4), // 少し背景色を濃く
+        // ★★★ オーバーフローの原因となっていた外側の枠線を削除 ★★★
+        // border: Border.all(color: Colors.grey[700]!, width: 2),
         borderRadius: const BorderRadius.all(Radius.circular(12)),
       ),
       child: ClipRRect(
-        // はみ出しを確実に防ぐ
         borderRadius: const BorderRadius.all(Radius.circular(10)),
         child: Stack(
           children: [
+            // --- ゲージの進捗バー ---
             Align(
               alignment: Alignment.topCenter,
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 500),
                 curve: Curves.easeOut,
                 height: totalColumnHeight * _timeGaugeProgress,
-                width: 40,
-                margin: const EdgeInsets.only(bottom: 8),
+                width: double.infinity,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(10),
                   gradient: LinearGradient(
@@ -1587,25 +1657,11 @@ class _TimeSchedulePageState extends State<TimeSchedulePage> {
                       blurRadius: 15.0,
                       spreadRadius: 5.0,
                     ),
-                    BoxShadow(
-                      color: const Color.fromARGB(
-                        255,
-                        134,
-                        19,
-                        159,
-                      ).withOpacity(0.3),
-                      blurRadius: 20.0,
-                      spreadRadius: 8.0,
-                    ),
-                    BoxShadow(
-                      color: Colors.white.withOpacity(0.4),
-                      blurRadius: 40.0,
-                      spreadRadius: 20.0,
-                    ),
                   ],
                 ),
               ),
             ),
+            // --- 時限ラベルと時間、そして罫線 ---
             Column(
               children: List.generate(rowHeights.length, (index) {
                 final bool isClassPeriod =
@@ -1615,8 +1671,25 @@ class _TimeSchedulePageState extends State<TimeSchedulePage> {
                   timeIndex = index;
                 else if (index > 2 && index < 7)
                   timeIndex = index - 1;
-                return SizedBox(
+
+                return Container(
                   height: rowHeights[index],
+                  // Containerのdecorationで罫線を引く
+                  decoration: BoxDecoration(
+                    border:
+                        index <
+                                rowHeights.length -
+                                    1 // 最後の行以外
+                            ? Border(
+                              bottom: BorderSide(
+                                color: Colors.white.withOpacity(
+                                  0.25,
+                                ), // ★ 少し色を調整
+                                width: 1.0,
+                              ),
+                            )
+                            : null,
+                  ),
                   child: Stack(
                     alignment: Alignment.center,
                     children: [
@@ -1683,7 +1756,6 @@ class _TimeSchedulePageState extends State<TimeSchedulePage> {
                 );
               }),
             ),
-            ...dividers,
           ],
         ),
       ),
@@ -1745,10 +1817,7 @@ class _TimeSchedulePageState extends State<TimeSchedulePage> {
         child: Stack(
           children: [
             Positioned.fill(
-              child: Image.asset(
-                "assets/background_plaza.png",
-                fit: BoxFit.cover,
-              ),
+              child: Image.asset("assets/night_view.png", fit: BoxFit.cover),
             ),
             Positioned.fill(
               child: Container(color: Colors.black.withOpacity(0.4)),
@@ -1837,7 +1906,12 @@ class _TimeSchedulePageState extends State<TimeSchedulePage> {
                     () => Navigator.pushReplacement(
                       context,
                       PageRouteBuilder(
-                        pageBuilder: (_, __, ___) => const ParkPage(),
+                        pageBuilder:
+                            (_, __, ___) => const ParkPage(
+                              diagnosedCharacterName: '剣士',
+                              answers: [],
+                              userName: '',
+                            ),
                         transitionDuration: Duration.zero,
                       ),
                     ),

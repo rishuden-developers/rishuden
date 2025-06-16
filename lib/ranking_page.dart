@@ -243,7 +243,12 @@ class RankingPage extends StatelessWidget {
                   Navigator.pushReplacement(
                     context,
                     PageRouteBuilder(
-                      pageBuilder: (_, __, ___) => const ParkPage(),
+                      pageBuilder:
+                          (_, __, ___) => const ParkPage(
+                            diagnosedCharacterName: '剣士',
+                            answers: [],
+                            userName: '',
+                          ),
                       transitionDuration: Duration.zero,
                     ),
                   );

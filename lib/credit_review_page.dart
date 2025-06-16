@@ -343,7 +343,11 @@ class _CreditReviewPageState extends State<CreditReviewPage> {
             context,
             PageRouteBuilder(
               pageBuilder:
-                  (context, animation, secondaryAnimation) => const ParkPage(),
+                  (context, animation, secondaryAnimation) => const ParkPage(
+                    diagnosedCharacterName: '剣士',
+                    answers: [],
+                    userName: '',
+                  ),
               transitionDuration: Duration.zero,
               reverseTransitionDuration: Duration.zero,
             ),

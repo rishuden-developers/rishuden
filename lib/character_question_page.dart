@@ -3,6 +3,8 @@ import 'dart:math'; // For max/min
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'character_decide_page.dart';
+import 'park_page.dart';
+import 'character_data.dart' show characterFullDataGlobal;
 
 // characterFullDataGlobal を使用するため
 import 'package:firebase_auth/firebase_auth.dart';
@@ -890,6 +892,22 @@ class _CharacterQuestionPageState extends State<CharacterQuestionPage> {
                                       ),
                                     );
                                   }
+                                  if (mounted) {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder:
+                                            (context) => CharacterDecidePage(
+                                              diagnosedCharacterName:
+                                                  characterName,
+                                              answers: finalAnswers,
+                                              userName: _nameController.text,
+                                              grade: _selectedGrade,
+                                              department: _selectedDepartment,
+                                            ),
+                                      ),
+                                    );
+                                  }
                                 }
                                 : null,
                       ),
@@ -926,8 +944,16 @@ class _CharacterQuestionPageState extends State<CharacterQuestionPage> {
     if (user == null) return;
 
     try {
+      // 選択されたキャラクターの画像を取得
+      String? characterImage;
+      if (_selectedCharacter != null &&
+          characterFullDataGlobal.containsKey(_selectedCharacter)) {
+        characterImage = characterFullDataGlobal[_selectedCharacter]!['image'];
+      }
+
       await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
         'character': _selectedCharacter,
+        'characterImage': characterImage, // 画像パスを保存
         'characterSelected': true,
         'name': _nameController.text.trim(),
         'grade': _selectedGrade,

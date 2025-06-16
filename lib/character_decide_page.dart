@@ -135,10 +135,10 @@ class _CharacterDecidePageState extends State<CharacterDecidePage> {
 
         if (context.mounted) {
           print('Navigating to ParkPage...');
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const ParkPage()),
-          );
+          // Navigator.pushReplacement(
+          //   context,
+          //   MaterialPageRoute(builder: (context) => const ParkPage()),
+          // );
           print('Navigation completed');
         }
       } else {
@@ -191,7 +191,7 @@ class _CharacterDecidePageState extends State<CharacterDecidePage> {
           Container(
             decoration: const BoxDecoration(
               image: DecorationImage(
-                image: AssetImage('assets/background.png'),
+                image: AssetImage('assets/question_background_image.png'),
                 fit: BoxFit.cover,
               ),
             ),
@@ -216,6 +216,7 @@ class _CharacterDecidePageState extends State<CharacterDecidePage> {
                     ),
                   ),
                 ),
+
                 const SizedBox(height: 20),
                 // キャラクター名
                 Text(

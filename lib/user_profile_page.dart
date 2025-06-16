@@ -54,7 +54,14 @@ class _UserProfilePageState extends State<UserProfilePage> {
       if (mounted) {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const ParkPage()),
+          MaterialPageRoute(
+            builder:
+                (context) => const ParkPage(
+                  diagnosedCharacterName: '剣士',
+                  answers: [],
+                  userName: '',
+                ),
+          ),
         );
       }
     } catch (e) {
