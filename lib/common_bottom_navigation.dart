@@ -46,7 +46,6 @@ class CommonBottomNavigation extends StatelessWidget {
 
     final String inactiveIcon;
     final String activeIcon;
-    final VoidCallback? onPressed;
     final Widget pageWidget;
 
     switch (page) {
