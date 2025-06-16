@@ -1,72 +1,99 @@
 import 'package:flutter/material.dart';
 import 'dart:ui';
+import 'park_page.dart';
+import 'time_schedule_page.dart';
+import 'ranking_page.dart';
+import 'item_page.dart';
+import 'credit_review_page.dart';
 
-enum AppPage { park, timetable, creditReview, ranking, item }
+enum AppPage { ranking, credit, park, timetable, dress }
 
 class CommonBottomNavigation extends StatelessWidget {
-  final AppPage currentPage;
-  final VoidCallback? onParkTap;
-  final VoidCallback? onTimetableTap;
-  final VoidCallback? onCreditReviewTap;
-  final VoidCallback? onRankingTap;
-  final VoidCallback? onItemTap;
+  final BuildContext context;
+  static AppPage currentPage = AppPage.park;
+  final String iconsParentPath = 'buttons/common_navigation/';
+  final String inactiveParkIcon = 'park_inactive.png';
+  final String activeParkIcon = 'park_active.png';
+  final String inactiveTimetableIcon = 'timetable_inactive.png';
+  final String activeTimetableIcon = 'timetable_active.png';
+  final String inactiveCreditIcon = 'credit_inactive.png';
+  final String activeCreditIcon = 'credit_active.png';
+  final String inactiveRankingIcon = 'ranking_inactive.png';
+  final String activeRankingIcon = 'ranking_active.png';
+  final String inactiveDressIcon = 'dress_inactive.png';
+  final String activeDressIcon = 'dress_active.png';
 
-  final String parkIconAsset;
-  final String parkIconActiveAsset;
-  final String timetableIconAsset;
-  final String timetableIconActiveAsset;
-  final String creditReviewIconAsset;
-  final String creditReviewActiveAsset;
-  final String rankingIconAsset;
-  final String rankingIconActiveAsset;
-  final String itemIconAsset;
-  final String itemIconActiveAsset;
+  const CommonBottomNavigation({super.key, required this.context});
+  void _onNavigationButtonPressed(AppPage page, Widget pageWidget) {
+    currentPage = page;
+    Navigator.pushReplacement(
+      context,
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) => pageWidget,
+        transitionDuration: Duration.zero,
+        reverseTransitionDuration: Duration.zero,
+      ),
+    );
+  }
 
-  const CommonBottomNavigation({
-    super.key,
-    required this.currentPage,
-    this.onParkTap,
-    this.onTimetableTap,
-    this.onCreditReviewTap,
-    this.onRankingTap,
-    this.onItemTap,
-    required this.parkIconAsset,
-    required this.parkIconActiveAsset,
-    required this.timetableIconAsset,
-    required this.timetableIconActiveAsset,
-    required this.creditReviewIconAsset,
-    required this.creditReviewActiveAsset,
-    required this.rankingIconAsset,
-    required this.rankingIconActiveAsset,
-    required this.itemIconAsset,
-    required this.itemIconActiveAsset,
-  });
-
-  Widget _buildNavItem({
-    required String inactiveIconAsset,
-    required String activeIconAsset,
-    required VoidCallback? onPressed,
-    required bool isActive,
-  }) {
+  Widget _buildNavdress({required AppPage page}) {
     const double activeSize = 80.0;
     const double inactiveSize = 60.0;
     const double activeYOffset = -8.0;
     const double inactiveYOffset = 8.0;
 
+    final bool isActive = currentPage == page;
+
+    final String inactiveIcon;
+    final String activeIcon;
+    final VoidCallback? onPressed;
+    final Widget pageWidget;
+
+    switch (page) {
+      case AppPage.park:
+        pageWidget = const ParkPage();
+        inactiveIcon = inactiveParkIcon;
+        activeIcon = activeParkIcon;
+        break;
+      case AppPage.timetable:
+        pageWidget = const TimeSchedulePage();
+        inactiveIcon = inactiveTimetableIcon;
+        activeIcon = activeTimetableIcon;
+        break;
+      case AppPage.credit:
+        pageWidget = const CreditReviewPage();
+        inactiveIcon = inactiveCreditIcon;
+        activeIcon = activeCreditIcon;
+        break;
+      case AppPage.ranking:
+        pageWidget = const RankingPage();
+        inactiveIcon = inactiveRankingIcon;
+        activeIcon = activeRankingIcon;
+        break;
+      case AppPage.dress:
+        pageWidget = const ItemPage();
+        inactiveIcon = inactiveDressIcon;
+        activeIcon = activeDressIcon;
+        break;
+    }
+
     final double currentSize = isActive ? activeSize : inactiveSize;
     final double currentYOffset = isActive ? activeYOffset : inactiveYOffset;
-    final String photoToShow = isActive ? activeIconAsset : inactiveIconAsset;
+    final String icon = isActive ? activeIcon : inactiveIcon;
 
     return Expanded(
       child: InkWell(
-        onTap: isActive ? null : onPressed,
+        onTap:
+            isActive
+                ? null
+                : () => _onNavigationButtonPressed(page, pageWidget),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 250),
           curve: Curves.easeOut,
           transform: Matrix4.translationValues(0, currentYOffset, 0),
           transformAlignment: Alignment.center,
           child: Image.asset(
-            photoToShow,
+            '$iconsParentPath$icon',
             width: currentSize,
             height: currentSize,
             fit: BoxFit.contain,
@@ -100,36 +127,11 @@ class CommonBottomNavigation extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: <Widget>[
-              _buildNavItem(
-                inactiveIconAsset: rankingIconAsset,
-                activeIconAsset: rankingIconActiveAsset,
-                onPressed: onRankingTap,
-                isActive: currentPage == AppPage.ranking,
-              ),
-              _buildNavItem(
-                inactiveIconAsset: creditReviewIconAsset,
-                activeIconAsset: creditReviewActiveAsset,
-                onPressed: onCreditReviewTap,
-                isActive: currentPage == AppPage.creditReview,
-              ),
-              _buildNavItem(
-                inactiveIconAsset: parkIconAsset,
-                activeIconAsset: parkIconActiveAsset,
-                onPressed: onParkTap,
-                isActive: currentPage == AppPage.park,
-              ),
-              _buildNavItem(
-                inactiveIconAsset: timetableIconAsset,
-                activeIconAsset: timetableIconActiveAsset,
-                onPressed: onTimetableTap,
-                isActive: currentPage == AppPage.timetable,
-              ),
-              _buildNavItem(
-                inactiveIconAsset: itemIconAsset,
-                activeIconAsset: itemIconActiveAsset,
-                onPressed: onItemTap,
-                isActive: currentPage == AppPage.item,
-              ),
+              _buildNavdress(page: AppPage.ranking),
+              _buildNavdress(page: AppPage.credit),
+              _buildNavdress(page: AppPage.park),
+              _buildNavdress(page: AppPage.timetable),
+              _buildNavdress(page: AppPage.dress),
             ],
           ),
         ],
