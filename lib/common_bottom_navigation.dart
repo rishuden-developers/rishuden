@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'dart:ui';
 import 'park_page.dart';
 import 'time_schedule_page.dart';
 import 'ranking_page.dart';
