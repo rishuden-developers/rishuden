@@ -388,66 +388,66 @@ class _MyHomePageState extends State<MyHomePage> {
             left: 16,
             right: 16,
             bottom: 16,
-            child: ElevatedButton(
-              onPressed: () async {
-                try {
-                  print('Debug button pressed');
+            child: Opacity(
+              opacity: 0.0, // 完全に透明
+              child: ElevatedButton(
+                onPressed: () async {
+                  try {
+                    print('Debug button pressed');
 
-                  // テスト用の固定ユーザーIDを使用
-                  const String testUserId = 'test_user_001';
-                  print('Using test user ID: $testUserId');
+                    const String testUserId = 'test_user_001';
+                    print('Using test user ID: $testUserId');
 
-                  // テスト用のユーザー情報を設定
-                  print('Saving user data to Firestore');
-                  await FirebaseFirestore.instance
-                      .collection('users')
-                      .doc(testUserId)
-                      .set({
-                        'character': 'キャラクター1',
-                        'characterSelected': true,
-                        'name': 'テストユーザー',
-                        'grade': '1年',
-                        'department': '工学部',
-                        'profileCompleted': true,
-                      }, SetOptions(merge: true));
-                  print('User data saved successfully');
+                    print('Saving user data to Firestore');
+                    await FirebaseFirestore.instance
+                        .collection('users')
+                        .doc(testUserId)
+                        .set({
+                          'character': 'キャラクター1',
+                          'characterSelected': true,
+                          'name': 'テストユーザー',
+                          'grade': '1年',
+                          'department': '工学部',
+                          'profileCompleted': true,
+                        }, SetOptions(merge: true));
+                    print('User data saved successfully');
 
-                  if (mounted) {
-                    print('Navigating to ParkPage');
-                    // 広場画面に遷移
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(
-                        builder:
-                            (context) => const ParkPage(
-                              diagnosedCharacterName: 'swordman',
-                              answers: [],
-                              userName: '',
-                            ),
-                      ),
-                    );
+                    if (mounted) {
+                      print('Navigating to ParkPage');
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                          builder:
+                              (context) => const ParkPage(
+                                diagnosedCharacterName: 'swordman',
+                                answers: [],
+                                userName: '',
+                              ),
+                        ),
+                      );
+                    }
+                  } catch (e, stackTrace) {
+                    print('Debug button error: $e');
+                    print('Stack trace: $stackTrace');
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('エラーが発生しました: $e'),
+                          backgroundColor: Colors.red,
+                          duration: const Duration(seconds: 5),
+                        ),
+                      );
+                    }
                   }
-                } catch (e, stackTrace) {
-                  print('Debug button error: $e');
-                  print('Stack trace: $stackTrace');
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('エラーが発生しました: $e'),
-                        backgroundColor: Colors.red,
-                        duration: const Duration(seconds: 5),
-                      ),
-                    );
-                  }
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.grey.withOpacity(0.7),
-                padding: const EdgeInsets.symmetric(vertical: 8),
-              ),
-              child: const Text(
-                'デバッグ: 広場画面へ',
-                style: TextStyle(fontSize: 14, color: Colors.white),
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.grey.withOpacity(0.7),
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                ),
+                child: const Text(
+                  'デバッグ: 広場画面へ',
+                  style: TextStyle(fontSize: 14, color: Colors.white),
+                ),
               ),
             ),
           ),

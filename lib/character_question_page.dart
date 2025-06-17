@@ -901,9 +901,6 @@ class _CharacterQuestionPageState extends State<CharacterQuestionPage> {
                                               diagnosedCharacterName:
                                                   characterName,
                                               answers: finalAnswers,
-                                              userName: _nameController.text,
-                                              grade: _selectedGrade,
-                                              department: _selectedDepartment,
                                             ),
                                       ),
                                     );
