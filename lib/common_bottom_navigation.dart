@@ -4,12 +4,10 @@ import 'time_schedule_page.dart';
 import 'ranking_page.dart';
 import 'item_page.dart';
 import 'credit_review_page.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'providers/current_page_provider.dart';
 
-enum AppPage { ranking, credit, park, timetable, dress }
-
-class CommonBottomNavigation extends StatelessWidget {
-  final BuildContext context;
-  static AppPage currentPage = AppPage.park;
+class CommonBottomNavigation extends ConsumerWidget {
   final String iconsParentPath = 'buttons/common_navigation/';
   final String inactiveParkIcon = 'park_inactive.png';
   final String activeParkIcon = 'park_active.png';
@@ -22,9 +20,15 @@ class CommonBottomNavigation extends StatelessWidget {
   final String inactiveDressIcon = 'dress_inactive.png';
   final String activeDressIcon = 'dress_active.png';
 
-  const CommonBottomNavigation({super.key, required this.context});
-  void _onNavigationButtonPressed(AppPage page, Widget pageWidget) {
-    currentPage = page;
+  const CommonBottomNavigation({super.key});
+
+  void _onNavigationButtonPressed({
+    required BuildContext context,
+    required WidgetRef ref,
+    required AppPage page,
+    required Widget pageWidget,
+  }) {
+    ref.read(currentPageProvider.notifier).state = page;
     Navigator.pushReplacement(
       context,
       PageRouteBuilder(
@@ -35,7 +39,12 @@ class CommonBottomNavigation extends StatelessWidget {
     );
   }
 
-  Widget _buildNavdress({required AppPage page}) {
+  Widget _buildNavdress({
+    required BuildContext context,
+    required WidgetRef ref,
+    required AppPage page,
+    required AppPage currentPage,
+  }) {
     const double activeSize = 80.0;
     const double inactiveSize = 60.0;
     const double activeYOffset = -8.0;
@@ -84,7 +93,12 @@ class CommonBottomNavigation extends StatelessWidget {
         onTap:
             isActive
                 ? null
-                : () => _onNavigationButtonPressed(page, pageWidget),
+                : () => _onNavigationButtonPressed(
+                  context: context,
+                  ref: ref,
+                  page: page,
+                  pageWidget: pageWidget,
+                ),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 250),
           curve: Curves.easeOut,
@@ -109,8 +123,9 @@ class CommonBottomNavigation extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     const double barHeight = 95.0;
+    final currentPage = ref.watch(currentPageProvider);
 
     return SizedBox(
       height: barHeight,
@@ -125,11 +140,36 @@ class CommonBottomNavigation extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: <Widget>[
-              _buildNavdress(page: AppPage.ranking),
-              _buildNavdress(page: AppPage.credit),
-              _buildNavdress(page: AppPage.park),
-              _buildNavdress(page: AppPage.timetable),
-              _buildNavdress(page: AppPage.dress),
+              _buildNavdress(
+                context: context,
+                ref: ref,
+                page: AppPage.ranking,
+                currentPage: currentPage,
+              ),
+              _buildNavdress(
+                context: context,
+                ref: ref,
+                page: AppPage.credit,
+                currentPage: currentPage,
+              ),
+              _buildNavdress(
+                context: context,
+                ref: ref,
+                page: AppPage.park,
+                currentPage: currentPage,
+              ),
+              _buildNavdress(
+                context: context,
+                ref: ref,
+                page: AppPage.timetable,
+                currentPage: currentPage,
+              ),
+              _buildNavdress(
+                context: context,
+                ref: ref,
+                page: AppPage.dress,
+                currentPage: currentPage,
+              ),
             ],
           ),
         ],

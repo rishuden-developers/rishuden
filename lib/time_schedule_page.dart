@@ -1821,7 +1821,7 @@ class _TimeSchedulePageState extends State<TimeSchedulePage> {
               bottom: 0,
               left: 0,
               right: 0,
-              child: CommonBottomNavigation(context: context),
+              child: CommonBottomNavigation(),
             ),
           ],
         ),

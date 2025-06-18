@@ -326,7 +326,7 @@ class _CreditReviewPageState extends State<CreditReviewPage> {
           fontWeight: FontWeight.bold,
         ),
       ),
-      bottomNavigationBar: CommonBottomNavigation(context: context),
+      bottomNavigationBar: CommonBottomNavigation(),
       body: Container(
         width: double.infinity,
         height: double.infinity,

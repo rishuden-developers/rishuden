@@ -1347,7 +1347,7 @@ class _ParkPageState extends State<ParkPage> {
             bottom: 0,
             left: 0,
             right: 0,
-            child: CommonBottomNavigation(context: context),
+            child: CommonBottomNavigation(),
           ),
           if (isQuestCreationVisible)
             Positioned.fill(

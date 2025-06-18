@@ -3,6 +3,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'main_page.dart';
 import 'firebase_options.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 void main() async {
   try {
@@ -11,7 +12,7 @@ void main() async {
       options: DefaultFirebaseOptions.currentPlatform,
     );
     await initializeDateFormatting('ja_JP', null);
-    runApp(const MyApp());
+    runApp(ProviderScope(child: const MyApp()));
   } catch (e) {
     print('Error initializing app: $e');
     runApp(
