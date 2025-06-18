@@ -103,19 +103,6 @@ class _MyHomePageState extends State<MyHomePage> {
                 );
               },
             ),
-            ListTile(
-              leading: const Icon(Icons.contact_mail),
-              title: const Text('履修キャラ診断'),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => CharacterQuestionPage(),
-                  ),
-                );
-              },
-            ),
           ],
         ),
       ),
@@ -318,7 +305,12 @@ class _MyHomePageState extends State<MyHomePage> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => const ParkPage(),
+                            builder:
+                                (context) => const ParkPage(
+                                  diagnosedCharacterName: '剣士',
+                                  answers: [],
+                                  userName: '',
+                                ),
                           ),
                         );
                       }
@@ -358,59 +350,66 @@ class _MyHomePageState extends State<MyHomePage> {
             left: 16,
             right: 16,
             bottom: 16,
-            child: ElevatedButton(
-              onPressed: () async {
-                try {
-                  print('Debug button pressed');
+            child: Opacity(
+              opacity: 0.0, // 完全に透明
+              child: ElevatedButton(
+                onPressed: () async {
+                  try {
+                    print('Debug button pressed');
 
-                  // テスト用の固定ユーザーIDを使用
-                  const String testUserId = 'test_user_001';
-                  print('Using test user ID: $testUserId');
+                    const String testUserId = 'test_user_001';
+                    print('Using test user ID: $testUserId');
 
-                  // テスト用のユーザー情報を設定
-                  print('Saving user data to Firestore');
-                  await FirebaseFirestore.instance
-                      .collection('users')
-                      .doc(testUserId)
-                      .set({
-                        'character': 'キャラクター1',
-                        'characterSelected': true,
-                        'name': 'テストユーザー',
-                        'grade': '1年',
-                        'department': '工学部',
-                        'profileCompleted': true,
-                      }, SetOptions(merge: true));
-                  print('User data saved successfully');
+                    print('Saving user data to Firestore');
+                    await FirebaseFirestore.instance
+                        .collection('users')
+                        .doc(testUserId)
+                        .set({
+                          'character': 'キャラクター1',
+                          'characterSelected': true,
+                          'name': 'テストユーザー',
+                          'grade': '1年',
+                          'department': '工学部',
+                          'profileCompleted': true,
+                        }, SetOptions(merge: true));
+                    print('User data saved successfully');
 
-                  if (mounted) {
-                    print('Navigating to ParkPage');
-                    // 広場画面に遷移
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(builder: (context) => const ParkPage()),
-                    );
+                    if (mounted) {
+                      print('Navigating to ParkPage');
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                          builder:
+                              (context) => const ParkPage(
+                                diagnosedCharacterName: 'swordman',
+                                answers: [],
+                                userName: '',
+                              ),
+                        ),
+                      );
+                    }
+                  } catch (e, stackTrace) {
+                    print('Debug button error: $e');
+                    print('Stack trace: $stackTrace');
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('エラーが発生しました: $e'),
+                          backgroundColor: Colors.red,
+                          duration: const Duration(seconds: 5),
+                        ),
+                      );
+                    }
                   }
-                } catch (e, stackTrace) {
-                  print('Debug button error: $e');
-                  print('Stack trace: $stackTrace');
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('エラーが発生しました: $e'),
-                        backgroundColor: Colors.red,
-                        duration: const Duration(seconds: 5),
-                      ),
-                    );
-                  }
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.grey.withOpacity(0.7),
-                padding: const EdgeInsets.symmetric(vertical: 8),
-              ),
-              child: const Text(
-                'デバッグ: 広場画面へ',
-                style: TextStyle(fontSize: 14, color: Colors.white),
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.grey.withOpacity(0.7),
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                ),
+                child: const Text(
+                  'デバッグ: 広場画面へ',
+                  style: TextStyle(fontSize: 14, color: Colors.white),
+                ),
               ),
             ),
           ),
@@ -428,6 +427,13 @@ class _MyHomePageState extends State<MyHomePage> {
           ),
         ],
       ),
+    );
+  }
+
+  void _navigateToCharacterQuestion() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => CharacterQuestionPage()),
     );
   }
 }
@@ -476,8 +482,25 @@ class AuthWrapper extends StatelessWidget {
               return const UserProfilePage();
             }
 
+            // キャラクターが選択されていない場合
+            if (userData == null || !userData.containsKey('character')) {
+              return CharacterQuestionPage();
+            }
+
+            // プロフィールが未完了の場合
+            if (!userData.containsKey('profileCompleted') ||
+                userData['profileCompleted'] != true) {
+              return const UserProfilePage();
+            }
+
             // すべての設定が完了している場合
-            return const ParkPage();
+            return ParkPage(
+              diagnosedCharacterName: userData['character'] ?? '剣士',
+              answers: [], // 適切な値を設定
+              userName: userData['name'] ?? '',
+              grade: userData['grade'] ?? '',
+              department: userData['department'] ?? '',
+            );
           },
         );
       },

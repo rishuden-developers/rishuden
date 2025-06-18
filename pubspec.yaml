@@ -65,6 +65,8 @@ flutter:
     - assets/takoyaki.png
     - assets/crack_overlay.png
     - assets/takoyaki_off.png
+    - assets/night_view.png
+    - assets/floating.png
   fonts:
     - family: Noto Sans JP
       fonts:

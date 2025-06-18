@@ -21,7 +21,20 @@ import 'quest_create.dart'; // QuestCreationWidgetのインポート
 import 'dart:ui';
 
 class ParkPage extends StatefulWidget {
-  const ParkPage({super.key});
+  final String diagnosedCharacterName;
+  final List<int> answers;
+  final String userName;
+  final String? grade;
+  final String? department;
+
+  const ParkPage({
+    super.key,
+    required this.diagnosedCharacterName,
+    required this.answers,
+    required this.userName,
+    this.grade,
+    this.department,
+  });
 
   @override
   State<ParkPage> createState() => _ParkPageState();
@@ -31,6 +44,10 @@ class _ParkPageState extends State<ParkPage> {
   String _currentParkCharacterImage = ''; // 空の初期値に変更
   String _currentParkCharacterName = ''; // 空の初期値に変更
   String _userName = '';
+
+  List<String> _dialogueMessages = [];
+  // 現在表示しているメッセージのインデックス
+  int _currentMessageIndex = 0;
 
   // 課題情報とカウントダウンのためのState変数
   // ★★★ 課題情報をリストで管理するように変更 ★★★
@@ -144,6 +161,34 @@ class _ParkPageState extends State<ParkPage> {
     );
   }
 
+  void _showDialogue(List<String> messages) {
+    setState(() {
+      _dialogueMessages = messages;
+      _currentMessageIndex = 0;
+    });
+  }
+
+  Timer? _rpgMessageTimer; // RPGメッセージ表示用のタイマー
+
+  // ★★★ 掲示板が割れた時にRPGメッセージを時間差で表示するメソッド ★★★
+  void _showRpgMessageAfterCrack(Map<String, dynamic> taskData) {
+    // 既存のタイマーがあればキャンセル
+    _rpgMessageTimer?.cancel();
+
+    // 1.5秒後にRPGメッセージを表示
+    _rpgMessageTimer = Timer(const Duration(milliseconds: 1500), () {
+      setState(() {
+        _dialogueMessages = [
+          "掲示板が割れた！",
+          "課題「${taskData['name']}」を討伐完了！",
+          "たこ焼き${taskData['reward'] ?? 10}個を獲得した！",
+          "よくやったな、冒険者よ...",
+        ];
+        _currentMessageIndex = 0;
+      });
+    });
+  }
+
   void _showPurchaseDialog(BuildContext context) {
     // 画面上にオーバーレイ表示するための関数
     showGeneralDialog(
@@ -229,27 +274,117 @@ class _ParkPageState extends State<ParkPage> {
     );
   }
 
-  Widget _buildArrowSeparator() {
-    return const Padding(
-      padding: EdgeInsets.symmetric(horizontal: 16.0), // 左右の余白で位置調整
-      child: Icon(
-        Icons.arrow_forward_ios, // あるいは Icons.chevron_right などお好みの矢印
-        color: Colors.white30, // 白く透けた感じ
-        size: 24.0, // サイズ調整
+  void _onTaskTap(int taskIndex) {
+    final taskData = _tasks[taskIndex];
+
+    // 割れるエフェクトを開始
+    setState(() {
+      _crackingTasks.add(taskIndex);
+    });
+
+    // RPGメッセージを時間差で表示
+    _showRpgMessageAfterCrack(taskData);
+
+    // さらに時間をおいてフェードアウト開始
+    Timer(const Duration(milliseconds: 3000), () {
+      setState(() {
+        _fadingOutTaskIndex = taskIndex;
+      });
+
+      // フェードアウト完了後にタスクを削除
+      Timer(const Duration(milliseconds: 500), () {
+        setState(() {
+          _tasks.removeAt(taskIndex);
+          _crackingTasks.remove(taskIndex);
+          _fadingOutTaskIndex = -1;
+        });
+      });
+    });
+  }
+
+  // ★★★ RPGメッセージボックスの改良版 ★★★
+  Widget _buildRpgMessageBox() {
+    if (_dialogueMessages.isEmpty) return const SizedBox.shrink();
+
+    void _nextMessage() {
+      if (_currentMessageIndex < _dialogueMessages.length - 1) {
+        setState(() {
+          _currentMessageIndex++;
+        });
+      } else {
+        // 全てのメッセージを読み終わったらボックスを消す
+        setState(() {
+          _dialogueMessages = [];
+          _currentMessageIndex = 0;
+        });
+      }
+    }
+
+    return Positioned(
+      bottom: 100, // フッターナビゲーションの上に配置
+      left: 10,
+      right: 10,
+      child: AnimatedOpacity(
+        opacity: _dialogueMessages.isNotEmpty ? 1.0 : 0.0,
+        duration: const Duration(milliseconds: 300),
+        child: GestureDetector(
+          onTap: _nextMessage,
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.9),
+              border: Border.all(color: Colors.yellow.shade600, width: 3.0),
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.yellow.withOpacity(0.3),
+                  blurRadius: 8,
+                  spreadRadius: 2,
+                ),
+              ],
+            ),
+            child: Stack(
+              children: [
+                Text(
+                  _dialogueMessages[_currentMessageIndex],
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontFamily: 'misaki',
+                    fontSize: 18,
+                    height: 1.5,
+                    shadows: [
+                      Shadow(
+                        color: Colors.black,
+                        blurRadius: 2,
+                        offset: Offset(1, 1),
+                      ),
+                    ],
+                  ),
+                ),
+                // 最後のメッセージでなければ「次へ」の矢印を表示
+                if (_currentMessageIndex < _dialogueMessages.length - 1)
+                  Positioned(
+                    bottom: -8,
+                    right: 8,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.yellow.shade600,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.arrow_drop_down,
+                        color: Colors.black,
+                        size: 28,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
-
-  // ★★★ この2つの関数を _ParkPageState クラスの中に追加 ★★★
-  // ★★★ このメソッドを、以下の完成版に丸ごと置き換えてください ★★★
-
-  // ★★★ このメソッドを、以下の完成版に丸ごと置き換えてください ★★★
-
-  // ★★★ このメソッドを、以下の完成版に丸ごと置き換えてください ★★★
-
-  // ★★★ このメソッドを、以下の完成版に丸ごと置き換えてください ★★★
-
-  // ★★★ _buildBulletinBoardPage メソッドを、以下の完成版に丸ごと置き換えてください ★★★
 
   Widget _buildBulletinBoardPage(Map<String, dynamic> taskData) {
     final screenHeight = MediaQuery.of(context).size.height;
@@ -264,45 +399,21 @@ class _ParkPageState extends State<ParkPage> {
     final bool isFadingOut = _fadingOutTaskIndex == taskIndex;
 
     // --- 討伐完了後に表示するシンプルなウィジェット ---
-    Widget buildSubmittedView() {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.check_circle,
-              color: Colors.greenAccent.withOpacity(0.8),
-              size: 60,
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              '討伐完了！',
-              style: TextStyle(
-                fontFamily: 'misaki',
-                fontSize: 24,
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
 
     // --- ここからがウィジェットの本体 ---
     return AnimatedOpacity(
       // フェードアウト中でない場合は透明度1.0(表示)、フェードアウト中なら0.0(非表示)
       opacity: isFadingOut ? 0.0 : 1.0,
-      duration: const Duration(milliseconds: 400), // フェードアウトの速さ
+      duration: const Duration(milliseconds: 0), // フェードアウトの速さ
       child: Stack(
         alignment: Alignment.center,
         children: [
           // --- 背景の掲示板画像 ---
           Positioned(
-            top: 0,
+            top: 180,
             bottom: 0,
-            left: screenWidth * 0.02,
-            right: screenWidth * 0.04,
+            left: screenWidth * 0.015,
+            right: screenWidth * 0.030,
             child: Opacity(
               opacity: 0.4,
               child: Image.asset('assets/countdown.png', fit: BoxFit.contain),
@@ -311,7 +422,7 @@ class _ParkPageState extends State<ParkPage> {
 
           // --- 課題の詳細情報 ---
           Positioned(
-            top: screenHeight * 0.227,
+            top: screenHeight * 0.345,
             left: 0,
             right: 0,
             height: screenHeight * 0.28,
@@ -328,22 +439,37 @@ class _ParkPageState extends State<ParkPage> {
                     textAlign: TextAlign.center,
                     text: TextSpan(
                       style: TextStyle(
-                        fontSize: screenHeight * 0.05,
+                        fontSize: screenHeight * 0.035,
                         fontWeight: FontWeight.bold,
-                        color: Colors.cyanAccent.withOpacity(0.9),
+                        color: const Color.fromARGB(
+                          255,
+                          42,
+                          255,
+                          255,
+                        ).withOpacity(0.9),
                         letterSpacing: 1.0,
                         fontFamily: 'display_free_tfb',
                         shadows: [
                           BoxShadow(
-                            color: Colors.cyanAccent.withOpacity(0.6),
-                            blurRadius: 12,
+                            color: const Color.fromARGB(
+                              255,
+                              6,
+                              255,
+                              255,
+                            ).withOpacity(0.5),
+                            blurRadius: 2,
                             spreadRadius: 4,
                             offset: const Offset(0, 2),
                           ),
                           BoxShadow(
-                            color: Colors.blue.withOpacity(0.5),
-                            blurRadius: 8,
-                            spreadRadius: 2,
+                            color: const Color.fromARGB(
+                              255,
+                              11,
+                              123,
+                              215,
+                            ).withOpacity(0.7),
+                            blurRadius: 20,
+                            spreadRadius: 20,
                             offset: const Offset(0, 0),
                           ),
                         ],
@@ -354,37 +480,37 @@ class _ParkPageState extends State<ParkPage> {
                           text: 'd',
                           style: TextStyle(
                             fontFamily: 'misaki',
-                            fontSize: screenHeight * 0.03,
+                            fontSize: screenHeight * 0.02,
                             color: Colors.white,
                           ),
                         ),
-                        const WidgetSpan(child: SizedBox(width: 12)),
+                        const WidgetSpan(child: SizedBox(width: 8)),
                         TextSpan(text: _hoursStr),
                         TextSpan(
                           text: 'h',
                           style: TextStyle(
                             fontFamily: 'misaki',
-                            fontSize: screenHeight * 0.03,
+                            fontSize: screenHeight * 0.02,
                             color: Colors.white,
                           ),
                         ),
-                        const WidgetSpan(child: SizedBox(width: 12)),
+                        const WidgetSpan(child: SizedBox(width: 8)),
                         TextSpan(text: _minutesStr),
                         TextSpan(
                           text: 'm',
                           style: TextStyle(
                             fontFamily: 'misaki',
-                            fontSize: screenHeight * 0.03,
+                            fontSize: screenHeight * 0.02,
                             color: Colors.white,
                           ),
                         ),
-                        const WidgetSpan(child: SizedBox(width: 12)),
+                        const WidgetSpan(child: SizedBox(width: 8)),
                         TextSpan(text: _secondsStr),
                         TextSpan(
                           text: 's',
                           style: TextStyle(
                             fontFamily: 'misaki',
-                            fontSize: screenHeight * 0.03,
+                            fontSize: screenHeight * 0.02,
                             color: Colors.white,
                           ),
                         ),
@@ -396,7 +522,7 @@ class _ParkPageState extends State<ParkPage> {
                     taskData['subject'],
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      fontSize: screenHeight * 0.030,
+                      fontSize: screenHeight * 0.025,
                       fontWeight: FontWeight.bold,
                       color: Colors.lightBlue[100]!.withOpacity(0.95),
                       fontFamily: 'misaki',
@@ -440,10 +566,10 @@ class _ParkPageState extends State<ParkPage> {
 
           // --- 討伐人数ゲージ ---
           Positioned(
-            top: screenHeight * 0.476,
-            left: screenWidth * 0.1,
+            top: screenHeight * 0.543,
+            left: screenWidth * 0.08,
             width: screenWidth * 0.22,
-            height: screenHeight * 0.045,
+            height: screenHeight * 0.035,
             child: TaskProgressGauge(
               defeatedCount:
                   isCracking
@@ -455,11 +581,11 @@ class _ParkPageState extends State<ParkPage> {
 
           // --- 作成者アイコン ---
           Positioned(
-            top: screenHeight * 0.28,
-            left: screenWidth * 0.11,
+            top: screenHeight * 0.39,
+            left: screenWidth * 0.08,
             child: Container(
-              width: screenWidth * 0.12,
-              height: screenWidth * 0.12,
+              width: screenWidth * 0.14,
+              height: screenWidth * 0.14,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(
@@ -474,26 +600,18 @@ class _ParkPageState extends State<ParkPage> {
             ),
           ),
 
-          // --- パリン！と割れるエフェクト用のオーバーレイ ---
-          // ★★★ 上記の if (isCracking) ブロックを、以下に置き換えてください ★★★
-          // ★★★ 上記の if (isCracking) ブロックを、以下のコードに置き換えてください ★★★
+          // ★★★ パリン！と割れるエフェクト用のオーバーレイ (修正箇所) ★★★
           if (isCracking)
-            Positioned.fill(
-              child: IgnorePointer(
-                child: TweenAnimationBuilder<double>(
-                  tween: Tween(begin: 0.0, end: 1.0),
-                  duration: const Duration(milliseconds: 150), // アニメーションを素早くする
-                  builder: (context, value, child) {
-                    // sin() をやめて、単純なフェードイン（valueをそのまま使う）に変更
-                    return Opacity(opacity: value, child: child);
-                  },
-                  child: Opacity(
-                    opacity: 0.65,
-                    child: Image.asset(
-                      'assets/crack_overlay.png',
-                      fit: BoxFit.cover,
-                    ),
-                  ),
+            Positioned(
+              top: 180,
+              bottom: 0,
+              left: screenWidth * 0.015,
+              right: screenWidth * 0.030,
+              child: Opacity(
+                opacity: 0.7,
+                child: Image.asset(
+                  'assets/crack_overlay.png',
+                  fit: BoxFit.contain,
                 ),
               ),
             ),
@@ -507,56 +625,45 @@ class _ParkPageState extends State<ParkPage> {
   // ★★★ このメソッドを、以下の完成版に丸ごと置き換えてください ★★★
 
   void _submitTask(int taskIndex) async {
-    // asyncキーワードを追加
-    // 処理中でないか、インデックスが有効かを確認
-    if (_fadingOutTaskIndex != null ||
-        _crackingTasks.contains(taskIndex) ||
-        taskIndex >= _tasks.length) {
+    // ★ asyncキーワードを追加
+    // インデックスが有効か、または処理中でないかを確認
+    if (taskIndex >= _tasks.length || _crackingTasks.contains(taskIndex)) {
       return;
     }
 
-    // --- Stage 1: 討伐人数を増やしてゲージを動かす ---
-    setState(() {
-      final currentDefeated = _tasks[taskIndex]['defeatedCount'] ?? 0;
-      _tasks[taskIndex]['defeatedCount'] = currentDefeated + 1;
-    });
-
-    // --- Step 2: ゲージのアニメーションを見せるために少し待つ (0.8秒) ---
-    await Future.delayed(const Duration(milliseconds: 800));
-    if (!mounted) return;
-
-    // --- Step 3: 画面が割れるアニメーションを開始 ---
+    // --- Step 1: 瞬時に「ひび割れ」を表示 ---
     setState(() {
       _crackingTasks.add(taskIndex);
     });
 
-    // --- Step 4: 割れるアニメーションを見せるために少し待つ (0.4秒) ---
-    await Future.delayed(const Duration(milliseconds: 400));
-    if (!mounted) return;
+    // --- Step 2: ひび割れ画像を少しの間表示するために待機 (例: 500ミリ秒) ---
+    await Future.delayed(const Duration(milliseconds: 500));
+    if (!mounted) return; // 待っている間にページが破棄された場合は処理を中断
 
-    // --- Step 5: パネルのフェードアウトを開始 ---
+    // --- Step 3: 報酬の獲得、タスクの削除、ひび割れの非表示をまとめて行う ---
+    // 獲得する報酬の値を定義
+    const int rewardExp = 5;
+    const int rewardTakoyaki = 2;
+
     setState(() {
-      _crackingTasks.remove(taskIndex); // ひび割れ画像を消す
-      _fadingOutTaskIndex = taskIndex; // フェードアウトを開始
-    });
+      // 報酬を加算
+      _takoyakiCount += rewardTakoyaki;
+      _gaugeKey.currentState?.addExperience(rewardExp);
 
-    // --- Step 6: フェードアウトのアニメーションを待つ (0.4秒) ---
-    await Future.delayed(const Duration(milliseconds: 400));
-    if (!mounted) return;
-
-    // --- Step 7: 完全に削除し、報酬を獲得 ---
-    setState(() {
-      _takoyakiCount += 2;
-      _gaugeKey.currentState?.addExperience(5);
-
+      // タスクリストから削除
       _tasks.removeAt(taskIndex);
-      _fadingOutTaskIndex = null; // フェードアウト状態をリセット
 
+      // ひび割れ表示をリセット
+      _crackingTasks.remove(taskIndex);
+
+      // ページビューのインデックスを調整
       if (_tasks.isNotEmpty && _pageController.hasClients) {
         final newPageIndex = taskIndex.clamp(0, _tasks.length - 1);
         _pageController.jumpToPage(newPageIndex);
       }
     });
+
+    // ★★★ SnackBarで討伐完了と報酬獲得の通知をすぐに表示 ★★★
   }
 
   // 1. 学生団体ロゴ用のダイアログ
@@ -706,44 +813,20 @@ class _ParkPageState extends State<ParkPage> {
   void initState() {
     super.initState();
     _loadTakoyakiStatus();
-    _loadCharacterInfo();
+    // _loadCharacterInfo();
     _startCountdownTimer();
     _calculateWeekDateRange();
-  }
 
-  // キャラクター情報を読み込む
-  Future<void> _loadCharacterInfo() async {
-    try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user != null) {
-        final doc =
-            await FirebaseFirestore.instance
-                .collection('users')
-                .doc(user.uid)
-                .get();
-
-        if (doc.exists) {
-          final data = doc.data() as Map<String, dynamic>;
-          final String characterName = data['character'] ?? '';
-          final String userName = data['name'] ?? '';
-
-          if (characterName.isNotEmpty &&
-              characterFullDataGlobal.containsKey(characterName)) {
-            if (mounted) {
-              setState(() {
-                _currentParkCharacterName = characterName;
-                _currentParkCharacterImage =
-                    characterFullDataGlobal[characterName]!['image'];
-                _userName = userName;
-                _isCharacterInfoInitialized = true;
-              });
-            }
-          }
-        }
+    // コンストラクタから渡されたキャラクター情報を設定
+    setState(() {
+      _currentParkCharacterName = widget.diagnosedCharacterName;
+      _userName = widget.userName;
+      if (characterFullDataGlobal.containsKey(widget.diagnosedCharacterName)) {
+        _currentParkCharacterImage =
+            characterFullDataGlobal[widget.diagnosedCharacterName]!['image'];
       }
-    } catch (e) {
-      print('Error loading character info: $e');
-    }
+      _isCharacterInfoInitialized = true;
+    });
   }
 
   final GlobalKey<LiquidLevelGaugeState> _gaugeKey =
@@ -953,6 +1036,22 @@ class _ParkPageState extends State<ParkPage> {
     );
   }
 
+  Widget _buildDrawerTile(IconData icon, String title, VoidCallback onTap) {
+    return ListTile(
+      leading: Icon(icon, color: Colors.amber[200]),
+      title: Text(
+        title,
+        style: const TextStyle(
+          fontFamily: 'misaki',
+          fontSize: 16,
+          color: Colors.white,
+        ),
+      ),
+      onTap: onTap,
+      hoverColor: Colors.amber.withOpacity(0.1),
+    );
+  }
+
   // ★★★ buildメソッドを、以下の完成版に丸ごと置き換えてください ★★★
 
   @override
@@ -962,6 +1061,7 @@ class _ParkPageState extends State<ParkPage> {
     final double topBarHeight = screenHeight * 0.08;
     final double singleBannerWidth = screenWidth * 0.30;
     final double bottomNavBarHeight = 75.0;
+
     final double logoSize = screenWidth * 0.13;
 
     // --- ボタンをページと連動させるためのアニメーション値の計算 ---
@@ -974,84 +1074,81 @@ class _ParkPageState extends State<ParkPage> {
       extendBodyBehindAppBar: true,
       extendBody: true,
       endDrawer: Drawer(
-        child: ListView(
-          padding: EdgeInsets.zero,
-          children: <Widget>[
-            DrawerHeader(
-              decoration: BoxDecoration(color: Colors.brown[700]),
-              child: Text(
-                'メニュー',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 24,
-                  fontFamily: 'misaki',
+        child: Container(
+          decoration: BoxDecoration(
+            image: DecorationImage(
+              image: AssetImage('assets/ranking_guild_background.png'), // 木目調など
+              fit: BoxFit.cover,
+            ),
+          ),
+          child: Column(
+            children: [
+              DrawerHeader(
+                decoration: BoxDecoration(
+                  border: Border(
+                    bottom: BorderSide(color: Colors.amber[300]!, width: 2),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: const [
+                    Icon(Icons.menu_book, color: Colors.white, size: 36),
+                    SizedBox(height: 10),
+                    Text(
+                      '冒険のメニュー',
+                      style: TextStyle(
+                        fontFamily: 'misaki',
+                        color: Colors.white,
+                        fontSize: 22,
+                        shadows: [Shadow(color: Colors.black, blurRadius: 2)],
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ),
-            ListTile(
-              leading: const Icon(Icons.school_outlined),
-              title: const Text('KOAN'),
-              onTap:
-                  () => _launchURL(
-                    'https://koan.osaka-u.ac.jp/campusweb/campusportal.do?page=main',
-                  ),
-            ),
-            ListTile(
-              leading: const Icon(Icons.book_outlined),
-              title: const Text('CLE'),
-              onTap:
-                  () =>
-                      _launchURL('https://www.cle.osaka-u.ac.jp/ultra/course'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.person_outline),
-              title: const Text('マイハンダイ'),
-              onTap: () => _launchURL('https://my.osaka-u.ac.jp/'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.mail_outline),
-              title: const Text('OU-Mail'),
-              onTap: () => _launchURL('https://outlook.office.com/mail/'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.mail_outline),
-              title: const Text('お問い合わせ'),
-              onTap: () {
+              _buildDrawerTile(Icons.school_outlined, 'KOAN', () {
+                _launchURL(
+                  'https://koan.osaka-u.ac.jp/campusweb/campusportal.do?page=main',
+                );
+              }),
+              _buildDrawerTile(Icons.book_outlined, 'CLE', () {
+                _launchURL('https://www.cle.osaka-u.ac.jp/ultra/course');
+              }),
+              _buildDrawerTile(Icons.person_outline, 'マイハンダイ', () {
+                _launchURL('https://my.osaka-u.ac.jp/');
+              }),
+              _buildDrawerTile(Icons.mail_outline, 'OU-Mail', () {
+                _launchURL('https://outlook.office.com/mail/');
+              }),
+              Divider(color: Colors.amber[200]),
+              _buildDrawerTile(Icons.mail, 'お問い合わせ', () {
                 Navigator.pop(context);
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const MailPage()),
+                  MaterialPageRoute(builder: (_) => const MailPage()),
                 );
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.info_outline),
-              title: const Text('お知らせを見る'),
-              onTap: () {
+              }),
+              _buildDrawerTile(Icons.info_outline, 'お知らせを見る', () {
                 Navigator.pop(context);
                 _showNoticeDialog(context);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.settings),
-              title: const Text('設定 (未実装)'),
-              onTap: () => Navigator.pop(context),
-            ),
-            ListTile(
-              leading: const Icon(Icons.help_outline),
-              title: const Text('ヘルプ (未実装)'),
-              onTap: () => Navigator.pop(context),
-            ),
-          ],
+              }),
+              Divider(color: Colors.amber[200]),
+              _buildDrawerTile(Icons.settings, '設定 (未実装)', () {
+                Navigator.pop(context);
+              }),
+              _buildDrawerTile(Icons.help_outline, 'ヘルプ (未実装)', () {
+                Navigator.pop(context);
+              }),
+              const SizedBox(height: 20), // 下の余白を確保
+            ],
+          ),
         ),
       ),
+
       body: Stack(
         children: [
           Positioned.fill(
-            child: Image.asset(
-              'assets/background_plaza.png',
-              fit: BoxFit.cover,
-            ),
+            child: Image.asset('assets/night_view.png', fit: BoxFit.cover),
           ),
           Positioned.fill(
             child: Container(color: Colors.black.withOpacity(0.5)),
@@ -1084,16 +1181,37 @@ class _ParkPageState extends State<ParkPage> {
                       ),
                     ),
                     Positioned(
-                      child: Center(
-                        child: Padding(
-                          padding: EdgeInsets.only(top: screenHeight * 0.28),
-                          child: Image.asset(
-                            _currentParkCharacterImage,
-                            width: screenWidth * 0.65,
-                            height: screenHeight * 0.55,
-                            fit: BoxFit.contain,
-                          ),
-                        ),
+                      // top: 画面の上端からの距離 (画面の高さに対する割合で指定)
+                      // この値を調整して、キャラクターの垂直位置を微調整してください。
+                      top: screenHeight * 0.04,
+
+                      // left: 画面の左端からの距離
+                      // 画像を水平方向の中央に配置するための計算式です。
+                      // (画面全体の幅 - 画像の幅) / 2
+                      left: (screenWidth - (screenWidth * 0.65)) / 8,
+
+                      child: Image.asset(
+                        "assets/floating.png", // ご指定の画像パス
+                        width: screenWidth * 0.55, // ご指定の幅
+                        height: screenHeight * 0.45, // ご指定の高さ
+                        fit: BoxFit.contain,
+                      ),
+                    ),
+                    Positioned(
+                      // top: 画面の上端からの距離 (画面の高さに対する割合で指定)
+                      // この値を調整して、キャラクターの垂直位置を微調整してください。
+                      top: screenHeight * 0.05,
+
+                      // left: 画面の左端からの距離
+                      // 画像を水平方向の中央に配置するための計算式です。
+                      // (画面全体の幅 - 画像の幅) / 2
+                      left: (screenWidth - (screenWidth * 0.65)) / 2.8,
+
+                      child: Image.asset(
+                        _currentParkCharacterImage, // ご指定の画像パス
+                        width: screenWidth * 0.38, // ご指定の幅
+                        height: screenHeight * 0.28, // ご指定の高さ
+                        fit: BoxFit.contain,
                       ),
                     ),
 
@@ -1126,11 +1244,11 @@ class _ParkPageState extends State<ParkPage> {
                     ),
                     Positioned(
                       top: 0,
-                      right: 20,
+                      right: 3,
                       child: IconButton(
                         icon: Icon(
                           Icons.menu,
-                          color: Colors.white,
+                          color: const Color.fromARGB(255, 26, 186, 222),
                           size: topBarHeight * 0.50,
                         ),
                         onPressed:
@@ -1152,7 +1270,7 @@ class _ParkPageState extends State<ParkPage> {
                     //),
                     //),
                     Positioned(
-                      top: 70,
+                      top: 75,
                       left: -1,
                       child: Stack(
                         alignment: Alignment.center,
@@ -1184,15 +1302,15 @@ class _ParkPageState extends State<ParkPage> {
                             ),
                           ),
                           Positioned(
-                            right: -1,
+                            right: -2,
                             child: GestureDetector(
                               onTap: () => _showPurchaseDialog(context),
                               child: Container(
                                 padding: const EdgeInsets.all(1.0),
                                 child: Image.asset(
                                   'assets/icon_plus.png',
-                                  width: topBarHeight * 0.5,
-                                  height: topBarHeight * 0.5,
+                                  width: topBarHeight * 0.4,
+                                  height: topBarHeight * 0.4,
                                   fit: BoxFit.contain,
                                 ),
                               ),
@@ -1216,12 +1334,36 @@ class _ParkPageState extends State<ParkPage> {
                         ),
                       ),
                     ),
-
+                    if (_dialogueMessages
+                        .isNotEmpty) // ★ メッセージがある場合はメッセージボックスを表示
+                      _buildRpgMessageBox()
+                    else // ★ メッセージがない場合はクエスト作成ボタンを表示
+                      Positioned(
+                        bottom: 40,
+                        child: GestureDetector(
+                          onTap: () {
+                            // ★ このボタンを押した時に会話を開始するテスト例
+                            // _showDialogue([
+                            //   "やあ、何か新しいクエストを作成するのかい？",
+                            //   "締切には気をつけるんだぞ！",
+                            // ]);
+                            setState(() {
+                              isQuestCreationVisible = true;
+                            });
+                          },
+                          child: Image.asset(
+                            'assets/make_quest.png',
+                            width: 360,
+                            height: 120,
+                            fit: BoxFit.contain,
+                          ),
+                        ),
+                      ),
                     // --- 独立したボタン群 ---
                     if (_tasks.isNotEmpty)
                       Positioned(
-                        top: screenHeight * 0.315,
-                        right: screenWidth * 0.24,
+                        top: screenHeight * 0.398,
+                        right: screenWidth * 0.20,
                         child: Opacity(
                           opacity: opacity,
                           child: Transform.scale(
@@ -1235,12 +1377,12 @@ class _ParkPageState extends State<ParkPage> {
                                   borderRadius: BorderRadius.circular(14),
                                 ),
                                 padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 10,
+                                  horizontal: 5,
+                                  vertical: 1,
                                 ),
                                 minimumSize: Size(
-                                  screenWidth * 0.12,
-                                  screenHeight * 0.045,
+                                  screenWidth * 0.06,
+                                  screenHeight * 0.035,
                                 ),
                                 elevation: 8,
                                 shadowColor: Colors.cyanAccent.withOpacity(0.6),
@@ -1273,8 +1415,8 @@ class _ParkPageState extends State<ParkPage> {
 
                     if (_tasks.isNotEmpty)
                       Positioned(
-                        top: screenHeight * 0.465,
-                        right: screenWidth * 0.24,
+                        top: screenHeight * 0.53,
+                        right: screenWidth * 0.21,
                         child: Opacity(
                           opacity: opacity,
                           child: Transform.scale(
@@ -1282,8 +1424,8 @@ class _ParkPageState extends State<ParkPage> {
                             child: GestureDetector(
                               onTap: _claimDailyTakoyaki,
                               child: Container(
-                                width: screenWidth * 0.10,
-                                height: screenWidth * 0.10,
+                                width: screenWidth * 0.15,
+                                height: screenWidth * 0.15,
                                 decoration: BoxDecoration(
                                   image: DecorationImage(
                                     image: AssetImage(
@@ -1301,7 +1443,7 @@ class _ParkPageState extends State<ParkPage> {
                       ),
 
                     Positioned(
-                      right: 140,
+                      right: 115,
                       top: 0,
                       child: GestureDetector(
                         onTap: () => _showOztechDialog(context),
@@ -1320,7 +1462,7 @@ class _ParkPageState extends State<ParkPage> {
                       ),
                     ),
                     Positioned(
-                      right: 70,
+                      right: 50,
                       top: 0,
                       child: GestureDetector(
                         onTap: () => _showPotiPotiDialog(context),
@@ -1338,6 +1480,7 @@ class _ParkPageState extends State<ParkPage> {
                         ),
                       ),
                     ),
+                    if (_dialogueMessages.isNotEmpty) _buildRpgMessageBox(),
                   ],
                 ),
               ),

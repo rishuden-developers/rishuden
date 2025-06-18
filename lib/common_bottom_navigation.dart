@@ -45,8 +45,8 @@ class CommonBottomNavigation extends ConsumerWidget {
     required AppPage page,
     required AppPage currentPage,
   }) {
-    const double activeSize = 80.0;
-    const double inactiveSize = 60.0;
+    const double activeSize = 70.0;
+    const double inactiveSize = 50.0;
     const double activeYOffset = -8.0;
     const double inactiveYOffset = 8.0;
 
@@ -58,7 +58,11 @@ class CommonBottomNavigation extends ConsumerWidget {
 
     switch (page) {
       case AppPage.park:
-        pageWidget = const ParkPage();
+        pageWidget = const ParkPage(
+          diagnosedCharacterName: '剣士',
+          answers: [],
+          userName: '',
+        );
         inactiveIcon = inactiveParkIcon;
         activeIcon = activeParkIcon;
         break;
@@ -132,7 +136,6 @@ class CommonBottomNavigation extends ConsumerWidget {
       width: double.infinity,
       child: Stack(
         children: [
-          // 背景画像（ファイル名は後で変更）
           Positioned.fill(
             child: Image.asset('assets/bottom_bar_bg.png', fit: BoxFit.cover),
           ),
