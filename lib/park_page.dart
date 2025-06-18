@@ -1490,52 +1490,7 @@ class _ParkPageState extends State<ParkPage> {
             bottom: 0,
             left: 0,
             right: 0,
-            child: CommonBottomNavigation(
-              currentPage: AppPage.park,
-              parkIconAsset: 'assets/button_park.png',
-              timetableIconAsset: 'assets/button_timetable.png',
-              creditReviewIconAsset: 'assets/button_unit_review.png',
-              rankingIconAsset: 'assets/button_ranking.png',
-              itemIconAsset: 'assets/button_dressup.png',
-              parkIconActiveAsset: 'assets/button_park_icon_active.png',
-              timetableIconActiveAsset: 'assets/button_timetable_active.png',
-              creditReviewActiveAsset: 'assets/button_unit_review_active.png',
-              rankingIconActiveAsset: 'assets/button_ranking_active.png',
-              itemIconActiveAsset: 'assets/button_dressup_active.png',
-              onParkTap: () {},
-              onTimetableTap:
-                  () => Navigator.pushReplacement(
-                    context,
-                    PageRouteBuilder(
-                      pageBuilder: (_, __, ___) => const TimeSchedulePage(),
-                      transitionDuration: Duration.zero,
-                    ),
-                  ),
-              onCreditReviewTap:
-                  () => Navigator.pushReplacement(
-                    context,
-                    PageRouteBuilder(
-                      pageBuilder: (_, __, ___) => const CreditReviewPage(),
-                      transitionDuration: Duration.zero,
-                    ),
-                  ),
-              onRankingTap:
-                  () => Navigator.pushReplacement(
-                    context,
-                    PageRouteBuilder(
-                      pageBuilder: (_, __, ___) => const RankingPage(),
-                      transitionDuration: Duration.zero,
-                    ),
-                  ),
-              onItemTap:
-                  () => Navigator.pushReplacement(
-                    context,
-                    PageRouteBuilder(
-                      pageBuilder: (_, __, ___) => const ItemPage(),
-                      transitionDuration: Duration.zero,
-                    ),
-                  ),
-            ),
+            child: CommonBottomNavigation(),
           ),
           if (isQuestCreationVisible)
             Positioned.fill(
