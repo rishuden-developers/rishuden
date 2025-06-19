@@ -8,7 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'providers/current_page_provider.dart';
 
 class CommonBottomNavigation extends ConsumerWidget {
-  final String iconsParentPath = 'buttons/common_navigation/';
+  final String iconsParentPath = 'assets/buttons/common_navigation/';
   final String inactiveParkIcon = 'park_inactive.png';
   final String activeParkIcon = 'park_active.png';
   final String inactiveTimetableIcon = 'timetable_inactive.png';
