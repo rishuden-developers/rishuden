@@ -184,8 +184,8 @@ class _QuestCreationWidgetState extends State<QuestCreationWidget> {
                     const SizedBox(height: 12),
                     TextField(
                       decoration: const InputDecoration(
-                        labelText: "課題の詳細",
-                        hintText: "課題の内容を入力してください",
+                        labelText: "課題の詳細 (任意)",
+                        hintText: "(例) A4一枚、手書き、表紙必須",
                       ),
                       maxLines: 3,
                       onChanged: (value) {
@@ -219,9 +219,7 @@ class _QuestCreationWidgetState extends State<QuestCreationWidget> {
                   ),
                   ElevatedButton(
                     onPressed:
-                        (tempTaskType != null &&
-                                tempDeadline != null &&
-                                tempDescription.isNotEmpty)
+                        (tempTaskType != null && tempDeadline != null)
                             ? () {
                               setState(() {
                                 _selectedTaskType = tempTaskType;

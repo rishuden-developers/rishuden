@@ -5,7 +5,7 @@ import 'timetable_entry.dart';
 import 'package:flutter/material.dart';
 
 final urlStr =
-    "https://g-calendar.koan.osaka-u.ac.jp/calendar/ebe7de71ce859c00d7fdb647a65002b03694b867-J.ics";
+    "https://g-calendar.koan.osaka-u.ac.jp/calendar/40cf6f8c7f9a1f4b07f787548d9d0007cb87f96a-J.ics";
 
 // dateを含む週の月曜日と日曜日のDateTimeを計算する関数
 DateTime _getThisMonday(DateTime date) {
