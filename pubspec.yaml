@@ -9,35 +9,40 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  firebase_core: ^3.13.1
-  cloud_firestore: ^5.6.8
-  firebase_auth: ^5.5.4
-  intl: ^0.19.0
-  cupertino_icons: ^1.0.6 # これは既にあるかもしれません
-  flutter_rating_bar: ^4.0.0 # ★これを追加してください★
-  provider: ^6.0.0
-  url_launcher: ^6.3.1
+  firebase_core:
+  cloud_firestore:
+  firebase_auth:
+  intl:
+  cupertino_icons: # これは既にあるかもしれません
+  flutter_rating_bar: # ★これを追加してください★
+  provider:
+  http:
+  icalendar_parser:
+  url_launcher:
+  shared_preferences:
+  flutter_riverpod:
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
+  flutter_launcher_icons: ^0.13.1
 
 flutter:
   uses-material-design: true
   assets:
     - assets/background_plaza.png
     - assets/icon_takoyaki.png
-    - assets/button_unit_review.png
-    - assets/button_ranking.png
-    - assets/button_dressup.png
-    - assets/button_timetable.png
-    - assets/button_park_icon.png
-    - assets/button_unit_review_active.png
-    - assets/button_ranking_active.png
-    - assets/button_dressup_active.png
-    - assets/button_timetable_active.png
-    - assets/button_park_icon_active.png
+    - assets/buttons/common_navigation/credit_active.png
+    - assets/buttons/common_navigation/credit_inactive.png
+    - assets/buttons/common_navigation/dress_active.png
+    - assets/buttons/common_navigation/dress_inactive.png
+    - assets/buttons/common_navigation/park_active.png
+    - assets/buttons/common_navigation/park_inactive.png
+    - assets/buttons/common_navigation/ranking_active.png
+    - assets/buttons/common_navigation/ranking_inactive.png
+    - assets/buttons/common_navigation/timetable_active.png
+    - assets/buttons/common_navigation/timetable_inactive.png
     - assets/character_swordman.png
     - assets/character_wizard.png
     - assets/character_gorilla.png
@@ -56,6 +61,13 @@ flutter:
     - assets/oztech.png
     - assets/potipoti.png
     - assets/bottom_bar_bg.png
+    - assets/stage.png
+    - assets/make_quest.png
+    - assets/takoyaki.png
+    - assets/crack_overlay.png
+    - assets/takoyaki_off.png
+    - assets/night_view.png
+    - assets/floating.png
   fonts:
     - family: Noto Sans JP
       fonts:
@@ -69,3 +81,7 @@ flutter:
     - family: DISPLAY FREE TFB
       fonts:
         - asset: fonts/DISPLAY FREE TFB.ttf
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/icon.png"

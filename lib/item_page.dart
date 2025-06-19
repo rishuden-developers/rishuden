@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'item_change_page.dart'; // 着せ替えページ
 import 'item_shop_page.dart'; // アイテム交換所ページ
-import 'dart:ui'; // BackdropFilter のために必要
+import 'dart:ui'; // すりガラス効果(ImageFilter)のために必要
 
 // ★★★ 共通フッターと遷移先ページをインポート ★★★
 import 'common_bottom_navigation.dart'; // common_bottom_navigation.dart のパスを正しく指定してください
@@ -9,6 +9,7 @@ import 'park_page.dart';
 import 'time_schedule_page.dart';
 import 'credit_review_page.dart';
 import 'ranking_page.dart';
+import 'mail_page.dart';
 // ItemPage自身は不要
 
 class ItemPage extends StatelessWidget {
@@ -45,6 +46,8 @@ class ItemPage extends StatelessWidget {
     );
   }
 
+  // ★★★ ItemPageのbuildメソッド全体をこちらに置き換えてください ★★★
+  // ★★★ ItemPageのbuildメソッド全体をこちらに置き換えてください ★★★
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -115,64 +118,7 @@ class ItemPage extends StatelessWidget {
                 ),
                 Align(
                   alignment: Alignment.bottomCenter,
-                  child: CommonBottomNavigation(
-                    currentPage: AppPage.item,
-                    parkIconAsset: 'assets/icons/park_icon.png',
-                    parkIconActiveAsset: 'assets/icons/park_icon_active.png',
-                    timetableIconAsset: 'assets/icons/timetable_icon.png',
-                    timetableIconActiveAsset:
-                        'assets/icons/timetable_icon_active.png',
-                    creditReviewIconAsset: 'assets/icons/credit_review_icon.png',
-                    creditReviewActiveAsset:
-                        'assets/icons/credit_review_icon_active.png',
-                    rankingIconAsset: 'assets/icons/ranking_icon.png',
-                    rankingIconActiveAsset: 'assets/icons/ranking_icon_active.png',
-                    itemIconAsset: 'assets/icons/item_icon.png',
-                    itemIconActiveAsset: 'assets/icons/item_icon_active.png',
-                    onParkTap: () {
-                      Navigator.pushReplacement(
-                        context,
-                        PageRouteBuilder(
-                          pageBuilder: (_, __, ___) => const ParkPage(),
-                          transitionDuration: Duration.zero,
-                        ),
-                      );
-                    },
-                    onTimetableTap: () {
-                      Navigator.pushReplacement(
-                        context,
-                        PageRouteBuilder(
-                          pageBuilder: (_, __, ___) => const TimeSchedulePage(),
-                          transitionDuration: Duration.zero,
-                        ),
-                      );
-                    },
-                    onCreditReviewTap: () {
-                      Navigator.pushReplacement(
-                        context,
-                        PageRouteBuilder(
-                          pageBuilder: (_, __, ___) => const CreditReviewPage(
-                            lectureName: 'ダミー講義名',
-                            teacherName: 'ダミー教員名', // 追加
-                          ),
-                          transitionDuration: Duration.zero,
-                        ),
-                      );
-                    },
-                    onRankingTap: () {
-                      Navigator.pushReplacement(
-                        context,
-                        PageRouteBuilder(
-                          pageBuilder: (_, __, ___) => const RankingPage(),
-                          transitionDuration: Duration.zero,
-                        ),
-                      );
-                    },
-                    // onItemTapは現在のページなので、何もしないか、リフレッシュ処理などを記述
-                    onItemTap: () {
-                      print("Already on Item Page");
-                    },
-                  ),
+                  child: CommonBottomNavigation(),
                 ),
               ],
             ),

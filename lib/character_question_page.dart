@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'dart:math'; // For max/min
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:provider/provider.dart';
+
 import 'character_decide_page.dart';
-import 'character_provider.dart';
-import 'character_data.dart'; // characterFullDataGlobal を使用するため
+import 'park_page.dart';
+import 'character_data.dart' show characterFullDataGlobal;
+
+// characterFullDataGlobal を使用するため
+import 'package:firebase_auth/firebase_auth.dart';
+import 'user_profile_page.dart';
 
 // 各質問の選択肢を定義 (ドロップダウン用 - 新しいインデックス10から19)
 final Map<int, List<String>> questionOptions = {
@@ -126,6 +130,25 @@ class _CharacterQuestionPageState extends State<CharacterQuestionPage> {
   late List<bool> _isQuestionAnswered;
   int _answeredQuestionsCount = 0;
   final int _totalQuestions = 20;
+  String? _selectedCharacter;
+  final _nameController = TextEditingController();
+  String? _selectedGrade;
+  String? _selectedDepartment;
+  String? _error;
+
+  final List<String> _grades = ['1年', '2年', '3年', '4年', '院1年', '院2年'];
+  final List<String> _departments = [
+    '工学部',
+    '理学部',
+    '医学部',
+    '歯学部',
+    '薬学部',
+    '文学部',
+    '法学部',
+    '経済学部',
+    '商学部',
+    '基礎工学部',
+  ];
 
   @override
   void initState() {
@@ -157,30 +180,31 @@ class _CharacterQuestionPageState extends State<CharacterQuestionPage> {
     List<int> userAnswers,
     String diagnosedCharacter,
   ) async {
-    // String userID = 'u245319i'; // このハードコードはテスト用。実際は認証などから取得。
-    // ProviderなどからユーザーIDを取得する方が望ましい
-    final characterProvider = Provider.of<CharacterProvider>(
-      context,
-      listen: false,
-    );
-    String? userID =
-        characterProvider.userId; // CharacterProviderにuserIdを持たせる想定
-
-    if (userID == null) {
-      print('ユーザーIDが取得できませんでした。Firestoreへの保存をスキップします。');
-      return;
-    }
-    print('--- Firestoreへの保存処理を開始します (QuestionPageから) ---');
     try {
-      // 特定のユーザーIDのドキュメントに直接書き込む
-      await FirebaseFirestore.instance.collection('users').doc(userID).set({
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        print('ユーザーがログインしていません。Firestoreへの保存をスキップします。');
+        return;
+      }
+
+      print('--- Firestoreへの保存処理を開始します (QuestionPageから) ---');
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
         'character': diagnosedCharacter,
-        'diagnostics': userAnswers, // userAnswers は List<int>
-        'lastDiagnosed': FieldValue.serverTimestamp(), // 最後に診断した日時
-      }, SetOptions(merge: true)); // merge:true で既存のフィールドを上書きせずに追加・更新
-      print('診断結果をFirestoreに保存しました。UserID: $userID');
+        'diagnostics': userAnswers,
+        'lastDiagnosed': FieldValue.serverTimestamp(),
+        'name': _nameController.text,
+        'grade': _selectedGrade,
+        'department': _selectedDepartment,
+      }, SetOptions(merge: true));
+
+      print('--- Firestoreへの保存が完了しました ---');
     } catch (e) {
-      print('Firestoreへの保存に失敗しました: $e');
+      print('Firestoreへの保存中にエラーが発生しました: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('エラーが発生しました: $e')));
+      }
     }
   }
 
@@ -868,6 +892,19 @@ class _CharacterQuestionPageState extends State<CharacterQuestionPage> {
                                       ),
                                     );
                                   }
+                                  if (mounted) {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder:
+                                            (context) => CharacterDecidePage(
+                                              diagnosedCharacterName:
+                                                  characterName,
+                                              answers: finalAnswers,
+                                            ),
+                                      ),
+                                    );
+                                  }
                                 }
                                 : null,
                       ),
@@ -881,5 +918,64 @@ class _CharacterQuestionPageState extends State<CharacterQuestionPage> {
         ],
       ),
     );
+  }
+
+  void _submitCharacter() async {
+    if (_selectedCharacter == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('キャラクターを選択してください')));
+      return;
+    }
+
+    if (_nameController.text.isEmpty ||
+        _selectedGrade == null ||
+        _selectedDepartment == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('すべての項目を入力してください')));
+      return;
+    }
+
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    try {
+      // 選択されたキャラクターの画像を取得
+      String? characterImage;
+      if (_selectedCharacter != null &&
+          characterFullDataGlobal.containsKey(_selectedCharacter)) {
+        characterImage = characterFullDataGlobal[_selectedCharacter]!['image'];
+      }
+
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+        'character': _selectedCharacter,
+        'characterImage': characterImage, // 画像パスを保存
+        'characterSelected': true,
+        'name': _nameController.text.trim(),
+        'grade': _selectedGrade,
+        'department': _selectedDepartment,
+        'profileCompleted': true,
+      }, SetOptions(merge: true));
+
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const UserProfilePage()),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('エラーが発生しました: $e')));
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    super.dispose();
   }
 }

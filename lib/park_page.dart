@@ -1,33 +1,53 @@
 import 'package:flutter/material.dart';
 import 'dart:async'; // Timer.periodic のために必要
 import 'package:intl/intl.dart';
-import 'package:provider/provider.dart'; // ★ Providerをインポート
-import 'character_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
-// DateFormat のために必要
-
-// 共通フッターと遷移先ページのインポート (パスは実際の構成に合わせてください)
+import 'dart:math';
+import 'task_progress_gauge.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'user_page.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'character_data.dart' show characterFullDataGlobal;
 import 'common_bottom_navigation.dart';
 import 'credit_review_page.dart';
 import 'item_page.dart';
 import 'ranking_page.dart';
 import 'time_schedule_page.dart';
 import 'news_page.dart';
+import 'mail_page.dart';
 import 'level_gauge.dart';
-// park_page.dart の一番上に追加
+import 'quest_create.dart'; // QuestCreationWidgetのインポート
 import 'dart:ui';
 
 class ParkPage extends StatefulWidget {
-  const ParkPage({super.key});
+  final String diagnosedCharacterName;
+  final List<int> answers;
+  final String userName;
+  final String? grade;
+  final String? department;
+
+  const ParkPage({
+    super.key,
+    required this.diagnosedCharacterName,
+    required this.answers,
+    required this.userName,
+    this.grade,
+    this.department,
+  });
 
   @override
   State<ParkPage> createState() => _ParkPageState();
 }
 
 class _ParkPageState extends State<ParkPage> {
-  String _currentParkCharacterImage =
-      'assets/character_swordman.png'; // デフォルト画像
-  String _currentParkCharacterName = '勇者'; // デフォルト名
+  String _currentParkCharacterImage = ''; // 空の初期値に変更
+  String _currentParkCharacterName = ''; // 空の初期値に変更
+  String _userName = '';
+
+  List<String> _dialogueMessages = [];
+  // 現在表示しているメッセージのインデックス
+  int _currentMessageIndex = 0;
 
   // 課題情報とカウントダウンのためのState変数
   // ★★★ 課題情報をリストで管理するように変更 ★★★
@@ -39,12 +59,14 @@ class _ParkPageState extends State<ParkPage> {
       'deadline': DateTime.now().add(
         const Duration(days: 5, hours: 18, minutes: 00),
       ),
+      'isSubmitted': false,
     },
     {
       'subject': "総合英語",
       'name': "最終課題",
       'details': "プレゼン作成",
       'deadline': DateTime.now().add(const Duration(days: 12, hours: 00)),
+      'isSubmitted': false,
     },
     // 他にも課題があればここに追加
   ];
@@ -68,7 +90,13 @@ class _ParkPageState extends State<ParkPage> {
   int _currentExp = 1250; // 仮の現在の経験値
   int _maxExp = 2000;
 
+  int? _fadingOutTaskIndex;
+
   bool _isCharacterInfoInitialized = false;
+  bool isQuestCreationVisible = false;
+  int _takoyakiCount = 13800; // たこ焼きの初期値
+  final Set<int> _crackingTasks = {};
+  double _pageOffset = 0.0;
 
   Future<void> _launchURL(String url) async {
     final Uri uri = Uri.parse(url);
@@ -76,6 +104,89 @@ class _ParkPageState extends State<ParkPage> {
       // エラー処理をここに追加できます (例: SnackBarの表示)
       debugPrint('Could not launch $url');
     }
+  }
+
+  // _ParkPageState クラス内
+
+  // ★★★ この変数を追加 ★★★
+  bool _isTakoyakiClaimed = false;
+
+  // ★★★ この2つのメソッドを丸ごと追加 ★★★
+
+  // 起動時に、今日すでにたこ焼きを受け取ったかチェックするメソッド
+  void _loadTakoyakiStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    // キーに今日の日付を含めることで、毎日リセットされるようにする
+    final String todayKey =
+        'takoyakiClaimed_${DateFormat('yyyy-MM-dd').format(DateTime.now())}';
+    setState(() {
+      _isTakoyakiClaimed = prefs.getBool(todayKey) ?? false;
+    });
+  }
+
+  // たこ焼きボタンが押された時の処理
+  void _claimDailyTakoyaki() async {
+    if (_isTakoyakiClaimed) {
+      // すでに受け取り済みの場合のメッセージ
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            '今日のたこ焼きはもう受け取ったで！また明日な！',
+            style: TextStyle(fontFamily: 'misaki'),
+          ),
+          backgroundColor: Colors.orangeAccent,
+        ),
+      );
+      return;
+    }
+
+    // 報酬を付与し、受け取り済みにする
+    setState(() {
+      _takoyakiCount += 10; // デイリーボーナスは10個
+      _isTakoyakiClaimed = true;
+    });
+
+    // 「今日受け取った」という記録を端末に保存
+    final prefs = await SharedPreferences.getInstance();
+    final String todayKey =
+        'takoyakiClaimed_${DateFormat('yyyy-MM-dd').format(DateTime.now())}';
+    await prefs.setBool(todayKey, true);
+
+    // 受け取り完了メッセージ
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('たこ焼きを10個ゲットした！', style: TextStyle(fontFamily: 'misaki')),
+        backgroundColor: Colors.green,
+      ),
+    );
+  }
+
+  void _showDialogue(List<String> messages) {
+    setState(() {
+      _dialogueMessages = messages;
+      _currentMessageIndex = 0;
+    });
+  }
+
+  Timer? _rpgMessageTimer; // RPGメッセージ表示用のタイマー
+
+  // ★★★ 掲示板が割れた時にRPGメッセージを時間差で表示するメソッド ★★★
+  void _showRpgMessageAfterCrack(Map<String, dynamic> taskData) {
+    // 既存のタイマーがあればキャンセル
+    _rpgMessageTimer?.cancel();
+
+    // 1.5秒後にRPGメッセージを表示
+    _rpgMessageTimer = Timer(const Duration(milliseconds: 1500), () {
+      setState(() {
+        _dialogueMessages = [
+          "掲示板が割れた！",
+          "課題「${taskData['name']}」を討伐完了！",
+          "たこ焼き${taskData['reward'] ?? 10}個を獲得した！",
+          "よくやったな、冒険者よ...",
+        ];
+        _currentMessageIndex = 0;
+      });
+    });
   }
 
   void _showPurchaseDialog(BuildContext context) {
@@ -163,189 +274,396 @@ class _ParkPageState extends State<ParkPage> {
     );
   }
 
-  Widget _buildArrowSeparator() {
-    return const Padding(
-      padding: EdgeInsets.symmetric(horizontal: 16.0), // 左右の余白で位置調整
-      child: Icon(
-        Icons.arrow_forward_ios, // あるいは Icons.chevron_right などお好みの矢印
-        color: Colors.white30, // 白く透けた感じ
-        size: 24.0, // サイズ調整
-      ),
-    );
+  void _onTaskTap(int taskIndex) {
+    final taskData = _tasks[taskIndex];
+
+    // 割れるエフェクトを開始
+    setState(() {
+      _crackingTasks.add(taskIndex);
+    });
+
+    // RPGメッセージを時間差で表示
+    _showRpgMessageAfterCrack(taskData);
+
+    // さらに時間をおいてフェードアウト開始
+    Timer(const Duration(milliseconds: 3000), () {
+      setState(() {
+        _fadingOutTaskIndex = taskIndex;
+      });
+
+      // フェードアウト完了後にタスクを削除
+      Timer(const Duration(milliseconds: 500), () {
+        setState(() {
+          _tasks.removeAt(taskIndex);
+          _crackingTasks.remove(taskIndex);
+          _fadingOutTaskIndex = -1;
+        });
+      });
+    });
   }
 
-  // ★★★ この2つの関数を _ParkPageState クラスの中に追加 ★★★
-  Widget _buildBulletinBoardPage(Map<String, dynamic> taskData) {
-    final screenHeight = MediaQuery.of(context).size.height;
-    final screenWidth = MediaQuery.of(context).size.width;
+  // ★★★ RPGメッセージボックスの改良版 ★★★
+  Widget _buildRpgMessageBox() {
+    if (_dialogueMessages.isEmpty) return const SizedBox.shrink();
 
-    // データを取り出す
-    final String taskSubject = taskData['subject'];
-    final String taskName = taskData['name'];
-    final String taskDetails = taskData['details'];
-    final DateTime taskDeadline = taskData['deadline'];
+    void _nextMessage() {
+      if (_currentMessageIndex < _dialogueMessages.length - 1) {
+        setState(() {
+          _currentMessageIndex++;
+        });
+      } else {
+        // 全てのメッセージを読み終わったらボックスを消す
+        setState(() {
+          _dialogueMessages = [];
+          _currentMessageIndex = 0;
+        });
+      }
+    }
 
-    return Stack(
-      alignment: Alignment.center,
-      children: [
-        // 背景の掲示板画像
-        Positioned(
-          top: 0,
-          bottom: 0,
-          // ★★★ これらの値を調整して横幅を狭めます ★★★
-          left: screenWidth * 0.02, // 左から5%内側に寄せる
-          right: screenWidth * 0.04, // 右から5%内側に寄せる
-          child: Opacity(
-            opacity: 0.6,
-            child: Image.asset(
-              'assets/countdown.png',
-              fit: BoxFit.contain,
-            ), // fitも変更推奨
-          ),
-        ),
-        // 情報表示エリア
-        Positioned(
-          top: screenHeight * 0.227,
-          left: screenWidth * 0.0,
-          right: screenWidth * 0.0,
-          height: screenHeight * 0.28,
+    return Positioned(
+      bottom: 100, // フッターナビゲーションの上に配置
+      left: 10,
+      right: 10,
+      child: AnimatedOpacity(
+        opacity: _dialogueMessages.isNotEmpty ? 1.0 : 0.0,
+        duration: const Duration(milliseconds: 300),
+        child: GestureDetector(
+          onTap: _nextMessage,
           child: Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 10.0,
-              vertical: 8.0,
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.start,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // カウントダウンタイマー
-                // 注: このTextは、State変数(_countdownText)を直接参照するため、
-                // 表示される内容は全ページで同じになります。
-                RichText(
-                  textAlign: TextAlign.center,
-                  text: TextSpan(
-                    style: TextStyle(
-                      fontSize: screenHeight * 0.05,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.cyanAccent.withOpacity(0.95),
-                      letterSpacing: 1.0,
-                      fontFamily: 'display_free_tfb', // 数字用のフォント
-                      shadows: [
-                        BoxShadow(
-                          color: Colors.blue.withOpacity(0.8),
-                          blurRadius: 8,
-                          spreadRadius: 1,
-                        ),
-                        BoxShadow(
-                          color: Colors.cyanAccent.withOpacity(0.6),
-                          blurRadius: 12,
-                          spreadRadius: 4,
-                        ),
-                      ],
-                    ),
-                    // ... RichTextの中
-                    children: <InlineSpan>[
-                      // ★ List<InlineSpan> に変更
-                      TextSpan(text: _daysStr),
-                      TextSpan(
-                        text: 'd',
-                        style: TextStyle(
-                          fontFamily: 'misaki',
-                          fontSize: screenHeight * 0.03,
-                          color: Colors.white,
-                        ),
-                      ),
-
-                      // ★★★ スペースの作り方をWidgetSpan + SizedBoxに変更 ★★★
-                      const WidgetSpan(child: SizedBox(width: 12)),
-
-                      TextSpan(text: _hoursStr),
-                      TextSpan(
-                        text: 'h',
-                        style: TextStyle(
-                          fontFamily: 'misaki',
-                          fontSize: screenHeight * 0.03,
-                          color: Colors.white,
-                        ),
-                      ),
-
-                      const WidgetSpan(child: SizedBox(width: 12)),
-
-                      TextSpan(text: _minutesStr),
-                      TextSpan(
-                        text: 'm',
-                        style: TextStyle(
-                          fontFamily: 'misaki',
-                          fontSize: screenHeight * 0.03,
-                          color: Colors.white,
-                        ),
-                      ),
-
-                      const WidgetSpan(child: SizedBox(width: 12)),
-
-                      TextSpan(text: _secondsStr),
-                      TextSpan(
-                        text: 's',
-                        style: TextStyle(
-                          fontFamily: 'misaki',
-                          fontSize: screenHeight * 0.03,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ],
-                    // ...
-                  ),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.9),
+              border: Border.all(color: Colors.yellow.shade600, width: 3.0),
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.yellow.withOpacity(0.3),
+                  blurRadius: 8,
+                  spreadRadius: 2,
                 ),
-                const SizedBox(height: 4),
-                // 教科名
+              ],
+            ),
+            child: Stack(
+              children: [
                 Text(
-                  taskSubject,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: screenHeight * 0.030,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.lightBlue[100]!.withOpacity(0.95),
+                  _dialogueMessages[_currentMessageIndex],
+                  style: const TextStyle(
+                    color: Colors.white,
                     fontFamily: 'misaki',
+                    fontSize: 18,
+                    height: 1.5,
                     shadows: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.5),
+                      Shadow(
+                        color: Colors.black,
                         blurRadius: 2,
                         offset: Offset(1, 1),
                       ),
                     ],
                   ),
-                  overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 6),
-                // 詳細コンテナ
-                Center(
-                  child: Container(
-                    width: screenWidth * 0.45,
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.35),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: Colors.white.withOpacity(0.2),
-                        width: 0.5,
+                // 最後のメッセージでなければ「次へ」の矢印を表示
+                if (_currentMessageIndex < _dialogueMessages.length - 1)
+                  Positioned(
+                    bottom: -8,
+                    right: 8,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.yellow.shade600,
+                        shape: BoxShape.circle,
                       ),
-                    ),
-                    child: Text(
-                      "課題: $taskName\n詳細: $taskDetails\n期限: ${DateFormat('MM/dd HH:mm', 'ja').format(taskDeadline)}",
-                      style: TextStyle(
-                        fontSize: screenHeight * 0.020,
-                        color: Colors.grey[100]!.withOpacity(0.95),
-                        height: 1.4,
+                      child: const Icon(
+                        Icons.arrow_drop_down,
+                        color: Colors.black,
+                        size: 28,
                       ),
                     ),
                   ),
-                ),
               ],
             ),
           ),
         ),
-      ],
+      ),
     );
+  }
+
+  Widget _buildBulletinBoardPage(Map<String, dynamic> taskData) {
+    final screenHeight = MediaQuery.of(context).size.height;
+    final screenWidth = MediaQuery.of(context).size.width;
+
+    // この課題が現在表示されているページのインデックス番号を取得
+    final int taskIndex = _tasks.indexOf(taskData);
+    if (taskIndex == -1) return const SizedBox(); // 既に削除されたタスクの場合は何も表示しない
+
+    final bool isCracking = _crackingTasks.contains(taskIndex);
+    // フェードアウト中のタスクかどうかを判定
+    final bool isFadingOut = _fadingOutTaskIndex == taskIndex;
+
+    // --- 討伐完了後に表示するシンプルなウィジェット ---
+
+    // --- ここからがウィジェットの本体 ---
+    return AnimatedOpacity(
+      // フェードアウト中でない場合は透明度1.0(表示)、フェードアウト中なら0.0(非表示)
+      opacity: isFadingOut ? 0.0 : 1.0,
+      duration: const Duration(milliseconds: 0), // フェードアウトの速さ
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          // --- 背景の掲示板画像 ---
+          Positioned(
+            top: 180,
+            bottom: 0,
+            left: screenWidth * 0.015,
+            right: screenWidth * 0.030,
+            child: Opacity(
+              opacity: 0.4,
+              child: Image.asset('assets/countdown.png', fit: BoxFit.contain),
+            ),
+          ),
+
+          // --- 課題の詳細情報 ---
+          Positioned(
+            top: screenHeight * 0.345,
+            left: 0,
+            right: 0,
+            height: screenHeight * 0.28,
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 10.0,
+                vertical: 8.0,
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  RichText(
+                    textAlign: TextAlign.center,
+                    text: TextSpan(
+                      style: TextStyle(
+                        fontSize: screenHeight * 0.035,
+                        fontWeight: FontWeight.bold,
+                        color: const Color.fromARGB(
+                          255,
+                          42,
+                          255,
+                          255,
+                        ).withOpacity(0.9),
+                        letterSpacing: 1.0,
+                        fontFamily: 'display_free_tfb',
+                        shadows: [
+                          BoxShadow(
+                            color: const Color.fromARGB(
+                              255,
+                              6,
+                              255,
+                              255,
+                            ).withOpacity(0.5),
+                            blurRadius: 2,
+                            spreadRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                          BoxShadow(
+                            color: const Color.fromARGB(
+                              255,
+                              11,
+                              123,
+                              215,
+                            ).withOpacity(0.7),
+                            blurRadius: 20,
+                            spreadRadius: 20,
+                            offset: const Offset(0, 0),
+                          ),
+                        ],
+                      ),
+                      children: <InlineSpan>[
+                        TextSpan(text: _daysStr),
+                        TextSpan(
+                          text: 'd',
+                          style: TextStyle(
+                            fontFamily: 'misaki',
+                            fontSize: screenHeight * 0.02,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const WidgetSpan(child: SizedBox(width: 8)),
+                        TextSpan(text: _hoursStr),
+                        TextSpan(
+                          text: 'h',
+                          style: TextStyle(
+                            fontFamily: 'misaki',
+                            fontSize: screenHeight * 0.02,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const WidgetSpan(child: SizedBox(width: 8)),
+                        TextSpan(text: _minutesStr),
+                        TextSpan(
+                          text: 'm',
+                          style: TextStyle(
+                            fontFamily: 'misaki',
+                            fontSize: screenHeight * 0.02,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const WidgetSpan(child: SizedBox(width: 8)),
+                        TextSpan(text: _secondsStr),
+                        TextSpan(
+                          text: 's',
+                          style: TextStyle(
+                            fontFamily: 'misaki',
+                            fontSize: screenHeight * 0.02,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    taskData['subject'],
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: screenHeight * 0.025,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.lightBlue[100]!.withOpacity(0.95),
+                      fontFamily: 'misaki',
+                      shadows: const [
+                        BoxShadow(
+                          color: Colors.black54,
+                          blurRadius: 2,
+                          offset: Offset(1, 1),
+                        ),
+                      ],
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 6),
+                  Center(
+                    child: Container(
+                      width: screenWidth * 0.45,
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.35),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.2),
+                          width: 0.5,
+                        ),
+                      ),
+                      child: Text(
+                        "課題: ${taskData['name']}\n詳細: ${taskData['details']}\n期限: ${DateFormat('MM/dd HH:mm', 'ja').format(taskData['deadline'])}",
+                        style: TextStyle(
+                          fontSize: screenHeight * 0.020,
+                          color: Colors.grey[100]!.withOpacity(0.95),
+                          height: 1.4,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // --- 討伐人数ゲージ ---
+          Positioned(
+            top: screenHeight * 0.543,
+            left: screenWidth * 0.08,
+            width: screenWidth * 0.22,
+            height: screenHeight * 0.035,
+            child: TaskProgressGauge(
+              defeatedCount:
+                  isCracking
+                      ? (taskData['defeatedCount'] ?? 0) + 1
+                      : (taskData['defeatedCount'] ?? 0),
+              totalParticipants: taskData['totalParticipants'] ?? 5,
+            ),
+          ),
+
+          // --- 作成者アイコン ---
+          Positioned(
+            top: screenHeight * 0.39,
+            left: screenWidth * 0.08,
+            child: Container(
+              width: screenWidth * 0.14,
+              height: screenWidth * 0.14,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: Colors.white.withOpacity(0.5),
+                  width: 1.2,
+                ),
+                image: const DecorationImage(
+                  image: AssetImage('assets/character_gorilla.png'),
+                  fit: BoxFit.cover,
+                ),
+              ),
+            ),
+          ),
+
+          // ★★★ パリン！と割れるエフェクト用のオーバーレイ (修正箇所) ★★★
+          if (isCracking)
+            Positioned(
+              top: 180,
+              bottom: 0,
+              left: screenWidth * 0.015,
+              right: screenWidth * 0.030,
+              child: Opacity(
+                opacity: 0.7,
+                child: Image.asset(
+                  'assets/crack_overlay.png',
+                  fit: BoxFit.contain,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  // ★★★ このメソッドを、以下の完成版に丸ごと置き換えてください ★★★
+
+  // ★★★ このメソッドを、以下の完成版に丸ごと置き換えてください ★★★
+
+  void _submitTask(int taskIndex) async {
+    // ★ asyncキーワードを追加
+    // インデックスが有効か、または処理中でないかを確認
+    if (taskIndex >= _tasks.length || _crackingTasks.contains(taskIndex)) {
+      return;
+    }
+
+    // --- Step 1: 瞬時に「ひび割れ」を表示 ---
+    setState(() {
+      _crackingTasks.add(taskIndex);
+    });
+
+    // --- Step 2: ひび割れ画像を少しの間表示するために待機 (例: 500ミリ秒) ---
+    await Future.delayed(const Duration(milliseconds: 500));
+    if (!mounted) return; // 待っている間にページが破棄された場合は処理を中断
+
+    // --- Step 3: 報酬の獲得、タスクの削除、ひび割れの非表示をまとめて行う ---
+    // 獲得する報酬の値を定義
+    const int rewardExp = 5;
+    const int rewardTakoyaki = 2;
+
+    setState(() {
+      // 報酬を加算
+      _takoyakiCount += rewardTakoyaki;
+      _gaugeKey.currentState?.addExperience(rewardExp);
+
+      // タスクリストから削除
+      _tasks.removeAt(taskIndex);
+
+      // ひび割れ表示をリセット
+      _crackingTasks.remove(taskIndex);
+
+      // ページビューのインデックスを調整
+      if (_tasks.isNotEmpty && _pageController.hasClients) {
+        final newPageIndex = taskIndex.clamp(0, _tasks.length - 1);
+        _pageController.jumpToPage(newPageIndex);
+      }
+    });
+
+    // ★★★ SnackBarで討伐完了と報酬獲得の通知をすぐに表示 ★★★
   }
 
   // 1. 学生団体ロゴ用のダイアログ
@@ -490,11 +808,25 @@ class _ParkPageState extends State<ParkPage> {
     );
   }
 
+  // ★★★ initStateメソッドを、以下のコードに置き換えてください ★★★
   @override
   void initState() {
     super.initState();
-    _calculateWeekDateRange();
+    _loadTakoyakiStatus();
+    // _loadCharacterInfo();
     _startCountdownTimer();
+    _calculateWeekDateRange();
+
+    // コンストラクタから渡されたキャラクター情報を設定
+    setState(() {
+      _currentParkCharacterName = widget.diagnosedCharacterName;
+      _userName = widget.userName;
+      if (characterFullDataGlobal.containsKey(widget.diagnosedCharacterName)) {
+        _currentParkCharacterImage =
+            characterFullDataGlobal[widget.diagnosedCharacterName]!['image'];
+      }
+      _isCharacterInfoInitialized = true;
+    });
   }
 
   final GlobalKey<LiquidLevelGaugeState> _gaugeKey =
@@ -503,33 +835,13 @@ class _ParkPageState extends State<ParkPage> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-
-    // ★★★ Providerからキャラクター情報を取得してStateを更新 ★★★
-    // listen: true を使うことで、Providerの値が変更されたらこのメソッドが再度呼ばれ、
-    // UIが最新の状態に追従するようになります。
-    final characterProvider = Provider.of<CharacterProvider>(context);
-    // Providerの値が現在のStateと異なる場合、または初回読み込み時にStateを更新
-    if (!_isCharacterInfoInitialized ||
-        _currentParkCharacterName != characterProvider.characterName ||
-        _currentParkCharacterImage != characterProvider.characterImage) {
-      // didChangeDependencies内で直接setStateを呼ぶのは通常問題ありませんが、
-      // より安全に、かつビルド完了後に行いたい場合はaddPostFrameCallbackを使います。
-      // 今回は、依存関係の変更を検知して即座にStateを更新する形にします。
-      // ただし、これがビルド中に呼ばれると問題なので、初回はフラグで制御
-      if (mounted) {
-        // mountedチェックは常に良い習慣
-        setState(() {
-          _currentParkCharacterImage = characterProvider.characterImage;
-          _currentParkCharacterName = characterProvider.characterName;
-          _isCharacterInfoInitialized = true; // 初回読み込み完了
-        });
-      }
-    }
-    // ★ ルート引数からのキャラクター情報取得は削除します ★
   }
 
+  // ★★★ disposeメソッドを、以下のコードに置き換えてください ★★★
   @override
   void dispose() {
+    // initStateで追加したリスナーをここで必ず解除します
+    _pageController.dispose(); // PageController自体のdisposeも忘れずに
     _timer?.cancel();
     super.dispose();
   }
@@ -724,6 +1036,24 @@ class _ParkPageState extends State<ParkPage> {
     );
   }
 
+  Widget _buildDrawerTile(IconData icon, String title, VoidCallback onTap) {
+    return ListTile(
+      leading: Icon(icon, color: Colors.amber[200]),
+      title: Text(
+        title,
+        style: const TextStyle(
+          fontFamily: 'misaki',
+          fontSize: 16,
+          color: Colors.white,
+        ),
+      ),
+      onTap: onTap,
+      hoverColor: Colors.amber.withOpacity(0.1),
+    );
+  }
+
+  // ★★★ buildメソッドを、以下の完成版に丸ごと置き換えてください ★★★
+
   @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
@@ -731,100 +1061,100 @@ class _ParkPageState extends State<ParkPage> {
     final double topBarHeight = screenHeight * 0.08;
     final double singleBannerWidth = screenWidth * 0.30;
     final double bottomNavBarHeight = 75.0;
+
     final double logoSize = screenWidth * 0.13;
+
+    // --- ボタンをページと連動させるためのアニメーション値の計算 ---
+    final double distance = (_pageOffset - _currentPage).abs();
+    final double scale = (1 - (distance * 0.5)).clamp(0.5, 1.0);
+    final double opacity = (1 - distance).clamp(0.0, 1.0);
 
     return Scaffold(
       key: _scaffoldKey,
       extendBodyBehindAppBar: true,
       extendBody: true,
       endDrawer: Drawer(
-        child: ListView(
-          padding: EdgeInsets.zero,
-          children: <Widget>[
-            DrawerHeader(
-              decoration: BoxDecoration(color: Colors.brown[700]),
-              child: Text(
-                'メニュー',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 24,
-                  fontFamily: 'misaki',
+        child: Container(
+          decoration: BoxDecoration(
+            image: DecorationImage(
+              image: AssetImage('assets/ranking_guild_background.png'), // 木目調など
+              fit: BoxFit.cover,
+            ),
+          ),
+          child: Column(
+            children: [
+              DrawerHeader(
+                decoration: BoxDecoration(
+                  border: Border(
+                    bottom: BorderSide(color: Colors.amber[300]!, width: 2),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: const [
+                    Icon(Icons.menu_book, color: Colors.white, size: 36),
+                    SizedBox(height: 10),
+                    Text(
+                      '冒険のメニュー',
+                      style: TextStyle(
+                        fontFamily: 'misaki',
+                        color: Colors.white,
+                        fontSize: 22,
+                        shadows: [Shadow(color: Colors.black, blurRadius: 2)],
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ),
-            ListTile(
-              leading: const Icon(Icons.school_outlined),
-              title: const Text('KOAN'),
-              onTap: () {
-                // TODO: Replace with your KOAN URL
+              _buildDrawerTile(Icons.school_outlined, 'KOAN', () {
                 _launchURL(
                   'https://koan.osaka-u.ac.jp/campusweb/campusportal.do?page=main',
                 );
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.book_outlined),
-              title: const Text('CLE'),
-              onTap: () {
-                // TODO: Replace with your CLE URL
+              }),
+              _buildDrawerTile(Icons.book_outlined, 'CLE', () {
                 _launchURL('https://www.cle.osaka-u.ac.jp/ultra/course');
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.person_outline),
-              title: const Text('マイハンダイ'),
-              onTap: () {
-                // TODO: Replace with your MyHandai URL
+              }),
+              _buildDrawerTile(Icons.person_outline, 'マイハンダイ', () {
                 _launchURL('https://my.osaka-u.ac.jp/');
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.mail_outline),
-              title: const Text('OU-Mail'),
-              onTap: () {
-                // TODO: Replace with your OUMail URL
+              }),
+              _buildDrawerTile(Icons.mail_outline, 'OU-Mail', () {
                 _launchURL('https://outlook.office.com/mail/');
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.info_outline),
-              title: const Text('お知らせを見る'),
-              onTap: () {
+              }),
+              Divider(color: Colors.amber[200]),
+              _buildDrawerTile(Icons.mail, 'お問い合わせ', () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const MailPage()),
+                );
+              }),
+              _buildDrawerTile(Icons.info_outline, 'お知らせを見る', () {
                 Navigator.pop(context);
                 _showNoticeDialog(context);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.settings),
-              title: const Text('設定 (未実装)'),
-              onTap: () {
-                Navigator.pop(context); /* TODO */
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.help_outline),
-              title: const Text('ヘルプ (未実装)'),
-              onTap: () {
-                Navigator.pop(context); /* TODO */
-              },
-            ),
-          ],
+              }),
+              Divider(color: Colors.amber[200]),
+              _buildDrawerTile(Icons.settings, '設定', () {
+                Navigator.pop(context);
+              }),
+              _buildDrawerTile(Icons.help_outline, 'ヘルプ', () {
+                Navigator.pop(context);
+              }),
+              _buildDrawerTile(Icons.report_problem_outlined, 'ユーザー通報', () {
+                Navigator.pop(context);
+              }),
+              const SizedBox(height: 20), // 下の余白を確保
+            ],
+          ),
         ),
       ),
 
       body: Stack(
         children: [
           Positioned.fill(
-            child: Image.asset(
-              'assets/background_plaza.png',
-              fit: BoxFit.cover,
-            ),
+            child: Image.asset('assets/night_view.png', fit: BoxFit.cover),
           ),
-          // 暗さを出すための黒いオーバーレイ
           Positioned.fill(
-            child: Container(
-              color: Colors.black.withOpacity(0.5), // ← 数値を0.3〜0.6で調整
-            ),
+            child: Container(color: Colors.black.withOpacity(0.5)),
           ),
           Positioned.fill(
             child: SafeArea(
@@ -834,371 +1164,357 @@ class _ParkPageState extends State<ParkPage> {
                 child: Stack(
                   alignment: Alignment.center,
                   children: [
-                    // === 電子掲示板 (背景) ===
                     SizedBox(
-                      height: screenHeight, // PageViewの領域の高さを画面全体に
+                      height: screenHeight,
                       child: PageView(
                         controller: _pageController,
-
                         onPageChanged: (int page) {
-                          // ページが切り替わったら、現在のページ番号を更新し、
-                          // カウントダウン表示も更新する
                           setState(() {
                             _currentPage = page;
                             _updateCountdownText();
                           });
                         },
                         children:
-                            _tasks.map((taskData) {
-                              // 各タスクデータから1ページ分の掲示板を生成
-                              return _buildBulletinBoardPage(taskData);
-                            }).toList(),
+                            _tasks
+                                .map(
+                                  (taskData) =>
+                                      _buildBulletinBoardPage(taskData),
+                                )
+                                .toList(),
                       ),
                     ),
-                    // === 中央のキャラクター ===
                     Positioned(
-                      child: Center(
-                        child: Padding(
-                          padding: EdgeInsets.only(
-                            top: screenHeight * 0.28,
-                          ), // Y位置調整
+                      // top: 画面の上端からの距離 (画面の高さに対する割合で指定)
+                      // この値を調整して、キャラクターの垂直位置を微調整してください。
+                      top: screenHeight * 0.04,
+
+                      // left: 画面の左端からの距離
+                      // 画像を水平方向の中央に配置するための計算式です。
+                      // (画面全体の幅 - 画像の幅) / 2
+                      left: (screenWidth - (screenWidth * 0.65)) / 8,
+
+                      child: Image.asset(
+                        "assets/floating.png", // ご指定の画像パス
+                        width: screenWidth * 0.55, // ご指定の幅
+                        height: screenHeight * 0.45, // ご指定の高さ
+                        fit: BoxFit.contain,
+                      ),
+                    ),
+                    Positioned(
+                      // top: 画面の上端からの距離 (画面の高さに対する割合で指定)
+                      // この値を調整して、キャラクターの垂直位置を微調整してください。
+                      top: screenHeight * 0.05,
+
+                      // left: 画面の左端からの距離
+                      // 画像を水平方向の中央に配置するための計算式です。
+                      // (画面全体の幅 - 画像の幅) / 2
+                      left: (screenWidth - (screenWidth * 0.65)) / 2.8,
+
+                      child: Image.asset(
+                        _currentParkCharacterImage, // ご指定の画像パス
+                        width: screenWidth * 0.38, // ご指定の幅
+                        height: screenHeight * 0.28, // ご指定の高さ
+                        fit: BoxFit.contain,
+                      ),
+                    ),
+
+                    Positioned(
+                      top: 0,
+                      left: 0,
+                      child: Column(
+                        children: [
+                          if (_userName.isNotEmpty)
+                            Text(
+                              _userName,
+                              style: TextStyle(
+                                fontFamily: 'misaki',
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                                shadows: [
+                                  Shadow(color: Colors.black54, blurRadius: 2),
+                                ],
+                              ),
+                            ),
+
+                          LiquidLevelGauge(
+                            key: _gaugeKey,
+                            width: screenWidth * 0.28,
+                            height: topBarHeight * 0.70,
+                          ),
+                        ],
+                      ),
+                    ),
+                    Positioned(
+                      top: 0,
+                      right: 3,
+                      child: IconButton(
+                        icon: Icon(
+                          Icons.menu,
+                          color: const Color.fromARGB(255, 26, 186, 222),
+                          size: topBarHeight * 0.50,
+                        ),
+                        onPressed:
+                            () => _scaffoldKey.currentState?.openEndDrawer(),
+                        padding: const EdgeInsets.only(left: 4.0),
+                        constraints: BoxConstraints(
+                          minWidth: topBarHeight * 0.5,
+                        ),
+                      ),
+                    ),
+                    //Positioned(
+                    //top: 20,
+                    //left: MediaQuery.of(context).size.width * 0.3,
+                    //child: Image.asset(
+                    //'assets/banner_news.png',
+                    //width: singleBannerWidth,
+                    //height: topBarHeight * 0.75,
+                    //fit: BoxFit.contain,
+                    //),
+                    //),
+                    Positioned(
+                      top: 75,
+                      left: -1,
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          Container(
+                            width: screenWidth * 0.28,
+                            height: topBarHeight * 0.50,
+                            decoration: const BoxDecoration(
+                              image: DecorationImage(
+                                image: AssetImage('assets/ui_takoyaki_bar.png'),
+                                fit: BoxFit.fill,
+                              ),
+                            ),
+                            padding: const EdgeInsets.only(
+                              left: 30.0,
+                              right: 20.0,
+                            ),
+                            alignment: Alignment.center,
+                            child: Text(
+                              '$_takoyakiCount',
+                              style: TextStyle(
+                                color: Colors.black,
+                                fontSize: topBarHeight * 0.26,
+                                fontWeight: FontWeight.bold,
+                                fontFamily: 'misaki',
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                              softWrap: false,
+                            ),
+                          ),
+                          Positioned(
+                            right: -2,
+                            child: GestureDetector(
+                              onTap: () => _showPurchaseDialog(context),
+                              child: Container(
+                                padding: const EdgeInsets.all(1.0),
+                                child: Image.asset(
+                                  'assets/icon_plus.png',
+                                  width: topBarHeight * 0.4,
+                                  height: topBarHeight * 0.4,
+                                  fit: BoxFit.contain,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Positioned(
+                      bottom: 40,
+                      child: GestureDetector(
+                        onTap:
+                            () => setState(() {
+                              isQuestCreationVisible = true;
+                            }),
+                        child: Image.asset(
+                          'assets/make_quest.png',
+                          width: 360,
+                          height: 120,
+                          fit: BoxFit.contain,
+                        ),
+                      ),
+                    ),
+                    if (_dialogueMessages
+                        .isNotEmpty) // ★ メッセージがある場合はメッセージボックスを表示
+                      _buildRpgMessageBox()
+                    else // ★ メッセージがない場合はクエスト作成ボタンを表示
+                      Positioned(
+                        bottom: 40,
+                        child: GestureDetector(
+                          onTap: () {
+                            // ★ このボタンを押した時に会話を開始するテスト例
+                            // _showDialogue([
+                            //   "やあ、何か新しいクエストを作成するのかい？",
+                            //   "締切には気をつけるんだぞ！",
+                            // ]);
+                            setState(() {
+                              isQuestCreationVisible = true;
+                            });
+                          },
                           child: Image.asset(
-                            _currentParkCharacterImage,
-                            width: screenWidth * 0.7,
-                            height: screenHeight * 0.6,
+                            'assets/make_quest.png',
+                            width: 360,
+                            height: 120,
                             fit: BoxFit.contain,
                           ),
                         ),
                       ),
-                    ),
-                    Positioned(
-                      // ★★★ 1. ボタンを右下に配置 ★★★
-                      top: 120, // 下からの距離
-                      right: 15, // 右からの距離
-                      child: ElevatedButton(
-                        // ★★★ 2. ボタンを目立たないスタイルに変更 ★★★
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.black.withOpacity(
-                            0.4,
-                          ), // 半透明の黒に
-                          foregroundColor: Colors.white.withOpacity(
-                            0.8,
-                          ), // 文字も少し透明に
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
-                          ),
-                          textStyle: const TextStyle(fontSize: 12), // 文字を小さく
-                        ),
-                        onPressed: () {
-                          _gaugeKey.currentState?.addExperience(20);
-                        },
-                        child: const Text('EXP+20'), // テキストを短く
-                      ),
-                    ),
-                    // === 上部UI要素群 ===
-                    Positioned(
-                      top: 0,
-                      left: 0,
-                      right: 0,
-                      child: Container(
-                        height: topBarHeight,
-                        decoration: const BoxDecoration(
-                          image: DecorationImage(
-                            image: AssetImage('assets/ui_top_bar.png'),
-                            fit: BoxFit.fill,
-                          ),
-                        ),
-                        child: Padding(
-                          padding: EdgeInsets.only(
-                            left: 8.0,
-                            right: 4.0,
-                            top: MediaQuery.of(context).padding.top * 0.2 + 2.0,
-                            bottom: 2.0,
-                          ),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              // --- 1. レベルゲージ (左側) ---
-                              LiquidLevelGauge(
-                                // ★★★ 4. ゲージにキーをセット ★★★
-                                key: _gaugeKey,
-                                width: screenWidth * 0.28,
-                                height: topBarHeight * 0.70,
-                              ),
-
-                              const Spacer(),
-                              // --- 2. 中央バナー (NEWS) ---
-                              GestureDetector(
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => const NewsPage(),
-                                    ),
-                                  );
-                                },
-                                child: Container(
-                                  width: singleBannerWidth,
-                                  height: topBarHeight * 0.75,
-                                  child: Image.asset(
-                                    'assets/banner_news.png',
-                                    fit: BoxFit.contain,
-                                  ),
+                    // --- 独立したボタン群 ---
+                    if (_tasks.isNotEmpty)
+                      Positioned(
+                        top: screenHeight * 0.398,
+                        right: screenWidth * 0.20,
+                        child: Opacity(
+                          opacity: opacity,
+                          child: Transform.scale(
+                            scale: scale,
+                            child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.cyanAccent.withOpacity(
+                                  0.9,
                                 ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 5,
+                                  vertical: 1,
+                                ),
+                                minimumSize: Size(
+                                  screenWidth * 0.06,
+                                  screenHeight * 0.035,
+                                ),
+                                elevation: 8,
+                                shadowColor: Colors.cyanAccent.withOpacity(0.6),
                               ),
-                              const Spacer(),
-                              // --- 3. たこ焼き表示 (右側) ---
-                              // ★★★ このStackウィジェット全体を置き換えてください ★★★
-                              Stack(
-                                alignment: Alignment.center,
+                              onPressed: () => _submitTask(_currentPage),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  // --- レイヤー1: 新しい背景画像と数字 ---
-                                  Container(
-                                    width: screenWidth * 0.25,
-                                    height: topBarHeight * 0.5,
-                                    decoration: const BoxDecoration(
-                                      image: DecorationImage(
-                                        // ★ 1. 新しい「アイコン一体型」の画像パスを指定 ★
-                                        image: AssetImage(
-                                          'assets/ui_takoyaki_bar.png',
-                                        ), // ← あなたが作成した新しいファイル名にしてください
-                                        fit: BoxFit.fill,
-                                      ),
-                                    ),
-                                    // ★ 2. 新しい背景に合わせて数字の表示位置を調整 ★
-                                    // 左側のアイコン部分のスペースを空けるために、左の余白を多めに取ります
-                                    padding: const EdgeInsets.only(
-                                      left: 30.0,
-                                      right: 20.0,
-                                    ),
-                                    alignment: Alignment.center,
-                                    child: Text(
-                                      '13800',
-                                      style: TextStyle(
-                                        color: Colors.black,
-                                        fontSize: topBarHeight * 0.26,
-                                        fontWeight: FontWeight.bold,
-                                        fontFamily: 'misaki',
-                                      ),
-                                      overflow: TextOverflow.ellipsis,
-                                      softWrap: false,
-                                    ),
+                                  Icon(
+                                    Icons.check_circle_outline,
+                                    color: Colors.white,
+                                    size: screenHeight * 0.021,
                                   ),
-
-                                  // --- はみ出すアイコン用のPositionedウィジェットは削除しました ---
-
-                                  // --- プラスボタン (変更なし) ---
-                                  Positioned(
-                                    right: -3,
-                                    child: GestureDetector(
-                                      onTap: () {
-                                        _showPurchaseDialog(context);
-                                      },
-                                      child: Container(
-                                        padding: const EdgeInsets.all(1.0),
-                                        child: Image.asset(
-                                          'assets/icon_plus.png',
-                                          width: topBarHeight * 0.5,
-                                          height: topBarHeight * 0.5,
-                                          fit: BoxFit.contain,
-                                        ),
-                                      ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '討伐',
+                                    style: TextStyle(
+                                      fontSize: screenHeight * 0.02,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                      fontFamily: 'misaki',
                                     ),
                                   ),
                                 ],
                               ),
-                              // --- 4. メニューアイコン (一番右) ---
-                              IconButton(
-                                icon: Icon(
-                                  Icons.menu,
-                                  color: Colors.white,
-                                  size: topBarHeight * 0.50,
-                                ),
-                                onPressed: () {
-                                  _scaffoldKey.currentState?.openEndDrawer();
-                                },
-                                padding: const EdgeInsets.only(left: 4.0),
-                                constraints: BoxConstraints(
-                                  minWidth: topBarHeight * 0.5,
+                            ),
+                          ),
+                        ),
+                      ),
+
+                    if (_tasks.isNotEmpty)
+                      Positioned(
+                        top: screenHeight * 0.53,
+                        right: screenWidth * 0.21,
+                        child: Opacity(
+                          opacity: opacity,
+                          child: Transform.scale(
+                            scale: scale,
+                            child: GestureDetector(
+                              onTap: _claimDailyTakoyaki,
+                              child: Container(
+                                width: screenWidth * 0.15,
+                                height: screenWidth * 0.15,
+                                decoration: BoxDecoration(
+                                  image: DecorationImage(
+                                    image: AssetImage(
+                                      _isTakoyakiClaimed
+                                          ? 'assets/takoyaki.png'
+                                          : 'assets/takoyaki_off.png',
+                                    ),
+                                    fit: BoxFit.contain,
+                                  ),
                                 ),
                               ),
-                            ],
+                            ),
                           ),
                         ),
                       ),
-                    ),
 
-                    // === ロゴなどの配置 (フッターナビゲーションの上) ===
                     Positioned(
-                      left: 15,
-                      top: 60,
+                      right: 115,
+                      top: 0,
                       child: GestureDetector(
-                        onTap: () {
-                          _showOztechDialog(context); // ★ 新しい関数を呼び出す
-                        },
+                        onTap: () => _showOztechDialog(context),
                         child: Opacity(
-                          opacity: 1.0, // 透明度は適宜調整してください
+                          opacity: 1.0,
                           child: ClipRRect(
-                            // ★★★ ClipRRectで囲む ★★★
-                            borderRadius: BorderRadius.circular(
-                              12.0,
-                            ), // ★★★ 角の丸みを指定 (半径12.0の円) ★★★
-                            // この値を調整してお好みの丸みにしてください
+                            borderRadius: BorderRadius.circular(12.0),
                             child: Image.asset(
-                              'assets/oztech.png', // ★ ロゴの画像パス
-                              width: logoSize, // logoSize は build メソッドの最初の方で定義
+                              'assets/oztech.png',
+                              width: logoSize,
                               height: logoSize,
-                              fit:
-                                  BoxFit
-                                      .cover, // ★ contain から cover に変更すると、丸いクリップ領域を埋めようとします
-                              //   (画像の中心部が拡大され、アスペクト比は保たれます)
-                              //   もし contain のままで、丸めた領域の外側が透明になるのが良ければ BoxFit.contain のままにします。
-                              errorBuilder:
-                                  (context, error, stackTrace) => Container(
-                                    width: logoSize,
-                                    height: logoSize,
-                                    decoration: BoxDecoration(
-                                      color: Colors.blue.withOpacity(0.3),
-                                      borderRadius: BorderRadius.circular(
-                                        12.0,
-                                      ), // エラー時も角丸に
-                                    ),
-                                    child: const Center(
-                                      child: Text(
-                                        '学生\nロゴ\nError',
-                                        textAlign: TextAlign.center,
-                                        style: TextStyle(
-                                          fontSize: 10,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
+                              fit: BoxFit.cover,
                             ),
                           ),
                         ),
                       ),
                     ),
-
                     Positioned(
-                      right: 15,
-                      top: 60,
+                      right: 50,
+                      top: 0,
                       child: GestureDetector(
-                        onTap: () {
-                          _showPotiPotiDialog(context); // ★ 新しい関数を呼び出す
-                        },
+                        onTap: () => _showPotiPotiDialog(context),
                         child: Opacity(
-                          opacity: 1.0, // 透明度は適宜調整してください
+                          opacity: 1.0,
                           child: ClipRRect(
-                            // ★★★ ClipRRectで囲む ★★★
-                            borderRadius: BorderRadius.circular(
-                              12.0,
-                            ), // ★★★ 角の丸みを指定 (半径12.0の円) ★★★
-                            // この値を調整してお好みの丸みにしてください
+                            borderRadius: BorderRadius.circular(12.0),
                             child: Image.asset(
-                              'assets/potipoti.png', // ★ ロゴの画像パス
-                              width: logoSize, // logoSize は build メソッドの最初の方で定義
+                              'assets/potipoti.png',
+                              width: logoSize,
                               height: logoSize,
-                              fit:
-                                  BoxFit
-                                      .cover, // ★ contain から cover に変更すると、丸いクリップ領域を埋めようとします
-                              //   (画像の中心部が拡大され、アスペクト比は保たれます)
-                              //   もし contain のままで、丸めた領域の外側が透明になるのが良ければ BoxFit.contain のままにします。
-                              errorBuilder:
-                                  (context, error, stackTrace) => Container(
-                                    width: logoSize,
-                                    height: logoSize,
-                                    decoration: BoxDecoration(
-                                      color: Colors.blue.withOpacity(0.3),
-                                      borderRadius: BorderRadius.circular(
-                                        12.0,
-                                      ), // エラー時も角丸に
-                                    ),
-                                    child: const Center(
-                                      child: Text(
-                                        '開発\nロゴ\nError',
-                                        textAlign: TextAlign.center,
-                                        style: TextStyle(
-                                          fontSize: 10,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
+                              fit: BoxFit.cover,
                             ),
                           ),
                         ),
                       ),
                     ),
+                    if (_dialogueMessages.isNotEmpty) _buildRpgMessageBox(),
                   ],
                 ),
               ),
             ),
           ),
           Positioned(
-            bottom: 0, // 画面の下からの距離
-            left: 0, // 画面の左からの距離
-            right: 0, // 画面の右からの距離
-            child: CommonBottomNavigation(
-              currentPage: AppPage.park,
-
-              // --- 通常アイコンのパス ---
-              parkIconAsset: 'assets/button_park.png',
-              timetableIconAsset: 'assets/button_timetable.png',
-              creditReviewIconAsset: 'assets/button_unit_review.png',
-              rankingIconAsset: 'assets/button_ranking.png',
-              itemIconAsset: 'assets/button_dressup.png',
-
-              // --- アクティブアイコンのパス（すべて指定） ---
-              parkIconActiveAsset: 'assets/button_park_icon_active.png',
-              timetableIconActiveAsset: 'assets/button_timetable_active.png',
-              creditReviewActiveAsset: 'assets/button_unit_review_active.png',
-              rankingIconActiveAsset: 'assets/button_ranking_active.png',
-              itemIconActiveAsset: 'assets/button_dressup_active.png',
-
-              // --- タップ時の処理（省略せずにすべて記述） ---
-              onParkTap: () {
-                print("Already on Park Page");
-              },
-              onTimetableTap: () {
-                Navigator.pushReplacement(
-                  context,
-                  PageRouteBuilder(
-                    pageBuilder: (_, __, ___) => const TimeSchedulePage(),
-                    transitionDuration: Duration.zero,
-                  ),
-                );
-              },
-              onCreditReviewTap: () {
-                Navigator.pushReplacement(
-                  context,
-                  PageRouteBuilder(
-                    pageBuilder: (_, __, ___) => const CreditReviewPage(lectureName: '', teacherName: '',),
-                    transitionDuration: Duration.zero,
-                  ),
-                );
-              },
-              onRankingTap: () {
-                Navigator.pushReplacement(
-                  context,
-                  PageRouteBuilder(
-                    pageBuilder: (_, __, ___) => const RankingPage(),
-                    transitionDuration: Duration.zero,
-                  ),
-                );
-              },
-              onItemTap: () {
-                Navigator.pushReplacement(
-                  context,
-                  PageRouteBuilder(
-                    pageBuilder: (_, __, ___) => const ItemPage(),
-                    transitionDuration: Duration.zero,
-                  ),
-                );
-              },
-            ),
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: CommonBottomNavigation(),
           ),
+          if (isQuestCreationVisible)
+            Positioned.fill(
+              child: Container(
+                color: Colors.black54,
+                alignment: Alignment.center,
+                child: QuestCreationWidget(
+                  classes: const ['線形代数', '英語A', 'プログラミング演習'],
+                  onCancel:
+                      () => setState(() {
+                        isQuestCreationVisible = false;
+                      }),
+                  onCreate: (selectedClass, taskType, deadline) {
+                    print('授業: $selectedClass, タスク: $taskType, 締切: $deadline');
+                    setState(() {
+                      isQuestCreationVisible = false;
+                    });
+                  },
+                ),
+              ),
+            ),
         ],
       ),
     );

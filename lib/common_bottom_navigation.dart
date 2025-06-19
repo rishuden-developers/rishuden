@@ -1,153 +1,180 @@
 import 'package:flutter/material.dart';
-import 'dart:ui'; // BackdropFilter のために必要
+import 'park_page.dart';
+import 'time_schedule_page.dart';
+import 'ranking_page.dart';
+import 'item_page.dart';
+import 'credit_explore_page.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'providers/current_page_provider.dart';
 
-enum AppPage { park, timetable, creditReview, ranking, item }
+class CommonBottomNavigation extends ConsumerWidget {
+  final String iconsParentPath = 'assets/buttons/common_navigation/';
+  final String inactiveParkIcon = 'park_inactive.png';
+  final String activeParkIcon = 'park_active.png';
+  final String inactiveTimetableIcon = 'timetable_inactive.png';
+  final String activeTimetableIcon = 'timetable_active.png';
+  final String inactiveCreditIcon = 'credit_inactive.png';
+  final String activeCreditIcon = 'credit_active.png';
+  final String inactiveRankingIcon = 'ranking_inactive.png';
+  final String activeRankingIcon = 'ranking_active.png';
+  final String inactiveDressIcon = 'dress_inactive.png';
+  final String activeDressIcon = 'dress_active.png';
 
-class CommonBottomNavigation extends StatelessWidget {
-  final AppPage currentPage;
-  final VoidCallback? onParkTap;
-  final VoidCallback? onTimetableTap;
-  final VoidCallback? onCreditReviewTap;
-  final VoidCallback? onRankingTap;
-  final VoidCallback? onItemTap;
+  const CommonBottomNavigation({super.key});
 
-  final String parkIconAsset;
-  final String parkIconActiveAsset;
-  final String timetableIconAsset;
-  final String timetableIconActiveAsset;
-  final String creditReviewIconAsset;
-  final String creditReviewActiveAsset;
-  final String rankingIconAsset;
-  final String rankingIconActiveAsset;
-  final String itemIconAsset;
-  final String itemIconActiveAsset;
-
-  const CommonBottomNavigation({
-    super.key,
-    required this.currentPage,
-    this.onParkTap,
-    this.onTimetableTap,
-    this.onCreditReviewTap,
-    this.onRankingTap,
-    this.onItemTap,
-    required this.parkIconAsset,
-    required this.parkIconActiveAsset,
-    required this.timetableIconAsset,
-    required this.timetableIconActiveAsset,
-    required this.creditReviewIconAsset,
-    required this.creditReviewActiveAsset,
-    required this.rankingIconAsset,
-    required this.rankingIconActiveAsset,
-    required this.itemIconAsset,
-    required this.itemIconActiveAsset,
-  });
-
-  Widget _buildNavItem({
-    required String inactiveIconAsset,
-    required String activeIconAsset,
-    required VoidCallback? onPressed,
-    required bool isActive,
+  void _onNavigationButtonPressed({
+    required BuildContext context,
+    required WidgetRef ref,
+    required AppPage page,
+    required Widget pageWidget,
   }) {
+    ref.read(currentPageProvider.notifier).state = page;
+    Navigator.pushReplacement(
+      context,
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) => pageWidget,
+        transitionDuration: Duration.zero,
+        reverseTransitionDuration: Duration.zero,
+      ),
+    );
+  }
+
+  Widget _buildNavdress({
+    required BuildContext context,
+    required WidgetRef ref,
+    required AppPage page,
+    required AppPage currentPage,
+  }) {
+    const double activeSize = 70.0;
+    const double inactiveSize = 50.0;
+    const double activeYOffset = -8.0;
+    const double inactiveYOffset = 8.0;
+
+    final bool isActive = currentPage == page;
+
+    final String inactiveIcon;
+    final String activeIcon;
+    final Widget pageWidget;
+
+    switch (page) {
+      case AppPage.park:
+        pageWidget = const ParkPage(
+          diagnosedCharacterName: '剣士',
+          answers: [],
+          userName: '',
+        );
+        inactiveIcon = inactiveParkIcon;
+        activeIcon = activeParkIcon;
+        break;
+      case AppPage.timetable:
+        pageWidget = const TimeSchedulePage();
+        inactiveIcon = inactiveTimetableIcon;
+        activeIcon = activeTimetableIcon;
+        break;
+      case AppPage.credit:
+        pageWidget = const CreditExplorePage();
+        inactiveIcon = inactiveCreditIcon;
+        activeIcon = activeCreditIcon;
+        break;
+      case AppPage.ranking:
+        pageWidget = const RankingPage();
+        inactiveIcon = inactiveRankingIcon;
+        activeIcon = activeRankingIcon;
+        break;
+      case AppPage.dress:
+        pageWidget = const ItemPage();
+        inactiveIcon = inactiveDressIcon;
+        activeIcon = activeDressIcon;
+        break;
+    }
+
+    final double currentSize = isActive ? activeSize : inactiveSize;
+    final double currentYOffset = isActive ? activeYOffset : inactiveYOffset;
+    final String icon = isActive ? activeIcon : inactiveIcon;
+
     return Expanded(
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onPressed,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                Image.asset(
-                  isActive ? activeIconAsset : inactiveIconAsset,
-                  width: 28, // アイコンのサイズを調整
-                  height: 28,
+      child: InkWell(
+        onTap:
+            isActive
+                ? null
+                : () => _onNavigationButtonPressed(
+                  context: context,
+                  ref: ref,
+                  page: page,
+                  pageWidget: pageWidget,
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  _getLabelForAsset(inactiveIconAsset),
-                  style: TextStyle(
-                    color: isActive ? Colors.white : Colors.grey[400],
-                    fontSize: 10,
-                    fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-                  ),
-                ),
-              ],
-            ),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeOut,
+          transform: Matrix4.translationValues(0, currentYOffset, 0),
+          transformAlignment: Alignment.center,
+          child: Image.asset(
+            '$iconsParentPath$icon',
+            width: currentSize,
+            height: currentSize,
+            fit: BoxFit.contain,
+            errorBuilder: (context, error, stackTrace) {
+              return Icon(
+                Icons.broken_image,
+                size: currentSize * 0.8,
+                color: Colors.grey[400],
+              );
+            },
           ),
         ),
       ),
     );
   }
-
-  String _getLabelForAsset(String assetPath) {
-    if (assetPath.contains('park')) return '公園';
-    if (assetPath.contains('timetable')) return '時間割';
-    if (assetPath.contains('review')) return '履修レビュー';
-    if (assetPath.contains('ranking')) return 'ランキング';
-    if (assetPath.contains('item')) return 'アイテム';
-    return '';
-  }
-
   @override
-  Widget build(BuildContext context) {
-    return ClipRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 5.0, sigmaY: 5.0), // ここでぼかしを適用
-        child: Container(
-          decoration: BoxDecoration(
-            color: Colors.indigo[800]!.withOpacity(0.8), // 半透明の背景色
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(20),
-              topRight: Radius.circular(20),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.3),
-                blurRadius: 10,
-                spreadRadius: 2,
+  Widget build(BuildContext context, WidgetRef ref) {
+    const double barHeight = 95.0;
+    final currentPage = ref.watch(currentPageProvider);
+
+    return SizedBox(
+      height: barHeight,
+      width: double.infinity,
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: Image.asset('assets/bottom_bar_bg.png', fit: BoxFit.cover),
+          ),
+          // ボタン群
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: <Widget>[
+              _buildNavdress(
+                context: context,
+                ref: ref,
+                page: AppPage.ranking,
+                currentPage: currentPage,
+              ),
+              _buildNavdress(
+                context: context,
+                ref: ref,
+                page: AppPage.credit,
+                currentPage: currentPage,
+              ),
+              _buildNavdress(
+                context: context,
+                ref: ref,
+                page: AppPage.park,
+                currentPage: currentPage,
+              ),
+              _buildNavdress(
+                context: context,
+                ref: ref,
+                page: AppPage.timetable,
+                currentPage: currentPage,
+              ),
+              _buildNavdress(
+                context: context,
+                ref: ref,
+                page: AppPage.dress,
+                currentPage: currentPage,
               ),
             ],
           ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8.0),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: <Widget>[
-                _buildNavItem(
-                  inactiveIconAsset: rankingIconAsset,
-                  activeIconAsset: rankingIconActiveAsset,
-                  onPressed: onRankingTap,
-                  isActive: currentPage == AppPage.ranking,
-                ),
-                _buildNavItem(
-                  inactiveIconAsset: creditReviewIconAsset,
-                  activeIconAsset: creditReviewActiveAsset,
-                  onPressed: onCreditReviewTap,
-                  isActive: currentPage == AppPage.creditReview,
-                ),
-                _buildNavItem(
-                  inactiveIconAsset: parkIconAsset,
-                  activeIconAsset: parkIconActiveAsset,
-                  onPressed: onParkTap,
-                  isActive: currentPage == AppPage.park,
-                ),
-                _buildNavItem(
-                  inactiveIconAsset: timetableIconAsset,
-                  activeIconAsset: timetableIconActiveAsset,
-                  onPressed: onTimetableTap,
-                  isActive: currentPage == AppPage.timetable,
-                ),
-                _buildNavItem(
-                  inactiveIconAsset: itemIconAsset,
-                  activeIconAsset: itemIconActiveAsset,
-                  onPressed: onItemTap,
-                  isActive: currentPage == AppPage.item,
-                ),
-              ],
-            ),
-          ),
-        ),
+        ],
       ),
     );
   }

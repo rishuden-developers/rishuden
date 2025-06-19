@@ -406,65 +406,7 @@ class _CreditReviewPageState extends State<CreditReviewPage> {
           ),
         ),
       ),
-      bottomNavigationBar: CommonBottomNavigation(
-        currentPage: AppPage.creditReview, // CreditReviewPageも履修レビューに該当
-        onParkTap: () {
-          Navigator.pushReplacement(
-            context,
-            PageRouteBuilder(
-              pageBuilder: (_, __, ___) => const ParkPage(),
-              transitionDuration: Duration.zero,
-            ),
-          );
-        },
-        onTimetableTap: () {
-          Navigator.pushReplacement(
-            context,
-            PageRouteBuilder(
-              pageBuilder: (_, __, ___) => const TimeSchedulePage(),
-              transitionDuration: Duration.zero,
-            ),
-          );
-        },
-        onCreditReviewTap: () {
-          Navigator.pushReplacement(
-            context,
-            PageRouteBuilder(
-              pageBuilder: (_, __, ___) => const CreditExplorePage(), // Exploreページへ遷移
-              transitionDuration: Duration.zero,
-            ),
-          );
-        },
-        onRankingTap: () {
-          Navigator.pushReplacement(
-            context,
-            PageRouteBuilder(
-              pageBuilder: (_, __, ___) => const RankingPage(),
-              transitionDuration: Duration.zero,
-            ),
-          );
-        },
-        onItemTap: () {
-          Navigator.pushReplacement(
-            context,
-            PageRouteBuilder(
-              pageBuilder: (_, __, ___) => const ItemPage(),
-              transitionDuration: Duration.zero,
-            ),
-          );
-        },
-        // アイコンアセットのパスをここに追加
-        parkIconAsset: 'assets/icon_park.png',
-        parkIconActiveAsset: 'assets/icon_park_active.png',
-        timetableIconAsset: 'assets/icon_timetable.png',
-        timetableIconActiveAsset: 'assets/icon_timetable_active.png',
-        creditReviewIconAsset: 'assets/icon_review.png',
-        creditReviewActiveAsset: 'assets/icon_review_active.png',
-        rankingIconAsset: 'assets/icon_ranking.png',
-        rankingIconActiveAsset: 'assets/icon_ranking_active.png',
-        itemIconAsset: 'assets/icon_item.png',
-        itemIconActiveAsset: 'assets/icon_item_active.png',
-      ),
+      bottomNavigationBar: CommonBottomNavigation(),
     );
   }
 
