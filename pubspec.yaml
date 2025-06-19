@@ -20,6 +20,7 @@ dependencies:
   icalendar_parser:
   url_launcher:
   shared_preferences:
+  flutter_riverpod:
 
 dev_dependencies:
   flutter_test:
@@ -32,16 +33,16 @@ flutter:
   assets:
     - assets/background_plaza.png
     - assets/icon_takoyaki.png
-    - assets/button_unit_review.png
-    - assets/button_ranking.png
-    - assets/button_dressup.png
-    - assets/button_timetable.png
-    - assets/button_park_icon.png
-    - assets/button_unit_review_active.png
-    - assets/button_ranking_active.png
-    - assets/button_dressup_active.png
-    - assets/button_timetable_active.png
-    - assets/button_park_icon_active.png
+    - assets/buttons/common_navigation/credit_active.png
+    - assets/buttons/common_navigation/credit_inactive.png
+    - assets/buttons/common_navigation/dress_active.png
+    - assets/buttons/common_navigation/dress_inactive.png
+    - assets/buttons/common_navigation/park_active.png
+    - assets/buttons/common_navigation/park_inactive.png
+    - assets/buttons/common_navigation/ranking_active.png
+    - assets/buttons/common_navigation/ranking_inactive.png
+    - assets/buttons/common_navigation/timetable_active.png
+    - assets/buttons/common_navigation/timetable_inactive.png
     - assets/character_swordman.png
     - assets/character_wizard.png
     - assets/character_gorilla.png

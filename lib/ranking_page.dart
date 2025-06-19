@@ -227,63 +227,7 @@ class RankingPage extends StatelessWidget {
               bottom: 0,
               left: 0,
               right: 0,
-              child: CommonBottomNavigation(
-                currentPage: AppPage.ranking,
-                parkIconAsset: 'assets/button_park_icon.png',
-                parkIconActiveAsset: 'assets/button_park_icon_active.png',
-                timetableIconAsset: 'assets/button_timetable.png',
-                timetableIconActiveAsset: 'assets/button_timetable_active.png',
-                creditReviewIconAsset: 'assets/button_unit_review.png',
-                creditReviewActiveAsset: 'assets/button_unit_review_active.png',
-                rankingIconAsset: 'assets/button_ranking.png',
-                rankingIconActiveAsset: 'assets/button_ranking_active.png',
-                itemIconAsset: 'assets/button_dressup.png',
-                itemIconActiveAsset: 'assets/button_dressup_active.png',
-                onParkTap: () {
-                  Navigator.pushReplacement(
-                    context,
-                    PageRouteBuilder(
-                      pageBuilder:
-                          (_, __, ___) => const ParkPage(
-                            diagnosedCharacterName: '剣士',
-                            answers: [],
-                            userName: '',
-                          ),
-                      transitionDuration: Duration.zero,
-                    ),
-                  );
-                },
-                onTimetableTap: () {
-                  Navigator.pushReplacement(
-                    context,
-                    PageRouteBuilder(
-                      pageBuilder: (_, __, ___) => const TimeSchedulePage(),
-                      transitionDuration: Duration.zero,
-                    ),
-                  );
-                },
-                onCreditReviewTap: () {
-                  Navigator.pushReplacement(
-                    context,
-                    PageRouteBuilder(
-                      pageBuilder: (_, __, ___) => const CreditReviewPage(),
-                      transitionDuration: Duration.zero,
-                    ),
-                  );
-                },
-                onItemTap: () {
-                  Navigator.pushReplacement(
-                    context,
-                    PageRouteBuilder(
-                      pageBuilder: (_, __, ___) => const ItemPage(),
-                      transitionDuration: Duration.zero,
-                    ),
-                  );
-                },
-                onRankingTap: () {
-                  print("Already on Ranking Page");
-                },
-              ),
+              child: CommonBottomNavigation(),
             ),
           ],
         ),

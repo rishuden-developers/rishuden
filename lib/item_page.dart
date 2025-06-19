@@ -238,67 +238,7 @@ class ItemPage extends StatelessWidget {
               bottom: 0,
               left: 0,
               right: 0,
-              child: CommonBottomNavigation(
-                currentPage: AppPage.item, // このページの種別を指定
-                // --- アイコンのパスを指定 ---
-                parkIconAsset: 'assets/button_park_icon.png',
-                parkIconActiveAsset: 'assets/button_park_icon_active.png',
-                timetableIconAsset: 'assets/button_timetable.png',
-                timetableIconActiveAsset: 'assets/button_timetable_active.png',
-                creditReviewIconAsset: 'assets/button_unit_review.png',
-                creditReviewActiveAsset: 'assets/button_unit_review_active.png',
-                rankingIconAsset: 'assets/button_ranking.png',
-                rankingIconActiveAsset: 'assets/button_ranking_active.png',
-                itemIconAsset: 'assets/button_dressup.png',
-                itemIconActiveAsset: 'assets/button_dressup_active.png',
-
-                // --- タップ時の処理 ---
-                onParkTap: () {
-                  Navigator.pushReplacement(
-                    context,
-                    PageRouteBuilder(
-                      pageBuilder:
-                          (_, __, ___) => const ParkPage(
-                            diagnosedCharacterName: '剣士',
-                            answers: [],
-                            userName: '',
-                          ),
-                      transitionDuration: Duration.zero,
-                    ),
-                  );
-                },
-                onTimetableTap: () {
-                  Navigator.pushReplacement(
-                    context,
-                    PageRouteBuilder(
-                      pageBuilder: (_, __, ___) => const TimeSchedulePage(),
-                      transitionDuration: Duration.zero,
-                    ),
-                  );
-                },
-                onCreditReviewTap: () {
-                  Navigator.pushReplacement(
-                    context,
-                    PageRouteBuilder(
-                      pageBuilder: (_, __, ___) => const CreditReviewPage(),
-                      transitionDuration: Duration.zero,
-                    ),
-                  );
-                },
-                onRankingTap: () {
-                  Navigator.pushReplacement(
-                    context,
-                    PageRouteBuilder(
-                      pageBuilder: (_, __, ___) => const RankingPage(),
-                      transitionDuration: Duration.zero,
-                    ),
-                  );
-                },
-                // onItemTapは現在のページなので、何もしないか、リフレッシュ処理などを記述
-                onItemTap: () {
-                  print("Already on Item Page");
-                },
-              ),
+              child: CommonBottomNavigation(),
             ),
           ],
         ),

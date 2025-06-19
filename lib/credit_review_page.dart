@@ -326,72 +326,7 @@ class _CreditReviewPageState extends State<CreditReviewPage> {
           fontWeight: FontWeight.bold,
         ),
       ),
-      bottomNavigationBar: CommonBottomNavigation(
-        currentPage: AppPage.creditReview,
-        parkIconActiveAsset: 'assets/button_park_icon_active.png',
-        parkIconAsset: 'assets/button_park_icon.png',
-        timetableIconActiveAsset: 'assets/button_timetable_active.png',
-        timetableIconAsset: 'assets/button_timetable.png',
-        creditReviewActiveAsset: 'assets/button_unit_review_active.png',
-        creditReviewIconAsset: 'assets/button_unit_review.png',
-        rankingIconActiveAsset: 'assets/button_ranking_active.png',
-        rankingIconAsset: 'assets/button_ranking.png',
-        itemIconActiveAsset: 'assets/button_dressup_active.png',
-        itemIconAsset: 'assets/button_dressup.png',
-        onParkTap: () {
-          Navigator.pushReplacement(
-            context,
-            PageRouteBuilder(
-              pageBuilder:
-                  (context, animation, secondaryAnimation) => const ParkPage(
-                    diagnosedCharacterName: '剣士',
-                    answers: [],
-                    userName: '',
-                  ),
-              transitionDuration: Duration.zero,
-              reverseTransitionDuration: Duration.zero,
-            ),
-          );
-        },
-        onTimetableTap: () {
-          Navigator.pushReplacement(
-            context,
-            PageRouteBuilder(
-              pageBuilder:
-                  (context, animation, secondaryAnimation) =>
-                      const TimeSchedulePage(),
-              transitionDuration: Duration.zero,
-              reverseTransitionDuration: Duration.zero,
-            ),
-          );
-        },
-        onRankingTap: () {
-          Navigator.pushReplacement(
-            context,
-            PageRouteBuilder(
-              pageBuilder:
-                  (context, animation, secondaryAnimation) =>
-                      const RankingPage(),
-              transitionDuration: Duration.zero,
-              reverseTransitionDuration: Duration.zero,
-            ),
-          );
-        },
-        onCreditReviewTap: () {
-          // 現在のページなので何もしない
-        },
-        onItemTap: () {
-          Navigator.pushReplacement(
-            context,
-            PageRouteBuilder(
-              pageBuilder:
-                  (context, animation, secondaryAnimation) => const ItemPage(),
-              transitionDuration: Duration.zero,
-              reverseTransitionDuration: Duration.zero,
-            ),
-          );
-        },
-      ),
+      bottomNavigationBar: CommonBottomNavigation(),
       body: Container(
         width: double.infinity,
         height: double.infinity,
