@@ -16,6 +16,9 @@ import 'ranking_page.dart';
 import 'item_page.dart';
 import 'timetable_entry.dart';
 import 'timetable.dart';
+import 'utils/course_pattern_detector.dart';
+import 'utils/course_color_generator.dart';
+import 'course_pattern.dart';
 
 enum AttendanceStatus { present, absent, late, none }
 
@@ -65,16 +68,22 @@ class _TimeSchedulePageState extends State<TimeSchedulePage> {
   List<Map<String, dynamic>> _sundayEvents = [];
   Map<int, List<Map<String, dynamic>>> _weekdayEvents = {};
   double _timeGaugeProgress = 0.0;
+  Map<String, Color> _courseColors = {};
 
   final List<Color> _neonColors = [
-    Colors.cyanAccent,
-    Colors.greenAccent[400]!,
-    Colors.yellowAccent,
-    Colors.purpleAccent[100]!,
-    Colors.white,
-    Colors.lightBlueAccent,
-    Colors.limeAccent[400]!,
+    const Color(0xFF00E5FF), // cyanAccent
+    const Color(0xFF69F0AE), // greenAccent[400]
+    const Color(0xFFFFFF00), // yellowAccent
+    const Color(0xFFE1BEE7), // purpleAccent[100]
+    const Color(0xFFFFFFFF), // white
+    const Color(0xFF40C4FF), // lightBlueAccent
+    const Color(0xFF76FF03), // limeAccent[400]
   ];
+
+  // ★★★ グローバルなcourseId管理 ★★★
+  static Map<String, String> _globalSubjectToCourseId = {};
+  static int _globalCourseIdCounter = 0;
+
   @override
   void initState() {
     super.initState();
@@ -126,8 +135,64 @@ class _TimeSchedulePageState extends State<TimeSchedulePage> {
     super.dispose();
   }
 
-  void _initializeTimetableGrid(d) async {
-    List<TimetableEntry> timeTableEntries = await getWeeklyTimetableEntries(d);
+  Future<void> _initializeTimetableGrid(DateTime weekStart) async {
+    List<TimetableEntry> timeTableEntries = await getWeeklyTimetableEntries(
+      weekStart,
+    );
+
+    // ★★★ シンプルに授業名だけでcourseIdを決定 ★★★
+    for (var entry in timeTableEntries) {
+      String normalizedSubjectName =
+          entry.subjectName
+              .replaceAll(RegExp(r'\s+'), '')
+              .replaceAll('　', '')
+              .replaceAll('・', '')
+              .replaceAll('Ⅰ', 'I')
+              .replaceAll('Ⅱ', 'II')
+              .replaceAll('Ⅲ', 'III')
+              .replaceAll('Ⅳ', 'IV')
+              .replaceAll('Ⅴ', 'V')
+              .replaceAll('Ⅵ', 'VI')
+              .replaceAll('Ⅶ', 'VII')
+              .replaceAll('Ⅷ', 'VIII')
+              .replaceAll('Ⅸ', 'IX')
+              .replaceAll('Ⅹ', 'X')
+              .trim();
+
+      if (!_globalSubjectToCourseId.containsKey(normalizedSubjectName)) {
+        _globalSubjectToCourseId[normalizedSubjectName] =
+            'course_${_globalCourseIdCounter++}';
+        print(
+          'DEBUG: 新しい授業 "$normalizedSubjectName" -> courseId: ${_globalSubjectToCourseId[normalizedSubjectName]}',
+        );
+      }
+      entry.courseId = _globalSubjectToCourseId[normalizedSubjectName]!;
+      print(
+        'DEBUG: ${entry.subjectName} -> 正規化: "$normalizedSubjectName" -> courseId: ${entry.courseId}',
+      );
+    }
+
+    // ★★★ 乱数で色を生成 ★★★
+    _courseColors.clear();
+    for (var entry in timeTableEntries) {
+      if (entry.courseId != null &&
+          !_courseColors.containsKey(entry.courseId)) {
+        // courseIdのハッシュ値を使って一貫した色を生成
+        final int hash = entry.courseId!.hashCode;
+        final Random random = Random(hash);
+
+        // 明るく見やすい色を生成
+        final int r = 100 + random.nextInt(156); // 100-255
+        final int g = 100 + random.nextInt(156); // 100-255
+        final int b = 100 + random.nextInt(156); // 100-255
+
+        _courseColors[entry.courseId!] = Color.fromARGB(255, r, g, b);
+        print(
+          'DEBUG: courseId ${entry.courseId} -> 乱数色: ${_courseColors[entry.courseId]} (hash: $hash)',
+        );
+      }
+    }
+
     List<List<TimetableEntry?>> grid = List.generate(
       _days.length,
       (dayIndex) => List.generate(_academicPeriods, (periodIndex) => null),
@@ -141,6 +206,44 @@ class _TimeSchedulePageState extends State<TimeSchedulePage> {
       _timetableGrid = grid;
       _attendancePolicies = policies;
     });
+  }
+
+  // ★★★ Firebaseにレギュラー授業情報を保存 ★★★
+  Future<void> _saveRegularScheduleToFirebase(
+    Map<String, String> subjectToRegularSlot,
+  ) async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        final regularScheduleData = <String, dynamic>{};
+
+        for (var entry in subjectToRegularSlot.entries) {
+          String subjectName = entry.key;
+          String regularSlot = entry.value;
+          List<String> slotParts = regularSlot.split('_');
+          int regularDay = int.parse(slotParts[0]);
+          int regularPeriod = int.parse(slotParts[1]);
+
+          regularScheduleData[subjectName] = {
+            'regularDay': regularDay,
+            'regularPeriod': regularPeriod,
+            'regularSlot': regularSlot,
+            'lastUpdated': DateTime.now().toIso8601String(),
+          };
+        }
+
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .collection('regularSchedule')
+            .doc('subjects')
+            .set(regularScheduleData, SetOptions(merge: true));
+
+        print('DEBUG: レギュラー授業情報をFirebaseに保存しました');
+      }
+    } catch (e) {
+      print('ERROR: Firebaseへの保存に失敗しました: $e');
+    }
   }
 
   void _updateWeekDates() {
@@ -162,16 +265,16 @@ class _TimeSchedulePageState extends State<TimeSchedulePage> {
     setState(() {
       _displayedMonday = _displayedMonday.subtract(const Duration(days: 7));
       _updateWeekDates();
-      _initializeTimetableGrid(_displayedMonday); // ←ここで新しい週の月曜を渡す
     });
+    _initializeTimetableGrid(_displayedMonday);
   }
 
   void _goToNextWeek() {
     setState(() {
       _displayedMonday = _displayedMonday.add(const Duration(days: 7));
       _updateWeekDates();
-      _initializeTimetableGrid(_displayedMonday); // ←ここで新しい週の月曜を渡す
     });
+    _initializeTimetableGrid(_displayedMonday);
   }
 
   void _updateHighlight() {
@@ -342,11 +445,24 @@ class _TimeSchedulePageState extends State<TimeSchedulePage> {
 
       switch (policy) {
         case AttendancePolicy.mandatory:
-          // ★★★ ここからが修正箇所 ★★★
-          final int colorIndex = entry.id.hashCode % _neonColors.length;
-          final Color randomBaseColor = _neonColors[colorIndex];
-          final neonColor = _getNeonWarningColor(randomBaseColor, entry.id);
-          // ★★★ ここまでが修正箇所 ★★★
+          // ★★★ courseIdベースで色を決定 ★★★
+          Color baseColor;
+          if (entry.courseId != null &&
+              _courseColors.containsKey(entry.courseId)) {
+            baseColor = _courseColors[entry.courseId]!;
+            print(
+              'DEBUG: ${entry.subjectName} (${entry.dayOfWeek}曜${entry.period}限) -> courseId: ${entry.courseId} -> 使用色: $baseColor',
+            );
+          } else {
+            // フォールバック：subjectNameで色生成
+            final int colorIndex =
+                entry.subjectName.hashCode % _neonColors.length;
+            baseColor = _neonColors[colorIndex];
+            print(
+              'DEBUG: ${entry.subjectName} (${entry.dayOfWeek}曜${entry.period}限) -> フォールバック色: $baseColor',
+            );
+          }
+          final neonColor = _getNeonWarningColor(baseColor, entry.id);
           textColor = neonColor;
           decoration = BoxDecoration(
             color: neonColor.withOpacity(0.1),
@@ -1009,26 +1125,24 @@ class _TimeSchedulePageState extends State<TimeSchedulePage> {
               ),
               actions: [
                 TextButton(
-                  onPressed: () => Navigator.of(context).pop(false),
-                  child: const Text(
+                  child: Text(
                     'キャンセル',
-                    style: TextStyle(color: Colors.white70),
+                    style: TextStyle(
+                      fontFamily: 'misaki',
+                      color: Colors.brown[600],
+                    ),
                   ),
+                  onPressed: () => Navigator.of(context).pop(false),
                 ),
-                TextButton(
-                  onPressed: () {
-                    if (titleController.text.isNotEmpty &&
-                        startTime != null &&
-                        endTime != null &&
-                        (endTime!.hour * 60 + endTime!.minute) >
-                            (startTime!.hour * 60 + startTime!.minute)) {
-                      Navigator.of(context).pop(true);
-                    }
-                  },
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.orange[700],
+                  ),
                   child: const Text(
                     '保存',
-                    style: TextStyle(color: Colors.tealAccent),
+                    style: TextStyle(fontFamily: 'misaki', color: Colors.white),
                   ),
+                  onPressed: () => Navigator.of(context).pop(true),
                 ),
               ],
             );

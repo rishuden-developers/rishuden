@@ -137,12 +137,17 @@ Future<List<TimetableEntry>> getWeeklyTimetableEntries(DateTime date) async {
   for (final ev in events) {
     final int weekday = ev['weekday'];
     final int period = ev['period'];
+    final DateTime eventDate = ev['dtstart'];
+    final String dateStr =
+        '${eventDate.year}-${eventDate.month.toString().padLeft(2, '0')}-${eventDate.day.toString().padLeft(2, '0')}';
+
     final info = TimetableEntry(
       id: '${weekday * 10 + period}', // IDは曜日と時限の組み合わせ
       subjectName: ev['subject'] as String,
       classroom: ev['location'] as String,
       dayOfWeek: weekday, // 曜日（0=月曜, 6=日曜）
       period: period, // 時限（1〜6）
+      date: dateStr,
       isCancelled: ev['isCancelled'], // 休講フラグ
     );
     timetableEntries.add(info);
