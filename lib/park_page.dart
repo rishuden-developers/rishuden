@@ -1133,10 +1133,13 @@ class _ParkPageState extends State<ParkPage> {
                 _showNoticeDialog(context);
               }),
               Divider(color: Colors.amber[200]),
-              _buildDrawerTile(Icons.settings, '設定 (未実装)', () {
+              _buildDrawerTile(Icons.settings, '設定', () {
                 Navigator.pop(context);
               }),
-              _buildDrawerTile(Icons.help_outline, 'ヘルプ (未実装)', () {
+              _buildDrawerTile(Icons.help_outline, 'ヘルプ', () {
+                Navigator.pop(context);
+              }),
+              _buildDrawerTile(Icons.report_problem_outlined, 'ユーザー通報', () {
                 Navigator.pop(context);
               }),
               const SizedBox(height: 20), // 下の余白を確保
