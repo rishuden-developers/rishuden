@@ -1174,7 +1174,7 @@ class _ParkPageState extends State<ParkPage> {
                 Navigator.pushReplacement(
                   context,
                   PageRouteBuilder(
-                    pageBuilder: (_, __, ___) => const CreditReviewPage(),
+                    pageBuilder: (_, __, ___) => const CreditReviewPage(lectureName: '', teacherName: '',),
                     transitionDuration: Duration.zero,
                   ),
                 );

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'dart:ui';
+import 'dart:ui'; // BackdropFilter のために必要
 
 enum AppPage { park, timetable, creditReview, ranking, item }
 
@@ -48,92 +48,108 @@ class CommonBottomNavigation extends StatelessWidget {
     required VoidCallback? onPressed,
     required bool isActive,
   }) {
-    const double activeSize = 80.0;
-    const double inactiveSize = 60.0;
-    const double activeYOffset = -8.0;
-    const double inactiveYOffset = 8.0;
-
-    final double currentSize = isActive ? activeSize : inactiveSize;
-    final double currentYOffset = isActive ? activeYOffset : inactiveYOffset;
-    final String photoToShow = isActive ? activeIconAsset : inactiveIconAsset;
-
     return Expanded(
-      child: InkWell(
-        onTap: isActive ? null : onPressed,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 250),
-          curve: Curves.easeOut,
-          transform: Matrix4.translationValues(0, currentYOffset, 0),
-          transformAlignment: Alignment.center,
-          child: Image.asset(
-            photoToShow,
-            width: currentSize,
-            height: currentSize,
-            fit: BoxFit.contain,
-            errorBuilder: (context, error, stackTrace) {
-              return Icon(
-                Icons.broken_image,
-                size: currentSize * 0.8,
-                color: Colors.grey[400],
-              );
-            },
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onPressed,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Image.asset(
+                  isActive ? activeIconAsset : inactiveIconAsset,
+                  width: 28, // アイコンのサイズを調整
+                  height: 28,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  _getLabelForAsset(inactiveIconAsset),
+                  style: TextStyle(
+                    color: isActive ? Colors.white : Colors.grey[400],
+                    fontSize: 10,
+                    fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
+  String _getLabelForAsset(String assetPath) {
+    if (assetPath.contains('park')) return '公園';
+    if (assetPath.contains('timetable')) return '時間割';
+    if (assetPath.contains('review')) return '履修レビュー';
+    if (assetPath.contains('ranking')) return 'ランキング';
+    if (assetPath.contains('item')) return 'アイテム';
+    return '';
+  }
+
   @override
   Widget build(BuildContext context) {
-    const double barHeight = 95.0;
-
-    return SizedBox(
-      height: barHeight,
-      width: double.infinity,
-      child: Stack(
-        children: [
-          // 背景画像（ファイル名は後で変更）
-          Positioned.fill(
-            child: Image.asset('assets/bottom_bar_bg.png', fit: BoxFit.cover),
-          ),
-          // ボタン群
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: <Widget>[
-              _buildNavItem(
-                inactiveIconAsset: rankingIconAsset,
-                activeIconAsset: rankingIconActiveAsset,
-                onPressed: onRankingTap,
-                isActive: currentPage == AppPage.ranking,
-              ),
-              _buildNavItem(
-                inactiveIconAsset: creditReviewIconAsset,
-                activeIconAsset: creditReviewActiveAsset,
-                onPressed: onCreditReviewTap,
-                isActive: currentPage == AppPage.creditReview,
-              ),
-              _buildNavItem(
-                inactiveIconAsset: parkIconAsset,
-                activeIconAsset: parkIconActiveAsset,
-                onPressed: onParkTap,
-                isActive: currentPage == AppPage.park,
-              ),
-              _buildNavItem(
-                inactiveIconAsset: timetableIconAsset,
-                activeIconAsset: timetableIconActiveAsset,
-                onPressed: onTimetableTap,
-                isActive: currentPage == AppPage.timetable,
-              ),
-              _buildNavItem(
-                inactiveIconAsset: itemIconAsset,
-                activeIconAsset: itemIconActiveAsset,
-                onPressed: onItemTap,
-                isActive: currentPage == AppPage.item,
+    return ClipRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 5.0, sigmaY: 5.0), // ここでぼかしを適用
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.indigo[800]!.withOpacity(0.8), // 半透明の背景色
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(20),
+              topRight: Radius.circular(20),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.3),
+                blurRadius: 10,
+                spreadRadius: 2,
               ),
             ],
           ),
-        ],
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8.0),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: <Widget>[
+                _buildNavItem(
+                  inactiveIconAsset: rankingIconAsset,
+                  activeIconAsset: rankingIconActiveAsset,
+                  onPressed: onRankingTap,
+                  isActive: currentPage == AppPage.ranking,
+                ),
+                _buildNavItem(
+                  inactiveIconAsset: creditReviewIconAsset,
+                  activeIconAsset: creditReviewActiveAsset,
+                  onPressed: onCreditReviewTap,
+                  isActive: currentPage == AppPage.creditReview,
+                ),
+                _buildNavItem(
+                  inactiveIconAsset: parkIconAsset,
+                  activeIconAsset: parkIconActiveAsset,
+                  onPressed: onParkTap,
+                  isActive: currentPage == AppPage.park,
+                ),
+                _buildNavItem(
+                  inactiveIconAsset: timetableIconAsset,
+                  activeIconAsset: timetableIconActiveAsset,
+                  onPressed: onTimetableTap,
+                  isActive: currentPage == AppPage.timetable,
+                ),
+                _buildNavItem(
+                  inactiveIconAsset: itemIconAsset,
+                  activeIconAsset: itemIconActiveAsset,
+                  onPressed: onItemTap,
+                  isActive: currentPage == AppPage.item,
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
-}
+  }
+  

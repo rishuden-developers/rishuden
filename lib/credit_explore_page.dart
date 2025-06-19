@@ -1,8 +1,7 @@
 // credit_explore_page.dart
 import 'package:flutter/material.dart';
 import 'credit_result_page.dart'; // 検索結果を表示するページ
-import 'credit_review_page.dart'; // レビュー投稿ページへの遷移用 (選択後)
-import 'common_bottom_navigation.dart'; // 共通フッターウィジェット (パスを確認してください)
+import 'common_bottom_navigation.dart'; // 共通フッターウィジェット
 import 'park_page.dart';
 import 'time_schedule_page.dart';
 import 'ranking_page.dart';
@@ -20,6 +19,7 @@ class _CreditExplorePageState extends State<CreditExplorePage> {
   String? _selectedFaculty;
   String? _selectedCategory; // 必修/選択
   String? _selectedDayOfWeek;
+  String? _selectedTag; // タグ検索用
 
   final List<String> _faculties = [
     '情報科学部',
@@ -33,135 +33,171 @@ class _CreditExplorePageState extends State<CreditExplorePage> {
   final List<String> _categories = ['必修', '選択', 'その他'];
   final List<String> _daysOfWeek = ['月', '火', '水', '木', '金', '土', '日'];
   // ★タグ検索候補 (ダミー)
-  final List<String> _tagSuggestions = [
-    '楽単',
+  final List<String> _tags = [
+    'レポート多め',
+    'グループワークあり',
     'テストなし',
-    '出席ゆるい',
-    'レポートのみ',
+    '出席必須',
     'オンライン完結',
-    'グループワーク',
+    'ディスカッション多め',
+    '課題なし',
+    '板書メイン',
   ];
-  String? _selectedTag;
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
-  }
 
   void _performSearch() {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder:
-            (context) => CreditResultPage(
-              searchQuery:
-                  _searchController.text.isEmpty
-                      ? null
-                      : _searchController.text,
-              filterFaculty: _selectedFaculty,
-              filterTag: _selectedTag, // タグフィルターも渡す
-              // 曜日や必修/選択も必要であればここに含めます
-            ),
+        builder: (context) => CreditResultPage(
+          searchQuery: _searchController.text.isNotEmpty ? _searchController.text : null,
+          filterFaculty: _selectedFaculty,
+          filterTag: _selectedTag,
+          filterCategory: _selectedCategory,
+          filterDayOfWeek: _selectedDayOfWeek,
+        ),
       ),
-    );
-  }
-
-  Widget _buildDropdownFilter({
-    required String label,
-    required List<String> items,
-    required String? selectedValue,
-    required ValueChanged<String?> onChanged,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12.0),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.9),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.orangeAccent[100]!, width: 1.5),
-          ),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
-              value: selectedValue,
-              isExpanded: true,
-              dropdownColor: Colors.white,
-              icon: const Icon(Icons.arrow_drop_down, color: Colors.brown),
-              hint: Text(
-                '全ての$label',
-                style: const TextStyle(color: Colors.grey),
-              ),
-              onChanged: onChanged,
-              items:
-                  items.map((String value) {
-                    return DropdownMenuItem<String>(
-                      value: value,
-                      child: Text(
-                        value,
-                        style: const TextStyle(color: Colors.black87),
-                      ),
-                    );
-                  }).toList(),
-            ),
-          ),
-        ),
-        const SizedBox(height: 20),
-      ],
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final double maxContentWidth = 600.0;
-    final double bottomNavBarHeight = 75.0; // CommonBottomNavigationの高さに合わせて調整
-
     return Scaffold(
-      extendBodyBehindAppBar: true,
-      extendBody: true,
       appBar: AppBar(
-        title: const Text('講義を探索する'),
-        backgroundColor: Colors.transparent,
+        title: const Text(
+          '講義を探す',
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontFamily: 'NotoSansJP',
+          ),
+        ),
+        backgroundColor: Colors.indigo[800],
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
-        titleTextStyle: const TextStyle(
-          fontFamily: 'NotoSansJP',
-          color: Colors.white,
-          fontSize: 20,
-          fontWeight: FontWeight.bold,
+        centerTitle: true,
+      ),
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Colors.indigo[800]!,
+              Colors.indigo[600]!,
+            ],
+          ),
+        ),
+        child: SafeArea(
+          child: LayoutBuilder(
+            builder: (context, constraints) => SingleChildScrollView(
+              padding: const EdgeInsets.all(16.0),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  minHeight: constraints.maxHeight - 32, // Adjust for padding
+                ),
+                child: IntrinsicHeight(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // Googleのような検索バー
+                      _buildSearchBar(),
+                      const SizedBox(height: 20),
+
+                      // 検索フィルターのドロップダウン
+                      _buildFilterDropdown(
+                        '学部で絞り込む',
+                        _selectedFaculty,
+                        _faculties,
+                        (String? newValue) {
+                          setState(() {
+                            _selectedFaculty = newValue;
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 10),
+                      _buildFilterDropdown(
+                        '種類で絞り込む (必修/選択)',
+                        _selectedCategory,
+                        _categories,
+                        (String? newValue) {
+                          setState(() {
+                            _selectedCategory = newValue;
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 10),
+                      _buildFilterDropdown(
+                        '曜日で絞り込む',
+                        _selectedDayOfWeek,
+                        _daysOfWeek,
+                        (String? newValue) {
+                          setState(() {
+                            _selectedDayOfWeek = newValue;
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 10),
+                      _buildFilterDropdown(
+                        'タグで絞り込む',
+                        _selectedTag,
+                        _tags,
+                        (String? newValue) {
+                          setState(() {
+                            _selectedTag = newValue;
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 30),
+
+                      // 検索ボタン
+                      ElevatedButton.icon(
+                        onPressed: _performSearch,
+                        icon: const Icon(Icons.search, color: Colors.white),
+                        label: const Text(
+                          '検索',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                            fontFamily: 'NotoSansJP',
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blueAccent[700],
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            side: BorderSide(color: Colors.blueAccent[100]!, width: 1.5),
+                          ),
+                          elevation: 4,
+                        ),
+                      ),
+                      const SizedBox(height: 40),
+
+                      // ランキング表示へのボタン (既存のものを維持)
+                      _buildSectionTitle('人気ランキング', Icons.bar_chart),
+                      const SizedBox(height: 10),
+                      _buildRankingButton(context, '楽単ランキング', 'easiness'),
+                      _buildRankingButton(context, '総合満足度ランキング', 'satisfaction'),
+                      _buildRankingButton(context, '学部別注目授業', 'faculty_specific'),
+
+                      const Spacer(), // 下部のナビゲーションバーのためのスペース
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
         ),
       ),
       bottomNavigationBar: CommonBottomNavigation(
-        currentPage: AppPage.creditReview, // ExploreページはcreditReviewアイコンに紐付け
-        parkIconActiveAsset: 'assets/button_park_icon_active.png',
-        parkIconAsset: 'assets/button_park_icon.png',
-        timetableIconActiveAsset: 'assets/button_timetable_active.png',
-        timetableIconAsset: 'assets/button_timetable.png',
-        creditReviewActiveAsset: 'assets/button_unit_review_active.png',
-        creditReviewIconAsset: 'assets/button_unit_review.png',
-        rankingIconActiveAsset: 'assets/button_ranking_active.png',
-        rankingIconAsset: 'assets/button_ranking.png',
-        itemIconActiveAsset: 'assets/button_dressup_active.png',
-        itemIconAsset: 'assets/button_dressup.png',
+        currentPage: AppPage.creditReview, // CreditExplorePageが履修レビューに該当
         onParkTap: () {
           Navigator.pushReplacement(
             context,
             PageRouteBuilder(
-              pageBuilder:
-                  (context, animation, secondaryAnimation) => const ParkPage(),
+              pageBuilder: (_, __, ___) => const ParkPage(),
               transitionDuration: Duration.zero,
-              reverseTransitionDuration: Duration.zero,
             ),
           );
         },
@@ -169,273 +205,150 @@ class _CreditExplorePageState extends State<CreditExplorePage> {
           Navigator.pushReplacement(
             context,
             PageRouteBuilder(
-              pageBuilder:
-                  (context, animation, secondaryAnimation) =>
-                      const TimeSchedulePage(),
+              pageBuilder: (_, __, ___) => const TimeSchedulePage(),
               transitionDuration: Duration.zero,
-              reverseTransitionDuration: Duration.zero,
             ),
           );
+        },
+        onCreditReviewTap: () {
+          // すでにExplorePageにいるので何もしないか、あるいは現在のページを再描画
+          print("Already on Credit Explore Page");
         },
         onRankingTap: () {
           Navigator.pushReplacement(
             context,
             PageRouteBuilder(
-              pageBuilder:
-                  (context, animation, secondaryAnimation) =>
-                      const RankingPage(),
+              pageBuilder: (_, __, ___) => const RankingPage(),
               transitionDuration: Duration.zero,
-              reverseTransitionDuration: Duration.zero,
             ),
           );
-        },
-        onCreditReviewTap: () {
-          // 現在のページなので何もしない
         },
         onItemTap: () {
           Navigator.pushReplacement(
             context,
             PageRouteBuilder(
-              pageBuilder:
-                  (context, animation, secondaryAnimation) => const ItemPage(),
+              pageBuilder: (_, __, ___) => const ItemPage(),
               transitionDuration: Duration.zero,
-              reverseTransitionDuration: Duration.zero,
             ),
           );
         },
+        // アイコンアセットのパスをここに追加
+        parkIconAsset: 'assets/icon_park.png',
+        parkIconActiveAsset: 'assets/icon_park_active.png',
+        timetableIconAsset: 'assets/icon_timetable.png',
+        timetableIconActiveAsset: 'assets/icon_timetable_active.png',
+        creditReviewIconAsset: 'assets/icon_review.png',
+        creditReviewActiveAsset: 'assets/icon_review_active.png',
+        rankingIconAsset: 'assets/icon_ranking.png',
+        rankingIconActiveAsset: 'assets/icon_ranking_active.png',
+        itemIconAsset: 'assets/icon_item.png',
+        itemIconActiveAsset: 'assets/icon_item_active.png',
       ),
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: const BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage('assets/ranking_guild_background.png'), // 背景画像
-            fit: BoxFit.cover,
+    );
+  }
+
+  Widget _buildSearchBar() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(30.0),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.2),
+            spreadRadius: 1,
+            blurRadius: 5,
+            offset: const Offset(0, 3), // changes position of shadow
           ),
+        ],
+      ),
+      child: TextField(
+        controller: _searchController,
+        decoration: InputDecoration(
+          hintText: '講義名や教員名で検索...',
+          hintStyle: TextStyle(color: Colors.grey[600]),
+          prefixIcon: Icon(Icons.search, color: Colors.grey[600]),
+          border: InputBorder.none,
+          suffixIcon: _searchController.text.isNotEmpty
+              ? IconButton(
+                  icon: Icon(Icons.clear, color: Colors.grey[600]),
+                  onPressed: () {
+                    _searchController.clear();
+                    setState(() {}); // 更新してクリアボタンを非表示にする
+                  },
+                )
+              : null,
         ),
-        child: SafeArea(
-          bottom: false,
-          child: Center(
-            child: ConstrainedBox(
-              constraints: BoxConstraints(maxWidth: maxContentWidth),
-              child: SingleChildScrollView(
-                padding: EdgeInsets.only(
-                  bottom: bottomNavBarHeight + 20,
-                  top: AppBar().preferredSize.height + 20,
-                  left: 24,
-                  right: 24,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const Text(
-                      '講義を検索',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                        fontFamily: 'NotoSansJP',
-                        shadows: [
-                          Shadow(
-                            blurRadius: 6.0,
-                            color: Colors.black54,
-                            offset: Offset(2.0, 2.0),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 40),
-                    // 検索バー
-                    TextFormField(
-                      controller: _searchController,
-                      decoration: InputDecoration(
-                        hintText: '講義名や教員名で検索',
-                        hintStyle: const TextStyle(color: Colors.grey),
-                        prefixIcon: const Icon(
-                          Icons.search,
-                          color: Colors.brown,
-                        ),
-                        filled: true,
-                        fillColor: Colors.white.withOpacity(0.9),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(
-                            color: Colors.orangeAccent[100]!,
-                            width: 1.5,
-                          ),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(
-                            color: Colors.orangeAccent[100]!,
-                            width: 1.5,
-                          ),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(
-                            color: Colors.brown,
-                            width: 2.0,
-                          ),
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          vertical: 16,
-                          horizontal: 16,
-                        ),
-                      ),
-                      style: const TextStyle(color: Colors.black87),
-                      onFieldSubmitted: (_) => _performSearch(), // エンターキーで検索実行
-                    ),
-                    const SizedBox(height: 30),
+        onChanged: (text) {
+          setState(() {}); // 入力内容に応じてクリアボタンの表示/非表示を更新
+        },
+        onSubmitted: (text) => _performSearch(),
+      ),
+    );
+  }
 
-                    // フィルターオプション
-                    _buildDropdownFilter(
-                      label: '学部・学科',
-                      items: _faculties,
-                      selectedValue: _selectedFaculty,
-                      onChanged: (value) {
-                        setState(() {
-                          _selectedFaculty = value;
-                        });
-                      },
-                    ),
-                    _buildDropdownFilter(
-                      label: '必修／選択',
-                      items: _categories,
-                      selectedValue: _selectedCategory,
-                      onChanged: (value) {
-                        setState(() {
-                          _selectedCategory = value;
-                        });
-                      },
-                    ),
-                    _buildDropdownFilter(
-                      label: '曜日',
-                      items: _daysOfWeek,
-                      selectedValue: _selectedDayOfWeek,
-                      onChanged: (value) {
-                        setState(() {
-                          _selectedDayOfWeek = value;
-                        });
-                      },
-                    ),
-                    // タグフィルター (Chip形式)
-                    const Text(
-                      'タグで絞り込み',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8.0,
-                      runSpacing: 8.0,
-                      children:
-                          _tagSuggestions.map((tag) {
-                            final isSelected = _selectedTag == tag;
-                            return FilterChip(
-                              label: Text(
-                                tag,
-                                style: TextStyle(
-                                  color:
-                                      isSelected
-                                          ? Colors.white
-                                          : Colors.brown[700],
-                                ),
-                              ),
-                              selected: isSelected,
-                              onSelected: (selected) {
-                                setState(() {
-                                  _selectedTag = selected ? tag : null;
-                                });
-                              },
-                              backgroundColor: Colors.white.withOpacity(0.9),
-                              selectedColor: Colors.brown[700]?.withOpacity(
-                                0.9,
-                              ),
-                              checkmarkColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(20),
-                                side: BorderSide(
-                                  color: Colors.orangeAccent[100]!,
-                                  width: 1.0,
-                                ),
-                              ),
-                              labelPadding: const EdgeInsets.symmetric(
-                                horizontal: 8.0,
-                                vertical: 2.0,
-                              ),
-                            );
-                          }).toList(),
-                    ),
-                    const SizedBox(height: 30),
-
-                    // 検索実行ボタン
-                    ElevatedButton(
-                      onPressed: _performSearch,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.orange[700],
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 18),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          side: BorderSide(
-                            color: Colors.amberAccent[100]!,
-                            width: 2,
-                          ),
-                        ),
-                        elevation: 6,
-                        textStyle: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          fontFamily: 'NotoSansJP',
-                        ),
-                      ),
-                      child: const Text('講義を検索'),
-                    ),
-                    const SizedBox(height: 40),
-
-                    // ランキングへの導線
-                    const Text(
-                      'ランキングを見る',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                        fontFamily: 'NotoSansJP',
-                        shadows: [
-                          Shadow(
-                            blurRadius: 4.0,
-                            color: Colors.black45,
-                            offset: Offset(1.0, 1.0),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    _buildRankingButton(context, '楽単ランキング', 'easiness'),
-                    _buildRankingButton(context, '人気講義TOP10', 'satisfaction'),
-                    _buildRankingButton(context, '沼単ランキング', 'nume'),
-                    _buildRankingButton(context, '学部別注目授業', 'faculty_specific'),
-                  ],
-                ),
-              ),
-            ),
+  Widget _buildFilterDropdown(
+      String hintText, String? selectedValue, List<String> items, ValueChanged<String?> onChanged) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.9),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.blueAccent[100]!, width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            spreadRadius: 1,
+            blurRadius: 3,
+            offset: const Offset(0, 2),
           ),
+        ],
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          isExpanded: true,
+          value: selectedValue,
+          hint: Text(hintText, style: TextStyle(color: Colors.grey[700])),
+          icon: const Icon(Icons.arrow_drop_down, color: Colors.indigo),
+          iconSize: 24,
+          elevation: 16,
+          style: const TextStyle(color: Colors.black87, fontSize: 16),
+          onChanged: onChanged,
+          items: items.map<DropdownMenuItem<String>>((String value) {
+            return DropdownMenuItem<String>(
+              value: value,
+              child: Text(value),
+            );
+          }).toList(),
         ),
       ),
     );
   }
 
+  Widget _buildSectionTitle(String title, IconData icon) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, color: Colors.white, size: 28),
+          const SizedBox(width: 10),
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+              fontFamily: 'NotoSansJP',
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildRankingButton(
-    BuildContext context,
-    String label,
-    String rankingType,
-  ) {
+      BuildContext context, String label, String rankingType) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: ElevatedButton(
@@ -443,14 +356,12 @@ class _CreditExplorePageState extends State<CreditExplorePage> {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder:
-                  (context) => CreditResultPage(
-                    rankingType: rankingType,
-                    filterFaculty:
-                        rankingType == 'faculty_specific'
-                            ? _selectedFaculty
-                            : null,
-                  ),
+              builder: (context) => CreditResultPage(
+                rankingType: rankingType,
+                filterFaculty: rankingType == 'faculty_specific'
+                    ? _selectedFaculty // 学部別ランキングの場合は選択中の学部を渡す
+                    : null,
+              ),
             ),
           );
         },
