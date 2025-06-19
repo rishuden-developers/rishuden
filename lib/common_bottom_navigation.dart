@@ -72,7 +72,10 @@ class CommonBottomNavigation extends ConsumerWidget {
         activeIcon = activeTimetableIcon;
         break;
       case AppPage.credit:
-        pageWidget = const CreditReviewPage();
+        pageWidget = const CreditReviewPage(
+          lectureName: '講義一覧',
+          teacherName: '全講義',
+        );
         inactiveIcon = inactiveCreditIcon;
         activeIcon = activeCreditIcon;
         break;
