@@ -217,7 +217,7 @@ class _CharacterDecidePageState extends State<CharacterDecidePage> {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Text(
-                    displayCharacterData["skills"],
+                    (displayCharacterData["skills"] as List<String>).join(', '),
                     style: const TextStyle(fontSize: 16, color: Colors.brown),
                     textAlign: TextAlign.center,
                   ),
@@ -227,7 +227,7 @@ class _CharacterDecidePageState extends State<CharacterDecidePage> {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Text(
-                    displayCharacterData["items"],
+                    (displayCharacterData["items"] as List<String>).join(', '),
                     style: const TextStyle(fontSize: 16, color: Colors.brown),
                     textAlign: TextAlign.center,
                   ),

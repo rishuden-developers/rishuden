@@ -813,20 +813,82 @@ class _ParkPageState extends State<ParkPage> {
   void initState() {
     super.initState();
     _loadTakoyakiStatus();
-    // _loadCharacterInfo();
+    _loadCharacterInfoFromFirebase();
     _startCountdownTimer();
     _calculateWeekDateRange();
+  }
 
-    // コンストラクタから渡されたキャラクター情報を設定
-    setState(() {
-      _currentParkCharacterName = widget.diagnosedCharacterName;
-      _userName = widget.userName;
-      if (characterFullDataGlobal.containsKey(widget.diagnosedCharacterName)) {
-        _currentParkCharacterImage =
-            characterFullDataGlobal[widget.diagnosedCharacterName]!['image'];
+  // Firebaseからキャラクター情報を取得するメソッドを追加
+  Future<void> _loadCharacterInfoFromFirebase() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        final doc =
+            await FirebaseFirestore.instance
+                .collection('users')
+                .doc(user.uid)
+                .get();
+        if (doc.exists) {
+          final data = doc.data() as Map<String, dynamic>;
+          setState(() {
+            _currentParkCharacterName =
+                data['character'] ?? widget.diagnosedCharacterName;
+            _userName = data['name'] ?? widget.userName;
+            if (data['characterImage'] != null) {
+              _currentParkCharacterImage = data['characterImage'];
+            } else if (characterFullDataGlobal.containsKey(
+              _currentParkCharacterName,
+            )) {
+              _currentParkCharacterImage =
+                  characterFullDataGlobal[_currentParkCharacterName]!['image'];
+            }
+            _isCharacterInfoInitialized = true;
+          });
+        } else {
+          // Firebaseにデータがない場合は、コンストラクタから渡された情報を使用
+          setState(() {
+            _currentParkCharacterName = widget.diagnosedCharacterName;
+            _userName = widget.userName;
+            if (characterFullDataGlobal.containsKey(
+              widget.diagnosedCharacterName,
+            )) {
+              _currentParkCharacterImage =
+                  characterFullDataGlobal[widget
+                      .diagnosedCharacterName]!['image'];
+            }
+            _isCharacterInfoInitialized = true;
+          });
+        }
+      } else {
+        // ユーザーがログインしていない場合
+        setState(() {
+          _currentParkCharacterName = widget.diagnosedCharacterName;
+          _userName = widget.userName;
+          if (characterFullDataGlobal.containsKey(
+            widget.diagnosedCharacterName,
+          )) {
+            _currentParkCharacterImage =
+                characterFullDataGlobal[widget
+                    .diagnosedCharacterName]!['image'];
+          }
+          _isCharacterInfoInitialized = true;
+        });
       }
-      _isCharacterInfoInitialized = true;
-    });
+    } catch (e) {
+      print('Error loading character info from Firebase: $e');
+      // エラーが発生した場合は、コンストラクタから渡された情報を使用
+      setState(() {
+        _currentParkCharacterName = widget.diagnosedCharacterName;
+        _userName = widget.userName;
+        if (characterFullDataGlobal.containsKey(
+          widget.diagnosedCharacterName,
+        )) {
+          _currentParkCharacterImage =
+              characterFullDataGlobal[widget.diagnosedCharacterName]!['image'];
+        }
+        _isCharacterInfoInitialized = true;
+      });
+    }
   }
 
   final GlobalKey<LiquidLevelGaugeState> _gaugeKey =
