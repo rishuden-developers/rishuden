@@ -43,6 +43,7 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
         fontFamily: 'NotoSansJP',
       ),
+      debugShowCheckedModeBanner: false,
       home: MyHomePage(title: '履修伝説'),
     );
   }
