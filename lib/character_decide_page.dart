@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'park_page.dart';
-import 'character_data.dart'; // ParkPageのインポート
+import 'character_data.dart'; // グローバルキャラクターデータをインポート
 // import 'dart:math'; // 診断ロジックがないので不要
 
 class CharacterDecidePage extends StatefulWidget {
@@ -38,41 +38,6 @@ class _CharacterDecidePageState extends State<CharacterDecidePage> {
     '商学部',
     '基礎工学部',
   ];
-
-  // キャラクターの全データ定義
-  final Map<String, Map<String, dynamic>> _characterFullData = {
-    "剣士": {
-      "image": "assets/character_swordman.png",
-      "personality": "正義感が強く、困難な課題にも正面から立ち向かうタイプ。\n計画性があり、着実に目標を達成していく性格です。",
-      "skills":
-          "【集中力】\n長時間の勉強や作業に集中できる能力を持っています。\n\n【計画性】\n効率的な時間管理と計画立案が得意です。",
-      "items": "【勇者の剣】\n困難な課題を切り開く力\n\n【計画手帳】\n効率的な時間管理を可能にする",
-    },
-    "魔法使い": {
-      "image": "assets/character_magician.png",
-      "personality": "創造的で、新しいアイデアを生み出すのが得意。\n柔軟な思考で、様々な問題解決方法を見つけ出します。",
-      "skills": "【創造力】\n独創的なアイデアを生み出す能力\n\n【分析力】\n複雑な問題を分析し、解決策を見つける力",
-      "items": "【魔法の杖】\n創造的な思考を強化する\n\n【知識の書】\n様々な分野の知識を蓄える",
-    },
-    "僧侶": {
-      "image": "assets/character_priest.png",
-      "personality": "穏やかで、周囲との調和を大切にするタイプ。\nチームワークを重視し、みんなで目標を達成することを好みます。",
-      "skills": "【コミュニケーション】\n他者との円滑な関係構築\n\n【調整力】\nグループ内の調整やまとめ役",
-      "items": "【癒しの杖】\n周囲を癒し、調和をもたらす\n\n【調和の鈴】\nチームワークを強化する",
-    },
-    "商人": {
-      "image": "assets/character_merchant.png",
-      "personality": "実用的で、効率的な方法を追求するタイプ。\nリソースを最大限活用し、目標達成を目指します。",
-      "skills": "【効率化】\n時間と労力を最小限に抑える能力\n\n【交渉力】\nWin-Winの関係を築く力",
-      "items": "【計算機】\n効率的な計画立案を支援\n\n【取引帳】\n人脈とリソースを管理",
-    },
-    "盗賊": {
-      "image": "assets/character_thief.png",
-      "personality": "自由奔放で、型にはまらないタイプ。\n独自の方法で目標を達成し、新しい発見を楽しみます。",
-      "skills": "【機転】\n臨機応変な対応力\n\n【探索力】\n新しい可能性を見つける力",
-      "items": "【隠れ蓑】\n独自の方法で目標を達成\n\n【宝の地図】\n新しい可能性を発見",
-    },
-  };
 
   @override
   void dispose() {
@@ -122,11 +87,11 @@ class _CharacterDecidePageState extends State<CharacterDecidePage> {
         await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
           'character': characterName,
           'characterSelected': true,
-          'characterImage': _characterFullData[characterName]?['image'],
+          'characterImage': characterFullDataGlobal[characterName]?['image'],
           'characterPersonality':
-              _characterFullData[characterName]?['personality'],
-          'characterSkills': _characterFullData[characterName]?['skills'],
-          'characterItems': _characterFullData[characterName]?['items'],
+              characterFullDataGlobal[characterName]?['personality'],
+          'characterSkills': characterFullDataGlobal[characterName]?['skills'],
+          'characterItems': characterFullDataGlobal[characterName]?['items'],
           'name': _nameController.text,
           'grade': _selectedGrade,
           'department': _selectedDepartment,
@@ -135,10 +100,19 @@ class _CharacterDecidePageState extends State<CharacterDecidePage> {
 
         if (context.mounted) {
           print('Navigating to ParkPage...');
-          // Navigator.pushReplacement(
-          //   context,
-          //   MaterialPageRoute(builder: (context) => const ParkPage()),
-          // );
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder:
+                  (context) => ParkPage(
+                    diagnosedCharacterName: characterName,
+                    answers: widget.answers,
+                    userName: _nameController.text,
+                    grade: _selectedGrade,
+                    department: _selectedDepartment,
+                  ),
+            ),
+          );
           print('Navigation completed');
         }
       } else {
@@ -164,7 +138,8 @@ class _CharacterDecidePageState extends State<CharacterDecidePage> {
   Widget build(BuildContext context) {
     final String characterName = widget.diagnosedCharacterName;
     final Map<String, dynamic> displayCharacterData =
-        _characterFullData[characterName] ?? _characterFullData["剣士"]!;
+        characterFullDataGlobal[characterName] ??
+        characterFullDataGlobal["剣士"]!;
 
     print('=== Character Data ===');
     print('Character Name: $characterName');
