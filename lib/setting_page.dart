@@ -51,9 +51,16 @@ class _SettingPageState extends State<SettingPage> {
     if (user == null) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('ログインが必要です'),
-            backgroundColor: Colors.red,
+          SnackBar(
+            content: const Text(
+              'ログインが必要です',
+              style: TextStyle(fontFamily: 'misaki', color: Colors.white),
+            ),
+            backgroundColor: Colors.black.withOpacity(0.85),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: const BorderSide(color: Colors.white, width: 2.5),
+            ),
           ),
         );
       }
@@ -69,9 +76,16 @@ class _SettingPageState extends State<SettingPage> {
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('カレンダーURLを保存しました！'),
-              backgroundColor: Colors.green,
+            SnackBar(
+              content: const Text(
+                'カレンダーURLを保存しました！',
+                style: TextStyle(fontFamily: 'misaki', color: Colors.white),
+              ),
+              backgroundColor: Colors.black.withOpacity(0.85),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: const BorderSide(color: Colors.white, width: 2.5),
+              ),
             ),
           );
           setState(() {
@@ -82,9 +96,16 @@ class _SettingPageState extends State<SettingPage> {
         print('Error saving calendar URL to Firestore: $e');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('保存に失敗しました'),
-              backgroundColor: Colors.red,
+            SnackBar(
+              content: const Text(
+                '保存に失敗しました',
+                style: TextStyle(fontFamily: 'misaki', color: Colors.white),
+              ),
+              backgroundColor: Colors.black.withOpacity(0.85),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: const BorderSide(color: Colors.white, width: 2.5),
+              ),
             ),
           );
         }
@@ -92,9 +113,16 @@ class _SettingPageState extends State<SettingPage> {
     } else {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('URLを入力してください'),
-            backgroundColor: Colors.red,
+          SnackBar(
+            content: const Text(
+              'URLを入力してください',
+              style: TextStyle(fontFamily: 'misaki', color: Colors.white),
+            ),
+            backgroundColor: Colors.black.withOpacity(0.85),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: const BorderSide(color: Colors.white, width: 2.5),
+            ),
           ),
         );
       }

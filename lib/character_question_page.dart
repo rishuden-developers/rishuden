@@ -922,18 +922,38 @@ class _CharacterQuestionPageState extends State<CharacterQuestionPage> {
 
   void _submitCharacter() async {
     if (_selectedCharacter == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('キャラクターを選択してください')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text(
+            'キャラクターを選択してください',
+            style: TextStyle(fontFamily: 'misaki', color: Colors.white),
+          ),
+          backgroundColor: Colors.black.withOpacity(0.85),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: const BorderSide(color: Colors.white, width: 2.5),
+          ),
+        ),
+      );
       return;
     }
 
     if (_nameController.text.isEmpty ||
         _selectedGrade == null ||
         _selectedDepartment == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('すべての項目を入力してください')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text(
+            'すべての項目を入力してください',
+            style: TextStyle(fontFamily: 'misaki', color: Colors.white),
+          ),
+          backgroundColor: Colors.black.withOpacity(0.85),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: const BorderSide(color: Colors.white, width: 2.5),
+          ),
+        ),
+      );
       return;
     }
 
@@ -966,9 +986,19 @@ class _CharacterQuestionPageState extends State<CharacterQuestionPage> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('エラーが発生しました: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'エラーが発生しました: $e',
+              style: const TextStyle(fontFamily: 'misaki', color: Colors.white),
+            ),
+            backgroundColor: Colors.black.withOpacity(0.85),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: const BorderSide(color: Colors.white, width: 2.5),
+            ),
+          ),
+        );
       }
     }
   }

@@ -3,6 +3,7 @@ import 'dart:async'; // Timer.periodic のために必要
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:math';
+import 'package:animated_text_kit/animated_text_kit.dart';
 import 'task_progress_gauge.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -67,7 +68,7 @@ class _ParkPageState extends ConsumerState<ParkPage> {
 
   bool _isCharacterInfoInitialized = false;
   bool isQuestCreationVisible = false;
-  int _takoyakiCount = 13800;
+  int _takoyakiCount = 0;
   double _pageOffset = 0.0;
 
   bool _isTakoyakiClaimed = false;
@@ -106,12 +107,16 @@ class _ParkPageState extends ConsumerState<ParkPage> {
   void _claimDailyTakoyaki() async {
     if (_isTakoyakiClaimed) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
+        SnackBar(
+          content: const Text(
             '今日のたこ焼きはもう受け取ったで！また明日な！',
-            style: TextStyle(fontFamily: 'misaki'),
+            style: TextStyle(fontFamily: 'misaki', color: Colors.white),
           ),
-          backgroundColor: Colors.orangeAccent,
+          backgroundColor: Colors.black.withOpacity(0.85),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: const BorderSide(color: Colors.white, width: 2.5),
+          ),
         ),
       );
       return;
@@ -131,9 +136,16 @@ class _ParkPageState extends ConsumerState<ParkPage> {
     await prefs.setBool(todayKey, true);
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('たこ焼きを10個ゲットした！', style: TextStyle(fontFamily: 'misaki')),
-        backgroundColor: Colors.green,
+      SnackBar(
+        content: const Text(
+          'たこ焼きを10個ゲットした！',
+          style: TextStyle(fontFamily: 'misaki', color: Colors.white),
+        ),
+        backgroundColor: Colors.black.withOpacity(0.85),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: const BorderSide(color: Colors.white, width: 2.5),
+        ),
       ),
     );
   }
@@ -144,7 +156,6 @@ class _ParkPageState extends ConsumerState<ParkPage> {
       if (!mounted) return;
       setState(() {
         _dialogueMessages = [
-          "掲示板が割れた！",
           "課題「${taskData['name']}」を討伐完了！",
           "たこ焼き${taskData['reward'] ?? 10}個を獲得した！",
           "よくやったな、冒険者よ...",
@@ -648,9 +659,22 @@ class _ParkPageState extends ConsumerState<ParkPage> {
                   final user = FirebaseAuth.instance.currentUser;
                   if (user == null) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('クエストを作成するにはログインが必要です。'),
-                        backgroundColor: Colors.red,
+                      SnackBar(
+                        content: const Text(
+                          'クエストを作成するにはログインが必要です。',
+                          style: TextStyle(
+                            fontFamily: 'misaki',
+                            color: Colors.white,
+                          ),
+                        ),
+                        backgroundColor: Colors.black.withOpacity(0.85),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          side: const BorderSide(
+                            color: Colors.white,
+                            width: 2.5,
+                          ),
+                        ),
                       ),
                     );
                     return;
@@ -678,18 +702,41 @@ class _ParkPageState extends ConsumerState<ParkPage> {
                           SnackBar(
                             content: Text(
                               'クエスト「$selectedClass - $taskType」を作成しました！',
-                              style: const TextStyle(fontFamily: 'misaki'),
+                              style: const TextStyle(
+                                fontFamily: 'misaki',
+                                color: Colors.white,
+                              ),
                             ),
-                            backgroundColor: Colors.green,
+                            backgroundColor: Colors.black.withOpacity(0.85),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              side: const BorderSide(
+                                color: Colors.white,
+                                width: 2.5,
+                              ),
+                            ),
                           ),
                         );
                       })
                       .catchError((error) {
                         setState(() => isQuestCreationVisible = false);
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('エラー: クエストの作成に失敗しました。'),
-                            backgroundColor: Colors.red,
+                          SnackBar(
+                            content: const Text(
+                              'エラー: クエストの作成に失敗しました。',
+                              style: TextStyle(
+                                fontFamily: 'misaki',
+                                color: Colors.white,
+                              ),
+                            ),
+                            backgroundColor: Colors.black.withOpacity(0.85),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              side: const BorderSide(
+                                color: Colors.white,
+                                width: 2.5,
+                              ),
+                            ),
                           ),
                         );
                       });
@@ -911,14 +958,16 @@ class _ParkPageState extends ConsumerState<ParkPage> {
             }
           },
           child: Container(
+            width: MediaQuery.of(context).size.width * 0.9,
+            height: 120,
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
             decoration: BoxDecoration(
               color: Colors.black.withOpacity(0.9),
-              border: Border.all(color: Colors.yellow.shade600, width: 3.0),
               borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.white, width: 3.0),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.yellow.withOpacity(0.3),
+                  color: Colors.white.withOpacity(0.3),
                   blurRadius: 8,
                   spreadRadius: 2,
                 ),
@@ -947,8 +996,8 @@ class _ParkPageState extends ConsumerState<ParkPage> {
                     bottom: -8,
                     right: 8,
                     child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.yellow.shade600,
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
                         shape: BoxShape.circle,
                       ),
                       child: const Icon(
@@ -985,7 +1034,7 @@ class _ParkPageState extends ConsumerState<ParkPage> {
           final data = doc.data() as Map<String, dynamic>;
           if (!mounted) return;
           setState(() {
-            _takoyakiCount = data['takoyakiCount'] ?? 13800;
+            _takoyakiCount = data['takoyakiCount'] ?? 0;
           });
           // EXPとレベルも読み込み
           final currentExp = data['currentExp'] ?? 0;

@@ -21,6 +21,7 @@ dependencies:
   url_launcher:
   shared_preferences:
   flutter_riverpod:
+  animated_text_kit: ^4.2.3
 
 dev_dependencies:
   flutter_test:

@@ -87,9 +87,19 @@ class _CreditInputPageState extends State<CreditInputPage> {
       // 実際にはここでAPIにレビューを送信したり、ローカルDBに保存したりする
       // レビュー投稿後、前のページに戻るか、結果ページに遷移する
       Navigator.pop(context); // 前のページ（CreditReviewPage）に戻る
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('レビューが投稿されました！')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text(
+            'レビューが投稿されました！',
+            style: TextStyle(fontFamily: 'misaki', color: Colors.white),
+          ),
+          backgroundColor: Colors.black.withOpacity(0.85),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: const BorderSide(color: Colors.white, width: 2.5),
+          ),
+        ),
+      );
     }
   }
 
