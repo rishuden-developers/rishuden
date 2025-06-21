@@ -247,10 +247,35 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
         final newCourseId = 'course_${_globalCourseIdCounter++}';
         _globalSubjectToCourseId[normalizedSubjectName] = newCourseId;
         entry.courseId = newCourseId;
+
+        // ★★★ 新しい授業にデフォルトの出席方針を設定 ★★★
+        final currentPolicies = Map<String, String>.from(attendancePolicies);
+        if (!currentPolicies.containsKey(newCourseId)) {
+          currentPolicies[newCourseId] = AttendancePolicy.mandatory.toString();
+          _updateAttendancePolicies(currentPolicies);
+          print(
+            'DEBUG: 新しい授業 "$normalizedSubjectName" -> courseId: $newCourseId -> デフォルト出席方針: mandatory',
+          );
+        }
+
         print(
           'DEBUG: 新しい授業 "$normalizedSubjectName" -> courseId: $newCourseId',
         );
       }
+
+      // ★★★ 既存の授業も含めて、出席方針が未設定の場合はデフォルト値を設定 ★★★
+      if (entry.courseId != null) {
+        final currentPolicies = Map<String, String>.from(attendancePolicies);
+        if (!currentPolicies.containsKey(entry.courseId!)) {
+          currentPolicies[entry.courseId!] =
+              AttendancePolicy.mandatory.toString();
+          _updateAttendancePolicies(currentPolicies);
+          print(
+            'DEBUG: 既存授業 "${entry.subjectName}" -> courseId: ${entry.courseId} -> デフォルト出席方針: mandatory',
+          );
+        }
+      }
+
       print(
         'DEBUG: ${entry.subjectName} -> 正規化: "$normalizedSubjectName" -> courseId: ${entry.courseId}',
       );
