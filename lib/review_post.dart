@@ -79,45 +79,49 @@ class _ReviewDialogState extends State<ReviewDialog> {
               const Text('試験の形式'),
               DropdownButtonFormField<String>(
                 value: examType,
-                items: examOptions
-                    .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                    .toList(),
+                items:
+                    examOptions
+                        .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                        .toList(),
                 onChanged: (value) => setState(() => examType = value!),
               ),
               const SizedBox(height: 8),
               const Text('出席の厳しさ'),
               DropdownButtonFormField<String>(
                 value: attendance,
-                items: attendanceOptions
-                    .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                    .toList(),
+                items:
+                    attendanceOptions
+                        .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                        .toList(),
                 onChanged: (value) => setState(() => attendance = value!),
               ),
               const SizedBox(height: 8),
               const Text('教員の特徴'),
               Wrap(
                 spacing: 8,
-                children: traitsOptions.map((trait) {
-                  return FilterChip(
-                    label: Text(trait),
-                    selected: teacherTraits.contains(trait),
-                    onSelected: (selected) {
-                      setState(() {
-                        selected
-                            ? teacherTraits.add(trait)
-                            : teacherTraits.remove(trait);
-                      });
-                    },
-                  );
-                }).toList(),
+                children:
+                    traitsOptions.map((trait) {
+                      return FilterChip(
+                        label: Text(trait),
+                        selected: teacherTraits.contains(trait),
+                        onSelected: (selected) {
+                          setState(() {
+                            selected
+                                ? teacherTraits.add(trait)
+                                : teacherTraits.remove(trait);
+                          });
+                        },
+                      );
+                    }).toList(),
               ),
               const SizedBox(height: 8),
               const Text('講義の形式'),
               DropdownButtonFormField<String>(
                 value: classFormat,
-                items: classFormats
-                    .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                    .toList(),
+                items:
+                    classFormats
+                        .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                        .toList(),
                 onChanged: (value) => setState(() => classFormat = value!),
               ),
               const SizedBox(height: 8),
@@ -146,7 +150,23 @@ class _ReviewDialogState extends State<ReviewDialog> {
                         // ここに保存処理やAPI呼び出しを実装
                         Navigator.of(context).pop();
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('レビューを投稿しました')),
+                          SnackBar(
+                            content: const Text(
+                              'レビューを投稿しました',
+                              style: TextStyle(
+                                fontFamily: 'misaki',
+                                color: Colors.white,
+                              ),
+                            ),
+                            backgroundColor: Colors.black.withOpacity(0.85),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              side: const BorderSide(
+                                color: Colors.white,
+                                width: 2.5,
+                              ),
+                            ),
+                          ),
                         );
                       }
                     },

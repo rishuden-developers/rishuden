@@ -31,6 +31,9 @@ class TimeSchedulePage extends ConsumerStatefulWidget {
 }
 
 class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
+  late PageController _pageController;
+  static const int _initialPage = 5000; // 無限スクロールのための開始ページ
+
   final List<String> _days = const ['月', '火', '水', '木', '金', '土', '日'];
   final int _academicPeriods = 6;
   String _mainCharacterName = 'キャラクター';
@@ -58,7 +61,6 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
     ["18:30", "20:00"],
   ];
   Timer? _highlightTimer;
-  Map<String, AttendanceStatus> _attendanceStatus = {};
   Map<String, int> _absenceCount = {};
   Map<String, int> _lateCount = {};
   late DateTime _displayedMonday;
@@ -90,7 +92,7 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
       ref.watch(timetableProvider)['weeklyNotes'] ?? {};
   Map<String, String> get attendancePolicies =>
       ref.watch(timetableProvider)['attendancePolicies'] ?? {};
-  Map<String, String> get attendanceStatus =>
+  Map<String, Map<String, String>> get attendanceStatus =>
       ref.watch(timetableProvider)['attendanceStatus'] ?? {};
   Map<String, int> get absenceCount =>
       ref.watch(timetableProvider)['absenceCount'] ?? {};
@@ -110,7 +112,7 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
     ref.read(timetableProvider.notifier).updateAttendancePolicies(policies);
   }
 
-  void _updateAttendanceStatus(Map<String, String> status) {
+  void _updateAttendanceStatus(Map<String, Map<String, String>> status) {
     ref.read(timetableProvider.notifier).updateAttendanceStatus(status);
   }
 
@@ -124,30 +126,34 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
 
   // 時間割データを読み込み
   void _loadTimetableData() {
+    print('Loading timetable data from Firebase...');
     ref.read(timetableProvider.notifier).loadFromFirestore();
   }
 
   @override
   void initState() {
     super.initState();
+    _pageController = PageController(initialPage: _initialPage);
     _loadTimetableData();
-    final now = DateTime.now();
-    _displayedMonday = now.subtract(Duration(days: now.weekday - 1));
-    final tuesdayDate = _displayedMonday.add(const Duration(days: 1));
-    final cancellationKey = "14_${DateFormat('yyyyMMdd').format(tuesdayDate)}";
-    _cancellations = {cancellationKey};
-    _initializeTimetableGrid(now);
-    _updateWeekDates();
     _updateHighlight();
     _highlightTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
-      _updateHighlight();
+      if (mounted) {
+        _updateHighlight();
+      }
     });
   }
 
+  bool _isInitialWeekLoaded = false;
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    if (!_isInitialWeekLoaded) {
+      _changeWeek(_initialPage);
+      _isInitialWeekLoaded = true;
+    }
     _fetchCharacterInfoFromFirebase();
+    // ホットリロード時にもデータを再読み込み
+    _loadTimetableData();
   }
 
   Future<void> _fetchCharacterInfoFromFirebase() async {
@@ -176,7 +182,21 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
   @override
   void dispose() {
     _highlightTimer?.cancel();
+    _pageController.dispose();
     super.dispose();
+  }
+
+  // ★週を変更するためのメソッド
+  void _changeWeek(int page) {
+    setState(() {
+      final weekOffset = page - _initialPage;
+      final today = DateTime.now();
+      _displayedMonday = today
+          .subtract(Duration(days: today.weekday - 1))
+          .add(Duration(days: weekOffset * 7));
+      _initializeTimetableGrid(_displayedMonday);
+      _updateWeekDates();
+    });
   }
 
   Future<void> _initializeTimetableGrid(DateTime weekStart) async {
@@ -184,11 +204,18 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
       weekStart,
     );
 
-    // ★★★ シンプルに授業名だけでcourseIdを決定 ★★★
+    // ★★★ 授業名だけでcourseIdを決定するロジックを改善 ★★★
     for (var entry in timeTableEntries) {
+      // 1. 正規化処理の強化
       String normalizedSubjectName =
           entry.subjectName
-              .replaceAll(RegExp(r'\s+'), '')
+              .replaceAll(RegExp(r'[（）()【】\[\]]'), '') // 括弧類を削除
+              .replaceAllMapped(
+                RegExp(r'[Ａ-Ｚａ-ｚ０-９]'),
+                (Match m) =>
+                    String.fromCharCode(m.group(0)!.codeUnitAt(0) - 0xFEE0),
+              ) // 全角英数字を半角に
+              .replaceAll(RegExp(r'\s+'), '') // 全ての空白文字を削除
               .replaceAll('　', '')
               .replaceAll('・', '')
               .replaceAll('Ⅰ', 'I')
@@ -201,16 +228,54 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
               .replaceAll('Ⅷ', 'VIII')
               .replaceAll('Ⅸ', 'IX')
               .replaceAll('Ⅹ', 'X')
+              .toLowerCase() // 全て小文字に
               .trim();
 
-      if (!_globalSubjectToCourseId.containsKey(normalizedSubjectName)) {
-        _globalSubjectToCourseId[normalizedSubjectName] =
-            'course_${_globalCourseIdCounter++}';
+      // 2. 既存のcourseIdと前方一致するかチェック
+      String? matchedCourseId;
+      _globalSubjectToCourseId.forEach((key, value) {
+        if (normalizedSubjectName.startsWith(key) ||
+            key.startsWith(normalizedSubjectName)) {
+          matchedCourseId = value;
+        }
+      });
+
+      if (matchedCourseId != null) {
+        entry.courseId = matchedCourseId;
+      } else {
+        // 3. 新しい授業として登録
+        final newCourseId = 'course_${_globalCourseIdCounter++}';
+        _globalSubjectToCourseId[normalizedSubjectName] = newCourseId;
+        entry.courseId = newCourseId;
+
+        // ★★★ 新しい授業にデフォルトの出席方針を設定 ★★★
+        final currentPolicies = Map<String, String>.from(attendancePolicies);
+        if (!currentPolicies.containsKey(newCourseId)) {
+          currentPolicies[newCourseId] = AttendancePolicy.mandatory.toString();
+          _updateAttendancePolicies(currentPolicies);
+          print(
+            'DEBUG: 新しい授業 "$normalizedSubjectName" -> courseId: $newCourseId -> デフォルト出席方針: mandatory',
+          );
+        }
+
         print(
-          'DEBUG: 新しい授業 "$normalizedSubjectName" -> courseId: ${_globalSubjectToCourseId[normalizedSubjectName]}',
+          'DEBUG: 新しい授業 "$normalizedSubjectName" -> courseId: $newCourseId',
         );
       }
-      entry.courseId = _globalSubjectToCourseId[normalizedSubjectName]!;
+
+      // ★★★ 既存の授業も含めて、出席方針が未設定の場合はデフォルト値を設定 ★★★
+      if (entry.courseId != null) {
+        final currentPolicies = Map<String, String>.from(attendancePolicies);
+        if (!currentPolicies.containsKey(entry.courseId!)) {
+          currentPolicies[entry.courseId!] =
+              AttendancePolicy.mandatory.toString();
+          _updateAttendancePolicies(currentPolicies);
+          print(
+            'DEBUG: 既存授業 "${entry.subjectName}" -> courseId: ${entry.courseId} -> デフォルト出席方針: mandatory',
+          );
+        }
+      }
+
       print(
         'DEBUG: ${entry.subjectName} -> 正規化: "$normalizedSubjectName" -> courseId: ${entry.courseId}',
       );
@@ -401,56 +466,134 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
   }
 
   String _getNoteForCell(int dayIndex, {int? periodIndex}) {
+    // ★★★ courseIdベースでメモを取得するように修正 ★★★
+    if (periodIndex != null &&
+        _timetableGrid.isNotEmpty &&
+        dayIndex < _timetableGrid.length &&
+        periodIndex < _timetableGrid[dayIndex].length) {
+      final entry = _timetableGrid[dayIndex][periodIndex];
+      if (entry != null) {
+        final String oneTimeNoteKey;
+        if (entry.courseId != null) {
+          oneTimeNoteKey =
+              "${entry.courseId}_${DateFormat('yyyyMMdd').format(_displayedMonday.add(Duration(days: dayIndex)))}";
+        } else {
+          // 後方互換性のため、courseIdがない場合は古い形式を使用
+          oneTimeNoteKey =
+              "C_${dayIndex}_${periodIndex}_${DateFormat('yyyyMMdd').format(_displayedMonday.add(Duration(days: dayIndex)))}";
+        }
+        final String weeklyNoteKey;
+        if (entry.courseId != null) {
+          weeklyNoteKey = "W_${entry.courseId}";
+        } else {
+          // 後方互換性のため、courseIdがない場合は古い形式を使用
+          weeklyNoteKey = "W_C_${dayIndex}_$periodIndex";
+        }
+
+        // ★★★ 修正：その日の特定のメモが存在する場合はそれを優先表示 ★★★
+        if (cellNotes.containsKey(oneTimeNoteKey)) {
+          return cellNotes[oneTimeNoteKey] ?? '';
+        }
+
+        // ★★★ その日の特定のメモが存在しない場合のみ、週次メモを表示 ★★★
+        if (weeklyNotes.containsKey(weeklyNoteKey)) {
+          return weeklyNotes[weeklyNoteKey] ?? '';
+        }
+
+        return '';
+      }
+    }
+
+    // フォールバック：古い形式のキーを使用
     final oneTimeNoteKey =
         "C_${dayIndex}_${periodIndex}_${DateFormat('yyyyMMdd').format(_displayedMonday.add(Duration(days: dayIndex)))}";
-    final weeklyNoteKey = "W_C_${dayIndex}_$periodIndex";
+    final String weeklyNoteKey = "W_C_${dayIndex}_$periodIndex";
 
-    // 週次メモが存在する場合は週次メモを優先表示
+    // ★★★ 修正：その日の特定のメモが存在する場合はそれを優先表示 ★★★
+    if (cellNotes.containsKey(oneTimeNoteKey)) {
+      return cellNotes[oneTimeNoteKey] ?? '';
+    }
+
+    // ★★★ その日の特定のメモが存在しない場合のみ、週次メモを表示 ★★★
     if (weeklyNotes.containsKey(weeklyNoteKey)) {
       return weeklyNotes[weeklyNoteKey] ?? '';
     }
 
-    // 週次メモが存在しない場合は、その週の特定の日付のメモのみを表示
-    return cellNotes[oneTimeNoteKey] ?? '';
+    return '';
   }
 
   void _setAttendanceStatus(
     String uniqueKey,
-    String entryId,
+    String courseId,
     AttendanceStatus status,
   ) {
     setState(() {
-      final oldStatus = attendanceStatus[uniqueKey] ?? AttendanceStatus.none;
-      final newStatus = (oldStatus == status) ? AttendanceStatus.none : status;
+      // ★★★ 新しい構造を使用：courseIdと日付で出席状態を管理 ★★★
+      final date = DateFormat('yyyyMMdd').format(
+        _displayedMonday.add(
+          Duration(days: _getDayIndexFromUniqueKey(uniqueKey)),
+        ),
+      );
 
-      // Provider経由でデータを更新
-      final newAttendanceStatus = Map<String, String>.from(attendanceStatus);
-      newAttendanceStatus[uniqueKey] = newStatus.toString();
-      _updateAttendanceStatus(newAttendanceStatus);
+      // Providerの新しいメソッドを使用
+      if (status == AttendanceStatus.none) {
+        // 出席状態を削除
+        ref
+            .read(timetableProvider.notifier)
+            .setAttendanceStatus(courseId, date, '');
+      } else {
+        // 出席状態を設定
+        ref
+            .read(timetableProvider.notifier)
+            .setAttendanceStatus(courseId, date, status.toString());
+      }
+
+      // courseId を使って欠席・遅刻をカウント
+      final currentStatus = ref
+          .read(timetableProvider.notifier)
+          .getAttendanceStatus(courseId, date);
+      final oldStatus =
+          currentStatus != null
+              ? AttendanceStatus.values.firstWhere(
+                (e) => e.toString() == currentStatus,
+              )
+              : AttendanceStatus.none;
 
       if (oldStatus != AttendanceStatus.absent &&
-          newStatus == AttendanceStatus.absent) {
+          status == AttendanceStatus.absent) {
         final newAbsenceCount = Map<String, int>.from(absenceCount);
-        newAbsenceCount[entryId] = (newAbsenceCount[entryId] ?? 0) + 1;
+        newAbsenceCount[courseId] = (newAbsenceCount[courseId] ?? 0) + 1;
         _updateAbsenceCount(newAbsenceCount);
       } else if (oldStatus == AttendanceStatus.absent &&
-          newStatus != AttendanceStatus.absent) {
+          status != AttendanceStatus.absent) {
         final newAbsenceCount = Map<String, int>.from(absenceCount);
-        newAbsenceCount[entryId] = (newAbsenceCount[entryId] ?? 1) - 1;
+        newAbsenceCount[courseId] = (newAbsenceCount[courseId] ?? 1) - 1;
         _updateAbsenceCount(newAbsenceCount);
       }
       if (oldStatus != AttendanceStatus.late &&
-          newStatus == AttendanceStatus.late) {
+          status == AttendanceStatus.late) {
         final newLateCount = Map<String, int>.from(lateCount);
-        newLateCount[entryId] = (newLateCount[entryId] ?? 0) + 1;
+        newLateCount[courseId] = (newLateCount[courseId] ?? 0) + 1;
         _updateLateCount(newLateCount);
       } else if (oldStatus == AttendanceStatus.late &&
-          newStatus != AttendanceStatus.late) {
+          status != AttendanceStatus.late) {
         final newLateCount = Map<String, int>.from(lateCount);
-        newLateCount[entryId] = (newLateCount[entryId] ?? 1) - 1;
+        newLateCount[courseId] = (newLateCount[courseId] ?? 1) - 1;
         _updateLateCount(newLateCount);
       }
     });
+  }
+
+  // ★★★ uniqueKeyから日付のインデックスを取得するヘルパーメソッド ★★★
+  int _getDayIndexFromUniqueKey(String uniqueKey) {
+    // uniqueKeyの形式: "courseId_20241201" または "C_0_1_20241201"
+    final parts = uniqueKey.split('_');
+    if (parts.length >= 2) {
+      final dateStr = parts.last;
+      final date = DateFormat('yyyyMMdd').parse(dateStr);
+      return date.difference(_displayedMonday).inDays;
+    }
+    return 0; // フォールバック
   }
 
   TimeOfDay _parseTime(String time) {
@@ -458,9 +601,12 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
     return TimeOfDay(hour: int.parse(parts[0]), minute: int.parse(parts[1]));
   }
 
-  Color _getNeonWarningColor(Color baseColor, String entryId) {
-    final int absenceCount = this.absenceCount[entryId] ?? 0;
-    final int lateCount = this.lateCount[entryId] ?? 0;
+  Color _getNeonWarningColor(Color baseColor, String? courseId) {
+    if (courseId == null) {
+      return baseColor;
+    }
+    final int absenceCount = this.absenceCount[courseId] ?? 0;
+    final int lateCount = this.lateCount[courseId] ?? 0;
     final double warningLevel = (absenceCount * 1.0) + (lateCount * 0.5);
     final double t = (warningLevel / 3.0).clamp(0.0, 1.0);
     final warningColor = Colors.redAccent[400]!;
@@ -498,14 +644,31 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
       final double top = visualRowIndex * rowHeight;
       final double height = rowHeight;
 
-      final uniqueKey =
-          "${entry.id}_${DateFormat('yyyyMMdd').format(_displayedMonday.add(Duration(days: dayIndex)))}";
-      final policyString =
-          attendancePolicies[entry.id] ?? AttendancePolicy.flexible.toString();
-      final policy = AttendancePolicy.values.firstWhere(
+      // ★★★ uniqueKeyをcourseIdベースに変更 ★★★
+      final String uniqueKey;
+      if (entry.courseId != null) {
+        uniqueKey =
+            "${entry.courseId}_${DateFormat('yyyyMMdd').format(_displayedMonday.add(Duration(days: dayIndex)))}";
+      } else {
+        // 後方互換性のため、courseIdがない場合は古い形式を使用
+        uniqueKey =
+            "${entry.id}_${DateFormat('yyyyMMdd').format(_displayedMonday.add(Duration(days: dayIndex)))}";
+      }
+
+      // ★★★ 後方互換性のためのロジック変更 ★★★
+      // まずcourseIdで出席方針を試し、なければ古い形式(id)で試す
+      String? policyString = attendancePolicies[entry.courseId];
+      if (policyString == null) {
+        policyString = attendancePolicies[entry.id];
+      }
+      // それでもなければデフォルト値を設定
+      policyString ??= AttendancePolicy.flexible.toString();
+
+      final AttendancePolicy policy = AttendancePolicy.values.firstWhere(
         (p) => p.toString() == policyString,
         orElse: () => AttendancePolicy.flexible,
       );
+
       Color textColor = Colors.white;
       BoxDecoration decoration = BoxDecoration();
 
@@ -528,7 +691,7 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
               'DEBUG: ${entry.subjectName} (${entry.dayOfWeek}曜${entry.period}限) -> フォールバック色: $baseColor',
             );
           }
-          final neonColor = _getNeonWarningColor(baseColor, entry.id);
+          final neonColor = _getNeonWarningColor(baseColor, entry.courseId);
           textColor = neonColor;
           decoration = BoxDecoration(
             color: neonColor.withOpacity(0.1),
@@ -565,8 +728,8 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
         );
       }
 
-      final int absenceCount = this.absenceCount[entry.id] ?? 0;
-      final int lateCount = this.lateCount[entry.id] ?? 0;
+      final int absenceCount = this.absenceCount[entry.courseId] ?? 0;
+      final int lateCount = this.lateCount[entry.courseId] ?? 0;
       final bool hasCount = absenceCount > 0 || lateCount > 0;
       final String noteText = _getNoteForCell(
         dayIndex,
@@ -770,23 +933,38 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
     double totalHeight,
   ) {
     List<Widget> positionedWidgets = [];
-    final events = _weekdayEvents[dayIndex] ?? [];
-    const double timetableStartInMinutes = 8 * 60 + 50;
-    const double totalMinutesInTimetable = (20 * 60) - timetableStartInMinutes;
+    final double totalMinutes = (20 * 60 + 0) - (8 * 60 + 50);
 
-    for (int i = 0; i < events.length; i++) {
-      final event = events[i];
+    if (!_weekdayEvents.containsKey(dayIndex)) {
+      return positionedWidgets;
+    }
+
+    // ★★★ 表示する週の日付を取得 ★★★
+    final DateTime currentDay = _displayedMonday.add(Duration(days: dayIndex));
+
+    // ★★★ 毎週の予定と、今週の予定のみをフィルタリング ★★★
+    final List<Map<String, dynamic>> eventsToShow =
+        _weekdayEvents[dayIndex]!.where((event) {
+          if (event['isWeekly'] == true) {
+            return true; // 毎週の予定は常に表示
+          }
+          // isWeeklyでない場合は日付をチェック
+          final DateTime eventDate = event['date'];
+          return eventDate.year == currentDay.year &&
+              eventDate.month == currentDay.month &&
+              eventDate.day == currentDay.day;
+        }).toList();
+
+    for (var event in eventsToShow) {
       final TimeOfDay startTime = event['start'];
       final TimeOfDay endTime = event['end'];
       final String title = event['title'];
 
       final startMinutes =
-          (startTime.hour * 60 + startTime.minute) - timetableStartInMinutes;
-      final endMinutes =
-          (endTime.hour * 60 + endTime.minute) - timetableStartInMinutes;
-      final top = (startMinutes / totalMinutesInTimetable) * totalHeight;
-      final height =
-          ((endMinutes - startMinutes) / totalMinutesInTimetable) * totalHeight;
+          (startTime.hour * 60 + startTime.minute) - (8 * 60 + 50);
+      final endMinutes = (endTime.hour * 60 + endTime.minute) - (8 * 60 + 50);
+      final top = (startMinutes / totalMinutes) * totalHeight;
+      final height = ((endMinutes - startMinutes) / totalMinutes) * totalHeight;
       if (height <= 0) continue;
 
       const eventColor = Colors.amberAccent;
@@ -822,7 +1000,10 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
             // ★ InkWellで囲んでタップできるようにする
             onTap: () {
               // 新しい編集ダイアログを呼び出す
-              _showEditWeekdayEventDialog(dayIndex, i);
+              _showEditWeekdayEventDialog(
+                dayIndex,
+                eventsToShow.indexOf(event),
+              );
             },
             child: eventWidget,
           ),
@@ -833,23 +1014,67 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
   }
   // ★★★ このメソッドをクラス内に丸ごと追加してください ★★★
 
-  Future<void> _showEditWeekdayEventDialog(int dayIndex, int eventIndex) async {
-    final eventToEdit = _weekdayEvents[dayIndex]![eventIndex];
+  Future<void> _showEditWeekdayEventDialog(
+    int dayIndex,
+    int eventIndex, {
+    TimeOfDay? newEventStartTime,
+  }) async {
+    final eventToEdit =
+        eventIndex != -1 ? _weekdayEvents[dayIndex]![eventIndex] : null;
 
-    final TextEditingController titleController = TextEditingController(
-      text: eventToEdit['title'],
+    final titleController = TextEditingController(
+      text: eventToEdit?['title'] ?? '',
     );
-    TimeOfDay startTime = eventToEdit['start'];
-    TimeOfDay endTime = eventToEdit['end'];
-    bool isWeekly = eventToEdit['isWeekly'];
+    TimeOfDay startTime;
+    TimeOfDay endTime;
+    bool isWeekly;
 
-    final String? action = await showDialog<String>(
+    if (eventIndex == -1) {
+      // 新規作成
+      startTime = newEventStartTime ?? TimeOfDay.now();
+      final endHour = startTime.hour + 1;
+      endTime = TimeOfDay(
+        hour: endHour > 23 ? 23 : endHour,
+        minute: endHour > 23 ? 59 : startTime.minute,
+      );
+      isWeekly = false;
+      titleController.text = '';
+    } else {
+      // 編集
+      startTime = eventToEdit!['start'];
+      endTime = eventToEdit['end'];
+      isWeekly = eventToEdit['isWeekly'];
+    }
+
+    final String? initialTitle = eventToEdit?['title'];
+    final TimeOfDay initialStartTime = eventToEdit?['start'] ?? startTime;
+    final TimeOfDay initialEndTime = eventToEdit?['end'] ?? endTime;
+    final bool initialIsWeekly = eventToEdit?['isWeekly'] ?? isWeekly;
+
+    final result = await showDialog<String>(
       context: context,
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setDialogState) {
+            // ★★★ 変更検知ロジック ★★★
+            final isTitleValid = titleController.text.isNotEmpty;
+            final isTimeValid =
+                (endTime.hour * 60 + endTime.minute) >
+                (startTime.hour * 60 + startTime.minute);
+            final hasChanged =
+                titleController.text != initialTitle ||
+                startTime != initialStartTime ||
+                endTime != initialEndTime ||
+                isWeekly != initialIsWeekly;
+            final canSave = isTitleValid && isTimeValid && hasChanged;
+
+            // ★★★ テキスト変更時にUIを更新 ★★★
+            titleController.addListener(() {
+              setDialogState(() {});
+            });
+
             return AlertDialog(
-              backgroundColor: Colors.grey[900],
+              backgroundColor: const Color.fromARGB(255, 22, 22, 22),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(15.0),
                 side: BorderSide(color: Colors.amberAccent.withOpacity(0.5)),
@@ -956,13 +1181,10 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                   ),
                 ),
                 TextButton(
-                  onPressed: () {
-                    if (titleController.text.isNotEmpty &&
-                        (endTime.hour * 60 + endTime.minute) >
-                            (startTime.hour * 60 + startTime.minute)) {
-                      Navigator.of(context).pop('update');
-                    }
-                  },
+                  onPressed:
+                      canSave
+                          ? () => Navigator.of(context).pop('update')
+                          : null,
                   child: const Text(
                     '保存',
                     style: TextStyle(color: Colors.amberAccent),
@@ -975,22 +1197,35 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
       },
     );
 
-    if (action == 'update') {
+    if (result == 'update') {
       setState(() {
-        _weekdayEvents[dayIndex]![eventIndex] = {
-          'title': titleController.text,
-          'start': startTime,
-          'end': endTime,
-          'isWeekly': isWeekly,
-          'date': eventToEdit['date'],
-        };
+        if (_weekdayEvents[dayIndex] == null) {
+          _weekdayEvents[dayIndex] = [];
+        }
+        if (eventIndex == -1) {
+          _weekdayEvents[dayIndex]!.add({
+            'title': titleController.text,
+            'start': startTime,
+            'end': endTime,
+            'isWeekly': isWeekly,
+            'date': _displayedMonday.add(Duration(days: dayIndex)),
+          });
+        } else {
+          _weekdayEvents[dayIndex]![eventIndex] = {
+            'title': titleController.text,
+            'start': startTime,
+            'end': endTime,
+            'isWeekly': isWeekly,
+            'date': _weekdayEvents[dayIndex]![eventIndex]['date'],
+          };
+        }
         _weekdayEvents[dayIndex]!.sort(
           (a, b) => (a['start'] as TimeOfDay).hour.compareTo(
             (b['start'] as TimeOfDay).hour,
           ),
         );
       });
-    } else if (action == 'delete') {
+    } else if (result == 'delete') {
       bool? confirmDelete = await showDialog<bool>(
         context: context,
         builder:
@@ -1044,12 +1279,35 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
     double periodHeight,
     double specialHeight,
   ) {
+    // For Sunday
     if (dayIndex == 6) {
       final double totalHeight = periodHeight * 8;
       return Expanded(
         flex: 1,
-        child: InkWell(
-          onTap: () => _showSundayEventDialog(),
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTapDown: (details) {
+            final double tappedY = details.localPosition.dy;
+            const double timetableStartInMinutes = 8 * 60 + 50;
+            const double timetableEndInMinutes = 20 * 60 + 0;
+            const double totalMinutesInTimetable =
+                timetableEndInMinutes - timetableStartInMinutes;
+            final double minutesFromTop =
+                (tappedY / totalHeight) * totalMinutesInTimetable;
+            double totalMinutesFromMidnight =
+                minutesFromTop + timetableStartInMinutes;
+            if (totalMinutesFromMidnight > timetableEndInMinutes - 60) {
+              totalMinutesFromMidnight = timetableEndInMinutes - 60;
+            }
+            // ★★★ 開始時刻を一番近い30分単位に丸める ★★★
+            final double roundedTotalMinutes =
+                (totalMinutesFromMidnight / 30).round() * 30.0;
+            int hour = roundedTotalMinutes.toInt() ~/ 60;
+            int minute = roundedTotalMinutes.toInt() % 60;
+
+            final startTime = TimeOfDay(hour: hour, minute: minute);
+            _showSundayEventDialog(newEventStartTime: startTime);
+          },
           child: SizedBox(
             height: totalHeight,
             child: Stack(children: _buildSundayEventCells(totalHeight)),
@@ -1057,17 +1315,47 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
         ),
       );
     }
+    // For Weekdays
     return Expanded(
       flex: 1,
       child: LayoutBuilder(
         builder: (context, constraints) {
           final totalHeight = constraints.maxHeight;
-          return Stack(
-            children: [
-              _buildTimetableBackgroundCells(dayIndex),
-              ..._buildClassEntriesAsPositioned(dayIndex, totalHeight),
-              ..._buildWeekdayEventsAsPositioned(dayIndex, totalHeight),
-            ],
+          return GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTapDown: (details) {
+              final double tappedY = details.localPosition.dy;
+              const double timetableStartInMinutes = 8 * 60 + 50;
+              const double timetableEndInMinutes = 20 * 60 + 0;
+              const double totalMinutesInTimetable =
+                  timetableEndInMinutes - timetableStartInMinutes;
+              final double minutesFromTop =
+                  (tappedY / totalHeight) * totalMinutesInTimetable;
+              double totalMinutesFromMidnight =
+                  minutesFromTop + timetableStartInMinutes;
+
+              if (totalMinutesFromMidnight > timetableEndInMinutes - 60) {
+                totalMinutesFromMidnight = timetableEndInMinutes - 60;
+              }
+              // ★★★ 開始時刻を一番近い30分単位に丸める ★★★
+              final double roundedTotalMinutes =
+                  (totalMinutesFromMidnight / 30).round() * 30.0;
+              int hour = roundedTotalMinutes.toInt() ~/ 60;
+              int minute = roundedTotalMinutes.toInt() % 60;
+
+              final startTime = TimeOfDay(hour: hour, minute: minute);
+              _showEditWeekdayEventDialog(
+                dayIndex,
+                -1,
+                newEventStartTime: startTime,
+              );
+            },
+            child: Stack(
+              children: [
+                ..._buildClassEntriesAsPositioned(dayIndex, totalHeight),
+                ..._buildWeekdayEventsAsPositioned(dayIndex, totalHeight),
+              ],
+            ),
           );
         },
       ),
@@ -1237,17 +1525,38 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
     }
   }
 
-  Future<void> _showSundayEventDialog() async {
-    final TextEditingController titleController = TextEditingController();
-    TimeOfDay? startTime = const TimeOfDay(hour: 10, minute: 0);
-    TimeOfDay? endTime = const TimeOfDay(hour: 12, minute: 0);
+  Future<void> _showSundayEventDialog({TimeOfDay? newEventStartTime}) async {
+    final titleController = TextEditingController();
+    TimeOfDay? startTime = newEventStartTime;
+    TimeOfDay? endTime;
+    if (newEventStartTime != null) {
+      final endHour = newEventStartTime.hour + 1;
+      endTime = TimeOfDay(
+        hour: endHour > 23 ? 23 : endHour,
+        minute: endHour > 23 ? 59 : newEventStartTime.minute,
+      );
+    }
     bool isWeekly = false;
 
-    final bool? shouldSave = await showDialog<bool>(
+    bool? shouldSave = await showDialog<bool>(
       context: context,
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setDialogState) {
+            // ★★★ 変更を検知するためのロジックを追加 ★★★
+            final bool isTitleValid = titleController.text.isNotEmpty;
+            final bool isTimeValid =
+                startTime != null &&
+                endTime != null &&
+                (endTime!.hour * 60 + endTime!.minute) >
+                    (startTime!.hour * 60 + startTime!.minute);
+            final bool canSave = isTitleValid && isTimeValid;
+
+            // ★★★ テキストが変更されたときにUIを更新 ★★★
+            titleController.addListener(() {
+              setDialogState(() {});
+            });
+
             return AlertDialog(
               title: const Text(
                 '日曜の予定を追加',
@@ -1370,20 +1679,41 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
       return;
     }
 
-    final String oneTimeNoteKey =
-        "C_${dayIndex}_${academicPeriodIndex}_${DateFormat('yyyyMMdd').format(_displayedMonday.add(Duration(days: dayIndex)))}";
-    final String weeklyNoteKey = "W_C_${dayIndex}_$academicPeriodIndex";
+    // ★★★ uniqueKeyをcourseIdベースに変更 ★★★
+    final String oneTimeNoteKey;
+    if (entry?.courseId != null) {
+      oneTimeNoteKey =
+          "${entry!.courseId}_${DateFormat('yyyyMMdd').format(_displayedMonday.add(Duration(days: dayIndex)))}";
+    } else {
+      // 後方互換性のため、courseIdがない場合は古い形式を使用
+      oneTimeNoteKey =
+          "C_${dayIndex}_${academicPeriodIndex}_${DateFormat('yyyyMMdd').format(_displayedMonday.add(Duration(days: dayIndex)))}";
+    }
+    final String weeklyNoteKey;
+    if (entry?.courseId != null) {
+      weeklyNoteKey = "W_${entry!.courseId}";
+    } else {
+      // 後方互換性のため、courseIdがない場合は古い形式を使用
+      weeklyNoteKey = "W_C_${dayIndex}_$academicPeriodIndex";
+    }
 
     final String initialText =
         cellNotes[oneTimeNoteKey] ?? weeklyNotes[weeklyNoteKey] ?? '';
     final bool isInitiallyWeekly =
         weeklyNotes.containsKey(weeklyNoteKey) &&
         !cellNotes.containsKey(oneTimeNoteKey);
+    // ★★★ 出席方針の初期値もcourseIdベースで取得 ★★★
+    String? initialPolicyString;
+    if (entry?.courseId != null) {
+      initialPolicyString = attendancePolicies[entry!.courseId];
+    }
+    if (initialPolicyString == null && entry?.id != null) {
+      initialPolicyString = attendancePolicies[entry!.id];
+    }
+    initialPolicyString ??= AttendancePolicy.flexible.toString();
+
     final AttendancePolicy initialPolicy = AttendancePolicy.values.firstWhere(
-      (p) =>
-          p.toString() ==
-          (attendancePolicies[entry!.id] ??
-              AttendancePolicy.flexible.toString()),
+      (p) => p.toString() == initialPolicyString,
       orElse: () => AttendancePolicy.flexible,
     );
 
@@ -1398,19 +1728,39 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
       builder: (BuildContext dialogContext) {
         return StatefulBuilder(
           builder: (context, setDialogState) {
+            // ★★★ 変更を検知するためのロジックを追加 ★★★
+            final bool hasChanged =
+                noteController.text != initialText ||
+                isWeekly != isInitiallyWeekly ||
+                selectedPolicy != initialPolicy;
+
             return AlertDialog(
               backgroundColor: Colors.brown[50],
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(15.0),
               ),
-              title: Text(
-                "${_days[dayIndex]}曜 ${academicPeriodIndex! + 1}限",
-                style: TextStyle(
-                  fontFamily: 'misaki',
-                  fontSize: 16,
-                  color: Colors.brown[800],
-                  fontWeight: FontWeight.bold,
-                ),
+              title: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "${_days[dayIndex]}曜 ${academicPeriodIndex! + 1}限",
+                    style: TextStyle(
+                      fontFamily: 'misaki',
+                      fontSize: 16,
+                      color: Colors.brown[800],
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    "${entry?.subjectName ?? ''} (${entry?.originalLocation ?? ''})",
+                    style: TextStyle(
+                      fontFamily: 'misaki',
+                      fontSize: 12,
+                      color: Colors.brown[600],
+                    ),
+                  ),
+                ],
               ),
               contentPadding: const EdgeInsets.fromLTRB(20, 15, 20, 0),
               content: SingleChildScrollView(
@@ -1500,15 +1850,25 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                       children: [
                         Text('出席確認:'),
                         DropdownButton<AttendanceStatus>(
-                          value:
-                              attendanceStatus[oneTimeNoteKey] != null
-                                  ? AttendanceStatus.values.firstWhere(
-                                    (status) =>
-                                        status.toString() ==
-                                        attendanceStatus[oneTimeNoteKey],
-                                    orElse: () => AttendanceStatus.none,
-                                  )
-                                  : AttendanceStatus.none,
+                          value: () {
+                            // ★★★ 新しい構造で出席状態を取得 ★★★
+                            if (entry?.courseId != null) {
+                              final date = DateFormat('yyyyMMdd').format(
+                                _displayedMonday.add(Duration(days: dayIndex)),
+                              );
+                              final currentStatusString = ref
+                                  .read(timetableProvider.notifier)
+                                  .getAttendanceStatus(entry!.courseId!, date);
+                              if (currentStatusString != null) {
+                                return AttendanceStatus.values.firstWhere(
+                                  (status) =>
+                                      status.toString() == currentStatusString,
+                                  orElse: () => AttendanceStatus.none,
+                                );
+                              }
+                            }
+                            return AttendanceStatus.none;
+                          }(),
                           items:
                               AttendanceStatus.values.map((status) {
                                 return DropdownMenuItem(
@@ -1517,11 +1877,16 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                                 );
                               }).toList(),
                           onChanged: (newStatus) {
+                            final TimetableEntry? currentEntry = entry;
+                            if (currentEntry == null ||
+                                newStatus == null ||
+                                currentEntry.courseId == null)
+                              return;
                             setState(() {
                               _setAttendanceStatus(
                                 oneTimeNoteKey,
-                                entry!.id,
-                                newStatus!,
+                                currentEntry.courseId!,
+                                newStatus,
                               );
                             });
                             Navigator.pop(context); // 必要に応じて
@@ -1551,7 +1916,11 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                     '保存',
                     style: TextStyle(fontFamily: 'misaki', color: Colors.white),
                   ),
-                  onPressed: () => Navigator.of(dialogContext).pop(true),
+                  // ★★★ 変更があった場合のみボタンを有効化 ★★★
+                  onPressed:
+                      hasChanged
+                          ? () => Navigator.of(dialogContext).pop(true)
+                          : null,
                 ),
               ],
             );
@@ -1564,26 +1933,37 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
       final currentEntry = entry;
       if (currentEntry != null) {
         final newText = noteController.text.trim();
+
+        // ★★★ メモ保存ロジックを全面的に修正 ★★★
+        final newCellNotes = Map<String, String>.from(cellNotes);
+        final newWeeklyNotes = Map<String, String>.from(weeklyNotes);
+
         if (newText.isEmpty) {
-          _updateCellNotes({...cellNotes}..remove(oneTimeNoteKey));
-          _updateWeeklyNotes({...weeklyNotes}..remove(weeklyNoteKey));
+          // テキストが空なら両方のメモを削除
+          newCellNotes.remove(oneTimeNoteKey);
+          newWeeklyNotes.remove(weeklyNoteKey);
         } else {
           if (isWeekly) {
-            _updateWeeklyNotes(
-              {...weeklyNotes, weeklyNoteKey: newText}..remove(oneTimeNoteKey),
-            );
-            _updateCellNotes({...cellNotes}..remove(oneTimeNoteKey));
+            // 「毎週」がオンの場合
+            newWeeklyNotes[weeklyNoteKey] = newText; // 週次メモとして保存
+            newCellNotes.remove(oneTimeNoteKey); // その日のメモは削除
           } else {
-            _updateCellNotes(
-              {...cellNotes, oneTimeNoteKey: newText}..remove(weeklyNoteKey),
-            );
-            _updateWeeklyNotes({...weeklyNotes}..remove(weeklyNoteKey));
+            // 「毎週」がオフの場合
+            newCellNotes[oneTimeNoteKey] = newText; // その日のメモとして保存
+            newWeeklyNotes.remove(weeklyNoteKey); // 週次メモは削除
           }
         }
-        _updateAttendancePolicies({
-          ...attendancePolicies,
-          currentEntry.id: selectedPolicy.toString(),
-        });
+
+        // 更新されたマップでStateを更新
+        _updateCellNotes(newCellNotes);
+        _updateWeeklyNotes(newWeeklyNotes);
+
+        if (currentEntry.courseId != null) {
+          _updateAttendancePolicies({
+            ...attendancePolicies,
+            currentEntry.courseId!: selectedPolicy.toString(),
+          });
+        }
       }
     }
   }
@@ -1607,26 +1987,45 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
   }
 
   Widget _buildAttendancePopupMenu(String uniqueKey, TimetableEntry entry) {
-    if (attendancePolicies[entry.id] != AttendancePolicy.mandatory.toString()) {
+    // ★★★ 後方互換性のためのロジック変更 ★★★
+    String? policyString = attendancePolicies[entry.courseId];
+    if (policyString == null) {
+      policyString = attendancePolicies[entry.id];
+    }
+
+    if (policyString != AttendancePolicy.mandatory.toString()) {
       return const SizedBox.shrink();
     }
+
+    // ★★★ 新しい構造で出席状態を取得 ★★★
+    final date = DateFormat('yyyyMMdd').format(
+      _displayedMonday.add(
+        Duration(days: _getDayIndexFromUniqueKey(uniqueKey)),
+      ),
+    );
+    final currentStatusString = ref
+        .read(timetableProvider.notifier)
+        .getAttendanceStatus(entry.courseId ?? '', date);
+    final currentStatus =
+        currentStatusString != null
+            ? AttendanceStatus.values.firstWhere(
+              (status) => status.toString() == currentStatusString,
+              orElse: () => AttendanceStatus.none,
+            )
+            : AttendanceStatus.none;
+
     return Theme(
       data: Theme.of(
         context,
       ).copyWith(materialTapTargetSize: MaterialTapTargetSize.shrinkWrap),
       child: PopupMenuButton<AttendanceStatus>(
-        child: _buildAttendanceStatusIcon(
-          attendanceStatus[uniqueKey] != null
-              ? AttendanceStatus.values.firstWhere(
-                (status) => status.toString() == attendanceStatus[uniqueKey],
-                orElse: () => AttendanceStatus.none,
-              )
-              : AttendanceStatus.none,
-        ),
+        child: _buildAttendanceStatusIcon(currentStatus),
         tooltip: '出欠を記録',
-        onSelected:
-            (AttendanceStatus newStatus) =>
-                _setAttendanceStatus(uniqueKey, entry.id, newStatus),
+        onSelected: (AttendanceStatus newStatus) {
+          if (entry.courseId != null) {
+            _setAttendanceStatus(uniqueKey, entry.courseId!, newStatus);
+          }
+        },
         itemBuilder:
             (BuildContext context) => <PopupMenuEntry<AttendanceStatus>>[
               const PopupMenuItem<AttendanceStatus>(
@@ -1729,61 +2128,6 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
     }
     return eventCells;
   }
-
-  Widget _buildNewTimetableHeader() {
-    return Row(
-      children: [
-        SizedBox(width: _timeColumnWidth), // ★ 変数を使用
-        Expanded(
-          child: Row(
-            children: List.generate(7, (dayIndex) {
-              final isSunday = dayIndex == 6;
-              return Expanded(
-                flex: 1,
-                child: Container(
-                  margin: const EdgeInsets.all(1.5),
-                  height: 40,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 4.0,
-                  ), // ★ 左右にパディングを追加
-                  child: Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          _days[dayIndex],
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12,
-                            fontFamily: 'misaki',
-                            color: isSunday ? Colors.red[300] : Colors.white,
-                            shadows: const [
-                              Shadow(color: Colors.black45, blurRadius: 2),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          _dayDates.isNotEmpty ? _dayDates[dayIndex] : "",
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontFamily: 'misaki',
-                            color: isSunday ? Colors.red[200] : Colors.white70,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              );
-            }),
-          ),
-        ),
-      ],
-    );
-  }
-
-  // ★★★ このメソッドを、以下の完成版に丸ごと置き換えてください ★★★
 
   // ★★★ このメソッドを、以下の完成版に丸ごと置き換えてください ★★★
   Widget _buildNewContinuousTimeColumn({
@@ -1963,6 +2307,105 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
     );
   }
 
+  // 新しいデザインの時間割ヘッダー（日付と曜日）
+  Widget _buildNewTimetableHeader() {
+    return Row(
+      children: [
+        SizedBox(width: _timeColumnWidth), // ★ 変数を使用
+        Expanded(
+          child: Row(
+            children: List.generate(7, (dayIndex) {
+              final isSunday = dayIndex == 6;
+              return Expanded(
+                flex: 1,
+                child: Container(
+                  margin: const EdgeInsets.all(1.5),
+                  height: 40,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 4.0,
+                  ), // ★ 左右にパディングを追加
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          _days[dayIndex],
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                            fontFamily: 'misaki',
+                            color: isSunday ? Colors.red[300] : Colors.white,
+                            shadows: const [
+                              Shadow(color: Colors.black45, blurRadius: 2),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          _dayDates.isNotEmpty ? _dayDates[dayIndex] : "",
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontFamily: 'misaki',
+                            color: isSunday ? Colors.red[200] : Colors.white70,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ★週選択UI
+  Widget _buildWeekSelector() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          IconButton(
+            icon: const Icon(
+              Icons.arrow_back_ios,
+              color: Colors.white,
+              size: 18,
+            ),
+            onPressed:
+                () => _pageController.previousPage(
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeOut,
+                ),
+          ),
+          Text(
+            _weekDateRange,
+            style: const TextStyle(
+              fontSize: 18.0,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+              shadows: [Shadow(color: Colors.black45, blurRadius: 2)],
+            ),
+          ),
+          IconButton(
+            icon: const Icon(
+              Icons.arrow_forward_ios,
+              color: Colors.white,
+              size: 18,
+            ),
+            onPressed:
+                () => _pageController.nextPage(
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeOut,
+                ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     const double bottomPaddingForNavBar = 100.0;
@@ -1982,51 +2425,62 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
               padding: const EdgeInsets.symmetric(horizontal: 8.0),
               child: Column(
                 children: [
+                  _buildWeekSelector(),
                   _buildNewTimetableHeader(),
                   Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.only(top: 4.0, bottom: 8.0),
-                      child: LayoutBuilder(
-                        builder: (context, constraints) {
-                          final availableHeight = constraints.maxHeight;
-                          final dynamicRowHeight = availableHeight / 8.0;
+                    child: PageView.builder(
+                      controller: _pageController,
+                      onPageChanged: _changeWeek,
+                      itemBuilder: (context, page) {
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 4.0, bottom: 8.0),
+                          child: LayoutBuilder(
+                            builder: (context, constraints) {
+                              final availableHeight = constraints.maxHeight;
+                              final dynamicRowHeight = availableHeight / 8.0;
 
-                          return Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _buildNewContinuousTimeColumn(
-                                periodRowHeight: dynamicRowHeight,
-                                lunchRowHeight: dynamicRowHeight,
-                              ),
-                              Expanded(
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(12),
-                                  child: BackdropFilter(
-                                    filter: ImageFilter.blur(
-                                      sigmaX: 4.0,
-                                      sigmaY: 4.0,
-                                    ),
-                                    child: Container(
-                                      decoration: BoxDecoration(
-                                        color: Colors.black.withOpacity(0.3),
-                                        borderRadius: BorderRadius.circular(12),
-                                        border: Border.all(
-                                          color: Colors.grey[800]!,
-                                          width: 1.0,
+                              return Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  _buildNewContinuousTimeColumn(
+                                    periodRowHeight: dynamicRowHeight,
+                                    lunchRowHeight: dynamicRowHeight,
+                                  ),
+                                  Expanded(
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(12),
+                                      child: BackdropFilter(
+                                        filter: ImageFilter.blur(
+                                          sigmaX: 4.0,
+                                          sigmaY: 4.0,
                                         ),
-                                      ),
-                                      child: _buildNewTimetableGrid(
-                                        periodRowHeight: dynamicRowHeight,
-                                        lunchRowHeight: dynamicRowHeight,
+                                        child: Container(
+                                          decoration: BoxDecoration(
+                                            color: Colors.black.withOpacity(
+                                              0.3,
+                                            ),
+                                            borderRadius: BorderRadius.circular(
+                                              12,
+                                            ),
+                                            border: Border.all(
+                                              color: Colors.grey[800]!,
+                                              width: 1.0,
+                                            ),
+                                          ),
+                                          child: _buildNewTimetableGrid(
+                                            periodRowHeight: dynamicRowHeight,
+                                            lunchRowHeight: dynamicRowHeight,
+                                          ),
+                                        ),
                                       ),
                                     ),
                                   ),
-                                ),
-                              ),
-                            ],
-                          );
-                        },
-                      ),
+                                ],
+                              );
+                            },
+                          ),
+                        );
+                      },
                     ),
                   ),
                 ],

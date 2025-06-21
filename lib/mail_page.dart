@@ -53,9 +53,16 @@ class _MailPageState extends State<MailPage> {
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('ご意見ありがとうございます！運営ギルドに伝書を送りました。'),
-        backgroundColor: Colors.green,
+      SnackBar(
+        content: const Text(
+          'ご意見ありがとうございます！運営ギルドに伝書を送りました。',
+          style: TextStyle(fontFamily: 'misaki', color: Colors.white),
+        ),
+        backgroundColor: Colors.black.withOpacity(0.85),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: const BorderSide(color: Colors.white, width: 2.5),
+        ),
       ),
     );
   }

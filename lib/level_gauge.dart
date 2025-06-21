@@ -4,11 +4,14 @@ import 'dart:async';
 class LiquidLevelGauge extends StatefulWidget {
   final double width;
   final double height;
+  final Function(int currentExp, int currentLevel, int expForNextLevel)?
+  onExpChanged;
 
   const LiquidLevelGauge({
     super.key,
     required this.width,
     required this.height,
+    this.onExpChanged,
   });
 
   @override
@@ -64,6 +67,8 @@ class LiquidLevelGaugeState extends State<LiquidLevelGauge> {
       setState(() {
         _currentExp = newExp;
       });
+      // Firebaseに保存
+      _saveToFirebase();
     } else {
       final int oldExpForNextLevel = _expForNextLevel;
       setState(() {
@@ -86,6 +91,27 @@ class LiquidLevelGaugeState extends State<LiquidLevelGauge> {
         _expForNextLevel = (_expForNextLevel * 1.5).round();
         _isLevelingUp = false;
         _isFillingUp = false;
+      });
+      // Firebaseに保存
+      _saveToFirebase();
+    }
+  }
+
+  // ★★★ Firebaseに保存するメソッド ★★★
+  void _saveToFirebase() {
+    // コールバック関数が設定されている場合は呼び出し
+    if (widget.onExpChanged != null) {
+      widget.onExpChanged!(_currentExp, _currentLevel, _expForNextLevel);
+    }
+  }
+
+  // ★★★ FirebaseからEXPとレベルデータを読み込むメソッド ★★★
+  void loadFromFirebase(int currentExp, int currentLevel, int expForNextLevel) {
+    if (mounted) {
+      setState(() {
+        _currentExp = currentExp;
+        _currentLevel = currentLevel;
+        _expForNextLevel = expForNextLevel;
       });
     }
   }

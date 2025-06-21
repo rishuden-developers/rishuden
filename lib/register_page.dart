@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'character_question_page.dart';
 
 class RegisterPage extends StatefulWidget {
@@ -10,6 +11,7 @@ class RegisterPage extends StatefulWidget {
 class _RegisterPageState extends State<RegisterPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _calendarUrlController = TextEditingController();
   String? _error;
 
   Future<void> _register() async {
@@ -22,8 +24,18 @@ class _RegisterPageState extends State<RegisterPage> {
             email: _emailController.text.trim(),
             password: _passwordController.text.trim(),
           );
+
+      if (userCredential.user != null) {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(userCredential.user!.uid)
+            .set({
+              'calendarUrl': _calendarUrlController.text.trim(),
+            }, SetOptions(merge: true));
+      }
+
       await userCredential.user!.sendEmailVerification();
-      // メール送信後はキャラ診断ページへ遷移せず、認証を促す
+      // メール送信後は認証を促す
       showDialog(
         context: context,
         builder:
@@ -38,7 +50,10 @@ class _RegisterPageState extends State<RegisterPage> {
                   child: Text('再送信'),
                 ),
                 TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                    Navigator.of(context).pop(); // WelcomePageまで戻る
+                  },
                   child: Text('OK'),
                 ),
               ],
@@ -58,7 +73,7 @@ class _RegisterPageState extends State<RegisterPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('登録ページ')),
+      appBar: AppBar(title: Text('アカウント作成')),
       body: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
@@ -73,12 +88,17 @@ class _RegisterPageState extends State<RegisterPage> {
               decoration: InputDecoration(labelText: 'パスワード'),
               obscureText: true,
             ),
+            TextField(
+              controller: _calendarUrlController,
+              decoration: InputDecoration(labelText: 'カレンダーURL (.ics形式)'),
+              keyboardType: TextInputType.url,
+            ),
             if (_error != null) ...[
               SizedBox(height: 12),
               Text(_error!, style: TextStyle(color: Colors.red)),
             ],
             SizedBox(height: 24),
-            ElevatedButton(child: Text('仮登録'), onPressed: _register),
+            ElevatedButton(child: Text('同意して仮登録'), onPressed: _register),
           ],
         ),
       ),

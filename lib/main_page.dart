@@ -97,25 +97,26 @@ class MainPage extends ConsumerWidget {
       body: Stack(
         children: [
           IndexedStack(index: currentPage.index, children: pages),
-          Positioned(
-            top: MediaQuery.of(context).padding.top,
-            right: 5,
-            child: IconButton(
-              icon: const Icon(
-                Icons.menu,
-                color: Colors.white,
-                size: 32,
-                shadows: [
-                  Shadow(
-                    color: Colors.black54,
-                    blurRadius: 4.0,
-                    offset: Offset(1.0, 1.0),
-                  ),
-                ],
+          if (currentPage == AppPage.park)
+            Positioned(
+              top: MediaQuery.of(context).padding.top,
+              right: 5,
+              child: IconButton(
+                icon: const Icon(
+                  Icons.menu,
+                  color: Colors.white,
+                  size: 32,
+                  shadows: [
+                    Shadow(
+                      color: Colors.black54,
+                      blurRadius: 4.0,
+                      offset: Offset(1.0, 1.0),
+                    ),
+                  ],
+                ),
+                onPressed: () => _scaffoldKey.currentState?.openEndDrawer(),
               ),
-              onPressed: () => _scaffoldKey.currentState?.openEndDrawer(),
             ),
-          ),
         ],
       ),
       bottomNavigationBar: const CommonBottomNavigation(),
@@ -246,25 +247,7 @@ class AuthWrapper extends StatelessWidget {
               return const UserProfilePage();
             }
 
-            // キャラクターが選択されていない場合
-            if (userData == null || !userData.containsKey('character')) {
-              return CharacterQuestionPage();
-            }
-
-            // プロフィールが未完了の場合
-            if (!userData.containsKey('profileCompleted') ||
-                userData['profileCompleted'] != true) {
-              return const UserProfilePage();
-            }
-
-            // すべての設定が完了している場合
-            return ParkPage(
-              diagnosedCharacterName: userData['character'] ?? '剣士',
-              answers: [], // 適切な値を設定
-              userName: userData['name'] ?? '',
-              grade: userData['grade'] ?? '',
-              department: userData['department'] ?? '',
-            );
+            return MainPage();
           },
         );
       },

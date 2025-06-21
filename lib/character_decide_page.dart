@@ -110,17 +110,37 @@ class _CharacterDecidePageState extends State<CharacterDecidePage> {
       } else {
         print('Error: User is not logged in');
         if (context.mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(const SnackBar(content: Text('ログインが必要です')));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text(
+                'ログインが必要です',
+                style: TextStyle(fontFamily: 'misaki', color: Colors.white),
+              ),
+              backgroundColor: Colors.black.withOpacity(0.85),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: const BorderSide(color: Colors.white, width: 2.5),
+              ),
+            ),
+          );
         }
       }
     } catch (e) {
       print('Error saving character: $e');
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('エラーが発生しました: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'エラーが発生しました: $e',
+              style: const TextStyle(fontFamily: 'misaki', color: Colors.white),
+            ),
+            backgroundColor: Colors.black.withOpacity(0.85),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: const BorderSide(color: Colors.white, width: 2.5),
+            ),
+          ),
+        );
       }
     }
     print('=== _saveCharacterToFirebase completed ===');

@@ -6,6 +6,7 @@ import 'utils/course_pattern_detector.dart';
 import 'utils/course_color_generator.dart';
 import 'course_pattern.dart';
 import 'providers/timetable_provider.dart';
+import 'package:intl/intl.dart';
 
 class QuestCreationWidget extends ConsumerStatefulWidget {
   final void Function() onCancel;
@@ -271,15 +272,6 @@ class _QuestCreationWidgetState extends ConsumerState<QuestCreationWidget> {
                     },
                     child: const Text("キャンセル"),
                   ),
-                  TextButton(
-                    onPressed: () {
-                      // 新規作成：前回のデータをクリア
-                      ref.read(timetableProvider.notifier).resetQuestData();
-                      _hasShownDialog = false; // フラグをリセット
-                      Navigator.of(context).pop();
-                    },
-                    child: const Text("新規作成"),
-                  ),
                   ElevatedButton(
                     onPressed:
                         (tempTaskType != null && tempDeadline != null)
@@ -299,7 +291,10 @@ class _QuestCreationWidgetState extends ConsumerState<QuestCreationWidget> {
                                 tempDeadline!,
                                 tempDescription,
                               );
-                              // クエスト作成完了後、データをリセットしない（保持する）
+                              // クエスト作成完了後、データをリセット
+                              ref
+                                  .read(timetableProvider.notifier)
+                                  .resetQuestData();
                               _hasShownDialog = false; // フラグをリセット
                               Navigator.of(context).pop();
                             }
@@ -472,12 +467,15 @@ class _QuestCreationWidgetState extends ConsumerState<QuestCreationWidget> {
                                   e.period == periodIndex + 1,
                               orElse:
                                   () => TimetableEntry(
-                                    id: 'empty',
-                                    subjectName: '',
+                                    id: 'default',
+                                    subjectName: '未選択',
                                     classroom: '',
-                                    dayOfWeek: dayIndex,
-                                    period: periodIndex + 1,
-                                    date: '',
+                                    originalLocation: '',
+                                    dayOfWeek: 0,
+                                    period: 0,
+                                    date: DateFormat(
+                                      'yyyy-MM-dd',
+                                    ).format(DateTime.now()),
                                   ),
                             );
 

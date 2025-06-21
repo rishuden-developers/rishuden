@@ -472,7 +472,6 @@ class _CreditReviewPageState extends State<CreditReviewPage> {
           ),
         ),
       ),
-      bottomNavigationBar: const CommonBottomNavigation(),
     );
   }
 
