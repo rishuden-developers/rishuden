@@ -20,8 +20,10 @@ import 'level_gauge.dart';
 import 'quest_create.dart'; // QuestCreationWidgetのインポート
 import 'dart:ui';
 import 'setting_page.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'providers/timetable_provider.dart';
 
-class ParkPage extends StatefulWidget {
+class ParkPage extends ConsumerStatefulWidget {
   final String diagnosedCharacterName;
   final List<int> answers;
   final String userName;
@@ -38,10 +40,10 @@ class ParkPage extends StatefulWidget {
   });
 
   @override
-  State<ParkPage> createState() => _ParkPageState();
+  ConsumerState<ParkPage> createState() => _ParkPageState();
 }
 
-class _ParkPageState extends State<ParkPage> {
+class _ParkPageState extends ConsumerState<ParkPage> {
   String _currentParkCharacterImage = ''; // 空の初期値に変更
   String _currentParkCharacterName = ''; // 空の初期値に変更
   String _userName = '';
@@ -1301,304 +1303,155 @@ class _ParkPageState extends State<ParkPage> {
     final screenHeight = MediaQuery.of(context).size.height;
     final screenWidth = MediaQuery.of(context).size.width;
     final double topBarHeight = screenHeight * 0.08;
-    final double singleBannerWidth = screenWidth * 0.30;
     final double bottomNavBarHeight = 75.0;
-
     final double logoSize = screenWidth * 0.13;
 
-    // --- ボタンをページと連動させるためのアニメーション値の計算 ---
-    final double distance = (_pageOffset - _currentPage).abs();
-    final double scale = (1 - (distance * 0.5)).clamp(0.5, 1.0);
-    final double opacity = (1 - distance).clamp(0.0, 1.0);
-
-    return Scaffold(
-      key: _scaffoldKey,
-      extendBodyBehindAppBar: true,
-      extendBody: true,
-      endDrawer: Drawer(
-        child: Container(
-          decoration: BoxDecoration(
-            image: DecorationImage(
-              image: AssetImage('assets/ranking_guild_background.png'), // 木目調など
-              fit: BoxFit.cover,
-            ),
-          ),
-          child: Column(
-            children: [
-              DrawerHeader(
-                decoration: BoxDecoration(
-                  border: Border(
-                    bottom: BorderSide(color: Colors.amber[300]!, width: 2),
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: Image.asset('assets/night_view.png', fit: BoxFit.cover),
+        ),
+        Positioned.fill(child: Container(color: Colors.black.withOpacity(0.5))),
+        Positioned.fill(
+          child: SafeArea(
+            bottom: true,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                Positioned(
+                  top: 160,
+                  bottom: 0,
+                  left: 0,
+                  right: 0,
+                  child: PageView(
+                    controller: _pageController,
+                    onPageChanged: (int page) {
+                      setState(() {
+                        _currentPage = page;
+                        _updateCountdownText();
+                      });
+                    },
+                    children:
+                        _tasks
+                            .map(
+                              (taskData) => _buildBulletinBoardPage(taskData),
+                            )
+                            .toList(),
                   ),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
-                    Icon(Icons.menu_book, color: Colors.white, size: 36),
-                    SizedBox(height: 10),
-                    Text(
-                      '冒険のメニュー',
-                      style: TextStyle(
-                        fontFamily: 'misaki',
-                        color: Colors.white,
-                        fontSize: 22,
-                        shadows: [Shadow(color: Colors.black, blurRadius: 2)],
-                      ),
-                    ),
-                  ],
+                Positioned(
+                  top: screenHeight * 0.04,
+                  left: (screenWidth - (screenWidth * 0.65)) / 8,
+                  child: Image.asset(
+                    "assets/floating.png",
+                    width: screenWidth * 0.55,
+                    height: screenHeight * 0.45,
+                    fit: BoxFit.contain,
+                  ),
                 ),
-              ),
-              _buildDrawerTile(Icons.school_outlined, 'KOAN', () {
-                _launchURL(
-                  'https://koan.osaka-u.ac.jp/campusweb/campusportal.do?page=main',
-                );
-              }),
-              _buildDrawerTile(Icons.book_outlined, 'CLE', () {
-                _launchURL('https://www.cle.osaka-u.ac.jp/ultra/course');
-              }),
-              _buildDrawerTile(Icons.person_outline, 'マイハンダイ', () {
-                _launchURL('https://my.osaka-u.ac.jp/');
-              }),
-              _buildDrawerTile(Icons.mail_outline, 'OU-Mail', () {
-                _launchURL('https://outlook.office.com/mail/');
-              }),
-              Divider(color: Colors.amber[200]),
-              _buildDrawerTile(Icons.mail, 'お問い合わせ', () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const MailPage()),
-                );
-              }),
-              _buildDrawerTile(Icons.info_outline, 'お知らせを見る', () {
-                Navigator.pop(context);
-                _showNoticeDialog(context);
-              }),
-              Divider(color: Colors.amber[200]),
-              _buildDrawerTile(Icons.settings, '設定', () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const SettingPage()),
-                );
-              }),
-              _buildDrawerTile(Icons.help_outline, 'ヘルプ', () {
-                Navigator.pop(context);
-              }),
-              _buildDrawerTile(Icons.report_problem_outlined, 'ユーザー通報', () {
-                Navigator.pop(context);
-              }),
-              const SizedBox(height: 20), // 下の余白を確保
-            ],
-          ),
-        ),
-      ),
-
-      body: Stack(
-        children: [
-          Positioned.fill(
-            child: Image.asset('assets/night_view.png', fit: BoxFit.cover),
-          ),
-          Positioned.fill(
-            child: Container(color: Colors.black.withOpacity(0.5)),
-          ),
-          Positioned.fill(
-            child: SafeArea(
-              bottom: false,
-              child: Padding(
-                padding: EdgeInsets.only(bottom: bottomNavBarHeight),
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    Positioned(
-                      top: 160, // 上端の位置を少し上に
-                      bottom: 0,
-                      left: 0, // 左右の余白を削除（paddingで制御するため）
-                      right: 0,
-                      child: PageView(
-                        controller: _pageController,
-                        onPageChanged: (int page) {
-                          setState(() {
-                            _currentPage = page;
-                            _updateCountdownText();
-                          });
-                        },
-                        children:
-                            _tasks
-                                .map(
-                                  (taskData) =>
-                                      _buildBulletinBoardPage(taskData),
-                                )
-                                .toList(),
-                      ),
-                    ),
-                    Positioned(
-                      // top: 画面の上端からの距離 (画面の高さに対する割合で指定)
-                      // この値を調整して、キャラクターの垂直位置を微調整してください。
-                      top: screenHeight * 0.04,
-
-                      // left: 画面の左端からの距離
-                      // 画像を水平方向の中央に配置するための計算式です。
-                      // (画面全体の幅 - 画像の幅) / 2
-                      left: (screenWidth - (screenWidth * 0.65)) / 8,
-
-                      child: Image.asset(
-                        "assets/floating.png", // ご指定の画像パス
-                        width: screenWidth * 0.55, // ご指定の幅
-                        height: screenHeight * 0.45, // ご指定の高さ
-                        fit: BoxFit.contain,
-                      ),
-                    ),
-                    Positioned(
-                      // top: 画面の上端からの距離 (画面の高さに対する割合で指定)
-                      // この値を調整して、キャラクターの垂直位置を微調整してください。
-                      top: screenHeight * 0.05,
-
-                      // left: 画面の左端からの距離
-                      // 画像を水平方向の中央に配置するための計算式です。
-                      // (画面全体の幅 - 画像の幅) / 2
-                      left: (screenWidth - (screenWidth * 0.65)) / 2.8,
-
-                      child: Image.asset(
-                        _currentParkCharacterImage, // ご指定の画像パス
-                        width: screenWidth * 0.38, // ご指定の幅
-                        height: screenHeight * 0.28, // ご指定の高さ
-                        fit: BoxFit.contain,
-                      ),
-                    ),
-
-                    Positioned(
-                      top: 0,
-                      left: 0,
-                      child: Column(
-                        children: [
-                          if (_userName.isNotEmpty)
-                            Text(
-                              _userName,
-                              style: TextStyle(
-                                fontFamily: 'misaki',
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                                shadows: [
-                                  Shadow(color: Colors.black54, blurRadius: 2),
-                                ],
-                              ),
-                            ),
-
-                          LiquidLevelGauge(
-                            key: _gaugeKey,
-                            width: screenWidth * 0.28,
-                            height: topBarHeight * 0.70,
+                Positioned(
+                  top: screenHeight * 0.05,
+                  left: (screenWidth - (screenWidth * 0.65)) / 2.8,
+                  child: Image.asset(
+                    _currentParkCharacterImage,
+                    width: screenWidth * 0.38,
+                    height: screenHeight * 0.28,
+                    fit: BoxFit.contain,
+                  ),
+                ),
+                Positioned(
+                  top: 0,
+                  left: 0,
+                  child: Column(
+                    children: [
+                      if (_userName.isNotEmpty)
+                        Text(
+                          _userName,
+                          style: const TextStyle(
+                            fontFamily: 'misaki',
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                            shadows: [
+                              Shadow(color: Colors.black54, blurRadius: 2),
+                            ],
                           ),
-                        ],
-                      ),
-                    ),
-                    Positioned(
-                      top: 0,
-                      right: 3,
-                      child: IconButton(
-                        icon: Icon(
-                          Icons.menu,
-                          color: const Color.fromARGB(255, 26, 186, 222),
-                          size: topBarHeight * 0.50,
                         ),
-                        onPressed:
-                            () => _scaffoldKey.currentState?.openEndDrawer(),
-                        padding: const EdgeInsets.only(left: 4.0),
-                        constraints: BoxConstraints(
-                          minWidth: topBarHeight * 0.5,
-                        ),
+                      LiquidLevelGauge(
+                        key: _gaugeKey,
+                        width: screenWidth * 0.28,
+                        height: topBarHeight * 0.70,
                       ),
-                    ),
-                    //Positioned(
-                    //top: 20,
-                    //left: MediaQuery.of(context).size.width * 0.3,
-                    //child: Image.asset(
-                    //'assets/banner_news.png',
-                    //width: singleBannerWidth,
-                    //height: topBarHeight * 0.75,
-                    //fit: BoxFit.contain,
-                    //),
-                    //),
-                    Positioned(
-                      top: 75,
-                      left: -1,
-                      child: Stack(
+                    ],
+                  ),
+                ),
+
+                Positioned(
+                  top: 75,
+                  left: -1,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Container(
+                        width: screenWidth * 0.28,
+                        height: topBarHeight * 0.50,
+                        decoration: const BoxDecoration(
+                          image: DecorationImage(
+                            image: AssetImage('assets/ui_takoyaki_bar.png'),
+                            fit: BoxFit.fill,
+                          ),
+                        ),
+                        padding: const EdgeInsets.only(left: 30.0, right: 20.0),
                         alignment: Alignment.center,
-                        children: [
-                          Container(
-                            width: screenWidth * 0.28,
-                            height: topBarHeight * 0.50,
-                            decoration: const BoxDecoration(
-                              image: DecorationImage(
-                                image: AssetImage('assets/ui_takoyaki_bar.png'),
-                                fit: BoxFit.fill,
-                              ),
-                            ),
-                            padding: const EdgeInsets.only(
-                              left: 30.0,
-                              right: 20.0,
-                            ),
-                            alignment: Alignment.center,
-                            child: Text(
-                              '$_takoyakiCount',
-                              style: TextStyle(
-                                color: Colors.black,
-                                fontSize: topBarHeight * 0.26,
-                                fontWeight: FontWeight.bold,
-                                fontFamily: 'misaki',
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                              softWrap: false,
-                            ),
+                        child: Text(
+                          '$_takoyakiCount',
+                          style: TextStyle(
+                            color: Colors.black,
+                            fontSize: topBarHeight * 0.26,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'misaki',
                           ),
-                          Positioned(
-                            right: -2,
-                            child: GestureDetector(
-                              onTap: () => _showPurchaseDialog(context),
-                              child: Container(
-                                padding: const EdgeInsets.all(1.0),
-                                child: Image.asset(
-                                  'assets/icon_plus.png',
-                                  width: topBarHeight * 0.4,
-                                  height: topBarHeight * 0.4,
-                                  fit: BoxFit.contain,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Positioned(
-                      bottom: 40,
-                      child: GestureDetector(
-                        onTap:
-                            () => setState(() {
-                              isQuestCreationVisible = true;
-                            }),
-                        child: Image.asset(
-                          'assets/make_quest.png',
-                          width: 360,
-                          height: 120,
-                          fit: BoxFit.contain,
+                          overflow: TextOverflow.ellipsis,
+                          softWrap: false,
                         ),
                       ),
-                    ),
-                    if (_dialogueMessages
-                        .isNotEmpty) // ★ メッセージがある場合はメッセージボックスを表示
-                      _buildRpgMessageBox()
-                    else // ★ メッセージがない場合はクエスト作成ボタンを表示
+                      Positioned(
+                        right: -2,
+                        child: GestureDetector(
+                          onTap: () => _showPurchaseDialog(context),
+                          child: Container(
+                            padding: const EdgeInsets.all(1.0),
+                            child: Image.asset(
+                              'assets/icon_plus.png',
+                              width: topBarHeight * 0.4,
+                              height: topBarHeight * 0.4,
+                              fit: BoxFit.contain,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                ...(_dialogueMessages.isNotEmpty
+                    ? [_buildRpgMessageBox()]
+                    : [
                       Positioned(
                         bottom: 40,
                         child: GestureDetector(
-                          onTap: () {
-                            // ★ このボタンを押した時に会話を開始するテスト例
-                            // _showDialogue([
-                            //   "やあ、何か新しいクエストを作成するのかい？",
-                            //   "締切には気をつけるんだぞ！",
-                            // ]);
+                          onTap: () async {
+                            try {
+                              await ref
+                                  .read(timetableProvider.notifier)
+                                  .loadFromFirestore();
+                              print(
+                                'Park Page - Firestore data loaded before opening quest creation',
+                              );
+                            } catch (e) {
+                              print(
+                                'Park Page - Error loading Firestore data: $e',
+                              );
+                            }
                             setState(() {
                               isQuestCreationVisible = true;
                             });
@@ -1611,105 +1464,93 @@ class _ParkPageState extends State<ParkPage> {
                           ),
                         ),
                       ),
-                  ],
-                ),
-              ),
+                    ]),
+              ],
             ),
           ),
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            child: CommonBottomNavigation(),
-          ),
-          if (isQuestCreationVisible)
-            Positioned.fill(
-              child: Container(
-                color: Colors.black54,
-                alignment: Alignment.center,
-                child: QuestCreationWidget(
-                  onCancel:
-                      () => setState(() {
-                        isQuestCreationVisible = false;
-                      }),
-                  onCreate: (selectedClass, taskType, deadline, description) {
-                    print(
-                      '授業: $selectedClass, タスク: $taskType, 締切: $deadline, 詳細: $description',
-                    );
-
-                    // 新しいクエストを_tasksリストに追加
-                    final newTask = {
-                      'subject': selectedClass,
-                      'name': taskType,
-                      'details': description,
-                      'deadline': deadline,
-                      'isSubmitted': false,
-                      'defeatedCount': 0,
-                      'totalParticipants': 1,
-                      'reward': 10, // デフォルト報酬
-                      'createdBy': widget.userName,
-                      'createdAt': DateTime.now(),
-                    };
-
-                    setState(() {
-                      _tasks.add(newTask);
+        ),
+        if (isQuestCreationVisible)
+          Positioned.fill(
+            child: Container(
+              color: Colors.black54,
+              alignment: Alignment.center,
+              child: QuestCreationWidget(
+                onCancel:
+                    () => setState(() {
                       isQuestCreationVisible = false;
-                    });
-
-                    // 成功メッセージを表示
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          'クエスト「$selectedClass - $taskType」を作成しました！',
-                          style: const TextStyle(fontFamily: 'misaki'),
-                        ),
-                        backgroundColor: Colors.green,
+                    }),
+                onCreate: (selectedClass, taskType, deadline, description) {
+                  print(
+                    '授業: $selectedClass, タスク: $taskType, 締切: $deadline, 詳細: $description',
+                  );
+                  final newTask = {
+                    'subject': selectedClass,
+                    'name': taskType,
+                    'details': description,
+                    'deadline': deadline,
+                    'isSubmitted': false,
+                    'defeatedCount': 0,
+                    'totalParticipants': 1,
+                    'reward': 10,
+                    'createdBy': widget.userName,
+                    'createdAt': DateTime.now(),
+                  };
+                  setState(() {
+                    _tasks.add(newTask);
+                    isQuestCreationVisible = false;
+                  });
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        'クエスト「$selectedClass - $taskType」を作成しました！',
+                        style: const TextStyle(fontFamily: 'misaki'),
                       ),
-                    );
-                  },
-                ),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                },
               ),
             ),
-          Positioned(
-            right: 115,
-            top: 60,
-            child: GestureDetector(
-              onTap: () => _showOztechDialog(context),
-              child: Opacity(
-                opacity: 1.0,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(12.0),
-                  child: Image.asset(
-                    'assets/oztech.png',
-                    width: logoSize,
-                    height: logoSize,
-                    fit: BoxFit.cover,
-                  ),
+          ),
+        Positioned(
+          right: 115,
+          top: 60,
+          child: GestureDetector(
+            onTap: () => _showOztechDialog(context),
+            child: Opacity(
+              opacity: 1.0,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12.0),
+                child: Image.asset(
+                  'assets/oztech.png',
+                  width: logoSize,
+                  height: logoSize,
+                  fit: BoxFit.cover,
                 ),
               ),
             ),
           ),
-          Positioned(
-            right: 50,
-            top: 60,
-            child: GestureDetector(
-              onTap: () => _showPotiPotiDialog(context),
-              child: Opacity(
-                opacity: 1.0,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(12.0),
-                  child: Image.asset(
-                    'assets/potipoti.png',
-                    width: logoSize,
-                    height: logoSize,
-                    fit: BoxFit.cover,
-                  ),
+        ),
+        Positioned(
+          right: 50,
+          top: 60,
+          child: GestureDetector(
+            onTap: () => _showPotiPotiDialog(context),
+            child: Opacity(
+              opacity: 1.0,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12.0),
+                child: Image.asset(
+                  'assets/potipoti.png',
+                  width: logoSize,
+                  height: logoSize,
+                  fit: BoxFit.cover,
                 ),
               ),
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 

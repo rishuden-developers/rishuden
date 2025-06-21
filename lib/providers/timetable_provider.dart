@@ -12,6 +12,10 @@ class TimetableNotifier extends StateNotifier<Map<String, dynamic>> {
         'attendanceStatus': <String, String>{},
         'absenceCount': <String, int>{},
         'lateCount': <String, int>{},
+        'questSelectedClass': null,
+        'questTaskType': null,
+        'questDeadline': null,
+        'questDescription': '',
       });
 
   // セルメモを更新
@@ -50,6 +54,44 @@ class TimetableNotifier extends StateNotifier<Map<String, dynamic>> {
     _saveToFirestore();
   }
 
+  // クエスト作成の状態を更新
+  void updateQuestSelectedClass(Map<String, dynamic>? selectedClass) {
+    print('TimetableProvider - Updating questSelectedClass: $selectedClass');
+    state = {...state, 'questSelectedClass': selectedClass};
+    _saveToFirestore();
+  }
+
+  void updateQuestTaskType(String? taskType) {
+    print('TimetableProvider - Updating questTaskType: $taskType');
+    state = {...state, 'questTaskType': taskType};
+    _saveToFirestore();
+  }
+
+  void updateQuestDeadline(DateTime? deadline) {
+    print('TimetableProvider - Updating questDeadline: $deadline');
+    state = {...state, 'questDeadline': deadline?.toIso8601String()};
+    _saveToFirestore();
+  }
+
+  void updateQuestDescription(String description) {
+    print('TimetableProvider - Updating questDescription: $description');
+    state = {...state, 'questDescription': description};
+    _saveToFirestore();
+  }
+
+  // クエスト作成の状態をリセット
+  void resetQuestData() {
+    print('TimetableProvider - Resetting quest data');
+    state = {
+      ...state,
+      'questSelectedClass': null,
+      'questTaskType': null,
+      'questDeadline': null,
+      'questDescription': '',
+    };
+    _saveToFirestore();
+  }
+
   // 特定のセルメモを追加・更新
   void setCellNote(String key, String note) {
     final cellNotes = Map<String, String>.from(state['cellNotes']);
@@ -75,6 +117,7 @@ class TimetableNotifier extends StateNotifier<Map<String, dynamic>> {
   // Firestoreからデータを読み込み
   Future<void> loadFromFirestore() async {
     try {
+      print('TimetableProvider - Starting loadFromFirestore');
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
         final doc =
@@ -87,6 +130,7 @@ class TimetableNotifier extends StateNotifier<Map<String, dynamic>> {
 
         if (doc.exists) {
           final data = doc.data()!;
+          print('TimetableProvider - Firestore data: $data');
           state = {
             'cellNotes': Map<String, String>.from(data['cellNotes'] ?? {}),
             'weeklyNotes': Map<String, String>.from(data['weeklyNotes'] ?? {}),
@@ -98,8 +142,17 @@ class TimetableNotifier extends StateNotifier<Map<String, dynamic>> {
             ),
             'absenceCount': Map<String, int>.from(data['absenceCount'] ?? {}),
             'lateCount': Map<String, int>.from(data['lateCount'] ?? {}),
+            'questSelectedClass': data['questSelectedClass'],
+            'questTaskType': data['questTaskType'],
+            'questDeadline': data['questDeadline'],
+            'questDescription': data['questDescription'] ?? '',
           };
+          print('TimetableProvider - State updated: $state');
+        } else {
+          print('TimetableProvider - No document found');
         }
+      } else {
+        print('TimetableProvider - No user found');
       }
     } catch (e) {
       print('Error loading timetable data: $e');
@@ -123,6 +176,10 @@ class TimetableNotifier extends StateNotifier<Map<String, dynamic>> {
               'attendanceStatus': state['attendanceStatus'],
               'absenceCount': state['absenceCount'],
               'lateCount': state['lateCount'],
+              'questSelectedClass': state['questSelectedClass'],
+              'questTaskType': state['questTaskType'],
+              'questDeadline': state['questDeadline'],
+              'questDescription': state['questDescription'],
               'lastUpdated': FieldValue.serverTimestamp(),
             }, SetOptions(merge: true));
       }

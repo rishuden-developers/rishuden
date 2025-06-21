@@ -1,9 +1,4 @@
 import 'package:flutter/material.dart';
-import 'park_page.dart';
-import 'time_schedule_page.dart';
-import 'ranking_page.dart';
-import 'item_page.dart';
-import 'credit_review_page.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'providers/current_page_provider.dart';
 
@@ -23,20 +18,10 @@ class CommonBottomNavigation extends ConsumerWidget {
   const CommonBottomNavigation({super.key});
 
   void _onNavigationButtonPressed({
-    required BuildContext context,
     required WidgetRef ref,
     required AppPage page,
-    required Widget pageWidget,
   }) {
     ref.read(currentPageProvider.notifier).state = page;
-    Navigator.pushReplacement(
-      context,
-      PageRouteBuilder(
-        pageBuilder: (context, animation, secondaryAnimation) => pageWidget,
-        transitionDuration: Duration.zero,
-        reverseTransitionDuration: Duration.zero,
-      ),
-    );
   }
 
   Widget _buildNavdress({
@@ -54,38 +39,25 @@ class CommonBottomNavigation extends ConsumerWidget {
 
     final String inactiveIcon;
     final String activeIcon;
-    final Widget pageWidget;
 
     switch (page) {
       case AppPage.park:
-        pageWidget = const ParkPage(
-          diagnosedCharacterName: '剣士',
-          answers: [],
-          userName: '',
-        );
         inactiveIcon = inactiveParkIcon;
         activeIcon = activeParkIcon;
         break;
       case AppPage.timetable:
-        pageWidget = const TimeSchedulePage();
         inactiveIcon = inactiveTimetableIcon;
         activeIcon = activeTimetableIcon;
         break;
       case AppPage.credit:
-        pageWidget = const CreditReviewPage(
-          lectureName: '講義一覧',
-          teacherName: '全講義',
-        );
         inactiveIcon = inactiveCreditIcon;
         activeIcon = activeCreditIcon;
         break;
       case AppPage.ranking:
-        pageWidget = const RankingPage();
         inactiveIcon = inactiveRankingIcon;
         activeIcon = activeRankingIcon;
         break;
       case AppPage.dress:
-        pageWidget = const ItemPage();
         inactiveIcon = inactiveDressIcon;
         activeIcon = activeDressIcon;
         break;
@@ -100,12 +72,7 @@ class CommonBottomNavigation extends ConsumerWidget {
         onTap:
             isActive
                 ? null
-                : () => _onNavigationButtonPressed(
-                  context: context,
-                  ref: ref,
-                  page: page,
-                  pageWidget: pageWidget,
-                ),
+                : () => _onNavigationButtonPressed(ref: ref, page: page),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 250),
           curve: Curves.easeOut,

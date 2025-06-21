@@ -1966,135 +1966,74 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
   @override
   Widget build(BuildContext context) {
     const double bottomPaddingForNavBar = 100.0;
-    return Scaffold(
-      extendBodyBehindAppBar: true,
-      extendBody: true,
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        centerTitle: true,
-        title: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            IconButton(
-              icon: const Icon(Icons.arrow_back_ios, size: 17),
-              onPressed: _goToPreviousWeek,
-              color: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 12.0),
-              constraints: const BoxConstraints(),
-            ),
-            Text(
-              _weekDateRange,
-              style: const TextStyle(
-                fontFamily: 'misaki',
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-                fontSize: 20,
-              ),
-            ),
-            IconButton(
-              icon: const Icon(Icons.arrow_forward_ios, size: 17),
-              onPressed: _goToNextWeek,
-              color: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 12.0),
-              constraints: const BoxConstraints(),
-            ),
-          ],
-        ),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.save_alt, color: Colors.white),
-            tooltip: '壁紙として保存',
-            onPressed: () {},
+    return Container(
+      width: double.infinity,
+      height: double.infinity,
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: Image.asset("assets/night_view.png", fit: BoxFit.cover),
           ),
-        ],
-      ),
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        child: Stack(
-          children: [
-            Positioned.fill(
-              child: Image.asset("assets/night_view.png", fit: BoxFit.cover),
-            ),
-            Positioned.fill(
-              child: Container(color: Colors.black.withOpacity(0.4)),
-            ),
-            Padding(
-              padding: const EdgeInsets.only(bottom: bottomPaddingForNavBar),
-              child: SafeArea(
-                bottom: false,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                  child: Column(
-                    children: [
-                      _buildNewTimetableHeader(),
-                      Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.only(top: 4.0, bottom: 8.0),
-                          child: LayoutBuilder(
-                            builder: (context, constraints) {
-                              final availableHeight = constraints.maxHeight;
-                              final dynamicRowHeight = availableHeight / 8.0;
+          Positioned.fill(
+            child: Container(color: Colors.black.withOpacity(0.4)),
+          ),
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8.0),
+              child: Column(
+                children: [
+                  _buildNewTimetableHeader(),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 4.0, bottom: 8.0),
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          final availableHeight = constraints.maxHeight;
+                          final dynamicRowHeight = availableHeight / 8.0;
 
-                              return Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  _buildNewContinuousTimeColumn(
-                                    periodRowHeight: dynamicRowHeight,
-                                    lunchRowHeight: dynamicRowHeight,
-                                  ),
-                                  Expanded(
-                                    child: ClipRRect(
-                                      borderRadius: BorderRadius.circular(12),
-                                      child: BackdropFilter(
-                                        filter: ImageFilter.blur(
-                                          sigmaX: 4.0,
-                                          sigmaY: 4.0,
+                          return Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildNewContinuousTimeColumn(
+                                periodRowHeight: dynamicRowHeight,
+                                lunchRowHeight: dynamicRowHeight,
+                              ),
+                              Expanded(
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: BackdropFilter(
+                                    filter: ImageFilter.blur(
+                                      sigmaX: 4.0,
+                                      sigmaY: 4.0,
+                                    ),
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        color: Colors.black.withOpacity(0.3),
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(
+                                          color: Colors.grey[800]!,
+                                          width: 1.0,
                                         ),
-                                        child: Container(
-                                          decoration: BoxDecoration(
-                                            color: Colors.black.withOpacity(
-                                              0.3,
-                                            ),
-                                            borderRadius: BorderRadius.circular(
-                                              12,
-                                            ),
-                                            border: Border.all(
-                                              color: Colors.grey[800]!,
-                                              width: 1.0,
-                                            ),
-                                          ),
-                                          child: _buildNewTimetableGrid(
-                                            periodRowHeight: dynamicRowHeight,
-                                            lunchRowHeight: dynamicRowHeight,
-                                          ),
-                                        ),
+                                      ),
+                                      child: _buildNewTimetableGrid(
+                                        periodRowHeight: dynamicRowHeight,
+                                        lunchRowHeight: dynamicRowHeight,
                                       ),
                                     ),
                                   ),
-                                ],
-                              );
-                            },
-                          ),
-                        ),
+                                ),
+                              ),
+                            ],
+                          );
+                        },
                       ),
-                    ],
+                    ),
                   ),
-                ),
+                ],
               ),
             ),
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: CommonBottomNavigation(),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
