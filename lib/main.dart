@@ -5,7 +5,8 @@ import 'main_page.dart';
 import 'firebase_options.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'login_page.dart';
+import 'welcome_page.dart';
+import 'user_data_checker.dart';
 
 void main() async {
   try {
@@ -47,9 +48,9 @@ class MyApp extends StatelessWidget {
             );
           }
           if (snapshot.hasData) {
-            return MainPage();
+            return const UserDataChecker();
           }
-          return const LoginPage();
+          return const WelcomePage();
         },
       ),
     );
