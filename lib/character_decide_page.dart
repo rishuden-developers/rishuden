@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'park_page.dart';
 import 'character_data.dart'; // グローバルキャラクターデータをインポート
+import 'main_page.dart'; // ★ MainPageをインポート
 // import 'dart:math'; // 診断ロジックがないので不要
 
 class CharacterDecidePage extends StatefulWidget {
@@ -99,19 +100,10 @@ class _CharacterDecidePageState extends State<CharacterDecidePage> {
         print('Data saved successfully');
 
         if (context.mounted) {
-          print('Navigating to ParkPage...');
+          print('Navigating to MainPage...');
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(
-              builder:
-                  (context) => ParkPage(
-                    diagnosedCharacterName: characterName,
-                    answers: widget.answers,
-                    userName: _nameController.text,
-                    grade: _selectedGrade,
-                    department: _selectedDepartment,
-                  ),
-            ),
+            MaterialPageRoute(builder: (context) => MainPage()),
           );
           print('Navigation completed');
         }
