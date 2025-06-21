@@ -1014,17 +1014,44 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
   }
   // ★★★ このメソッドをクラス内に丸ごと追加してください ★★★
 
-  Future<void> _showEditWeekdayEventDialog(int dayIndex, int eventIndex) async {
-    final eventToEdit = _weekdayEvents[dayIndex]![eventIndex];
+  Future<void> _showEditWeekdayEventDialog(
+    int dayIndex,
+    int eventIndex, {
+    TimeOfDay? newEventStartTime,
+  }) async {
+    final eventToEdit =
+        eventIndex != -1 ? _weekdayEvents[dayIndex]![eventIndex] : null;
 
-    final TextEditingController titleController = TextEditingController(
-      text: eventToEdit['title'],
+    final titleController = TextEditingController(
+      text: eventToEdit?['title'] ?? '',
     );
-    TimeOfDay startTime = eventToEdit['start'];
-    TimeOfDay endTime = eventToEdit['end'];
-    bool isWeekly = eventToEdit['isWeekly'];
+    TimeOfDay startTime;
+    TimeOfDay endTime;
+    bool isWeekly;
 
-    final String? action = await showDialog<String>(
+    if (eventIndex == -1) {
+      // 新規作成
+      startTime = newEventStartTime ?? TimeOfDay.now();
+      final endHour = startTime.hour + 1;
+      endTime = TimeOfDay(
+        hour: endHour > 23 ? 23 : endHour,
+        minute: endHour > 23 ? 59 : startTime.minute,
+      );
+      isWeekly = false;
+      titleController.text = '';
+    } else {
+      // 編集
+      startTime = eventToEdit!['start'];
+      endTime = eventToEdit['end'];
+      isWeekly = eventToEdit['isWeekly'];
+    }
+
+    final String? initialTitle = eventToEdit?['title'];
+    final TimeOfDay initialStartTime = eventToEdit?['start'] ?? startTime;
+    final TimeOfDay initialEndTime = eventToEdit?['end'] ?? endTime;
+    final bool initialIsWeekly = eventToEdit?['isWeekly'] ?? isWeekly;
+
+    final result = await showDialog<String>(
       context: context,
       builder: (context) {
         return StatefulBuilder(
@@ -1035,10 +1062,10 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                 (endTime.hour * 60 + endTime.minute) >
                 (startTime.hour * 60 + startTime.minute);
             final hasChanged =
-                titleController.text != eventToEdit['title'] ||
-                startTime != eventToEdit['start'] ||
-                endTime != eventToEdit['end'] ||
-                isWeekly != eventToEdit['isWeekly'];
+                titleController.text != initialTitle ||
+                startTime != initialStartTime ||
+                endTime != initialEndTime ||
+                isWeekly != initialIsWeekly;
             final canSave = isTitleValid && isTimeValid && hasChanged;
 
             // ★★★ テキスト変更時にUIを更新 ★★★
@@ -1170,22 +1197,35 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
       },
     );
 
-    if (action == 'update') {
+    if (result == 'update') {
       setState(() {
-        _weekdayEvents[dayIndex]![eventIndex] = {
-          'title': titleController.text,
-          'start': startTime,
-          'end': endTime,
-          'isWeekly': isWeekly,
-          'date': eventToEdit['date'],
-        };
+        if (_weekdayEvents[dayIndex] == null) {
+          _weekdayEvents[dayIndex] = [];
+        }
+        if (eventIndex == -1) {
+          _weekdayEvents[dayIndex]!.add({
+            'title': titleController.text,
+            'start': startTime,
+            'end': endTime,
+            'isWeekly': isWeekly,
+            'date': _displayedMonday.add(Duration(days: dayIndex)),
+          });
+        } else {
+          _weekdayEvents[dayIndex]![eventIndex] = {
+            'title': titleController.text,
+            'start': startTime,
+            'end': endTime,
+            'isWeekly': isWeekly,
+            'date': _weekdayEvents[dayIndex]![eventIndex]['date'],
+          };
+        }
         _weekdayEvents[dayIndex]!.sort(
           (a, b) => (a['start'] as TimeOfDay).hour.compareTo(
             (b['start'] as TimeOfDay).hour,
           ),
         );
       });
-    } else if (action == 'delete') {
+    } else if (result == 'delete') {
       bool? confirmDelete = await showDialog<bool>(
         context: context,
         builder:
@@ -1239,12 +1279,35 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
     double periodHeight,
     double specialHeight,
   ) {
+    // For Sunday
     if (dayIndex == 6) {
       final double totalHeight = periodHeight * 8;
       return Expanded(
         flex: 1,
-        child: InkWell(
-          onTap: () => _showSundayEventDialog(),
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTapDown: (details) {
+            final double tappedY = details.localPosition.dy;
+            const double timetableStartInMinutes = 8 * 60 + 50;
+            const double timetableEndInMinutes = 20 * 60 + 0;
+            const double totalMinutesInTimetable =
+                timetableEndInMinutes - timetableStartInMinutes;
+            final double minutesFromTop =
+                (tappedY / totalHeight) * totalMinutesInTimetable;
+            double totalMinutesFromMidnight =
+                minutesFromTop + timetableStartInMinutes;
+            if (totalMinutesFromMidnight > timetableEndInMinutes - 60) {
+              totalMinutesFromMidnight = timetableEndInMinutes - 60;
+            }
+            // ★★★ 開始時刻を一番近い30分単位に丸める ★★★
+            final double roundedTotalMinutes =
+                (totalMinutesFromMidnight / 30).round() * 30.0;
+            int hour = roundedTotalMinutes.toInt() ~/ 60;
+            int minute = roundedTotalMinutes.toInt() % 60;
+
+            final startTime = TimeOfDay(hour: hour, minute: minute);
+            _showSundayEventDialog(newEventStartTime: startTime);
+          },
           child: SizedBox(
             height: totalHeight,
             child: Stack(children: _buildSundayEventCells(totalHeight)),
@@ -1252,17 +1315,47 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
         ),
       );
     }
+    // For Weekdays
     return Expanded(
       flex: 1,
       child: LayoutBuilder(
         builder: (context, constraints) {
           final totalHeight = constraints.maxHeight;
-          return Stack(
-            children: [
-              _buildTimetableBackgroundCells(dayIndex),
-              ..._buildClassEntriesAsPositioned(dayIndex, totalHeight),
-              ..._buildWeekdayEventsAsPositioned(dayIndex, totalHeight),
-            ],
+          return GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTapDown: (details) {
+              final double tappedY = details.localPosition.dy;
+              const double timetableStartInMinutes = 8 * 60 + 50;
+              const double timetableEndInMinutes = 20 * 60 + 0;
+              const double totalMinutesInTimetable =
+                  timetableEndInMinutes - timetableStartInMinutes;
+              final double minutesFromTop =
+                  (tappedY / totalHeight) * totalMinutesInTimetable;
+              double totalMinutesFromMidnight =
+                  minutesFromTop + timetableStartInMinutes;
+
+              if (totalMinutesFromMidnight > timetableEndInMinutes - 60) {
+                totalMinutesFromMidnight = timetableEndInMinutes - 60;
+              }
+              // ★★★ 開始時刻を一番近い30分単位に丸める ★★★
+              final double roundedTotalMinutes =
+                  (totalMinutesFromMidnight / 30).round() * 30.0;
+              int hour = roundedTotalMinutes.toInt() ~/ 60;
+              int minute = roundedTotalMinutes.toInt() % 60;
+
+              final startTime = TimeOfDay(hour: hour, minute: minute);
+              _showEditWeekdayEventDialog(
+                dayIndex,
+                -1,
+                newEventStartTime: startTime,
+              );
+            },
+            child: Stack(
+              children: [
+                ..._buildClassEntriesAsPositioned(dayIndex, totalHeight),
+                ..._buildWeekdayEventsAsPositioned(dayIndex, totalHeight),
+              ],
+            ),
           );
         },
       ),
@@ -1432,13 +1525,20 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
     }
   }
 
-  Future<void> _showSundayEventDialog() async {
-    final TextEditingController titleController = TextEditingController();
-    TimeOfDay? startTime = const TimeOfDay(hour: 10, minute: 0);
-    TimeOfDay? endTime = const TimeOfDay(hour: 12, minute: 0);
+  Future<void> _showSundayEventDialog({TimeOfDay? newEventStartTime}) async {
+    final titleController = TextEditingController();
+    TimeOfDay? startTime = newEventStartTime;
+    TimeOfDay? endTime;
+    if (newEventStartTime != null) {
+      final endHour = newEventStartTime.hour + 1;
+      endTime = TimeOfDay(
+        hour: endHour > 23 ? 23 : endHour,
+        minute: endHour > 23 ? 59 : newEventStartTime.minute,
+      );
+    }
     bool isWeekly = false;
 
-    final bool? shouldSave = await showDialog<bool>(
+    bool? shouldSave = await showDialog<bool>(
       context: context,
       builder: (context) {
         return StatefulBuilder(
