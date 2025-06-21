@@ -61,7 +61,6 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
     ["18:30", "20:00"],
   ];
   Timer? _highlightTimer;
-  Map<String, AttendanceStatus> _attendanceStatus = {};
   Map<String, int> _absenceCount = {};
   Map<String, int> _lateCount = {};
   late DateTime _displayedMonday;
@@ -93,7 +92,7 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
       ref.watch(timetableProvider)['weeklyNotes'] ?? {};
   Map<String, String> get attendancePolicies =>
       ref.watch(timetableProvider)['attendancePolicies'] ?? {};
-  Map<String, String> get attendanceStatus =>
+  Map<String, Map<String, String>> get attendanceStatus =>
       ref.watch(timetableProvider)['attendanceStatus'] ?? {};
   Map<String, int> get absenceCount =>
       ref.watch(timetableProvider)['absenceCount'] ?? {};
@@ -113,7 +112,7 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
     ref.read(timetableProvider.notifier).updateAttendancePolicies(policies);
   }
 
-  void _updateAttendanceStatus(Map<String, String> status) {
+  void _updateAttendanceStatus(Map<String, Map<String, String>> status) {
     ref.read(timetableProvider.notifier).updateAttendanceStatus(status);
   }
 
@@ -205,11 +204,18 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
       weekStart,
     );
 
-    // ★★★ シンプルに授業名だけでcourseIdを決定 ★★★
+    // ★★★ 授業名だけでcourseIdを決定するロジックを改善 ★★★
     for (var entry in timeTableEntries) {
+      // 1. 正規化処理の強化
       String normalizedSubjectName =
           entry.subjectName
-              .replaceAll(RegExp(r'\s+'), '')
+              .replaceAll(RegExp(r'[（）()【】\[\]]'), '') // 括弧類を削除
+              .replaceAllMapped(
+                RegExp(r'[Ａ-Ｚａ-ｚ０-９]'),
+                (Match m) =>
+                    String.fromCharCode(m.group(0)!.codeUnitAt(0) - 0xFEE0),
+              ) // 全角英数字を半角に
+              .replaceAll(RegExp(r'\s+'), '') // 全ての空白文字を削除
               .replaceAll('　', '')
               .replaceAll('・', '')
               .replaceAll('Ⅰ', 'I')
@@ -222,16 +228,29 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
               .replaceAll('Ⅷ', 'VIII')
               .replaceAll('Ⅸ', 'IX')
               .replaceAll('Ⅹ', 'X')
+              .toLowerCase() // 全て小文字に
               .trim();
 
-      if (!_globalSubjectToCourseId.containsKey(normalizedSubjectName)) {
-        _globalSubjectToCourseId[normalizedSubjectName] =
-            'course_${_globalCourseIdCounter++}';
+      // 2. 既存のcourseIdと前方一致するかチェック
+      String? matchedCourseId;
+      _globalSubjectToCourseId.forEach((key, value) {
+        if (normalizedSubjectName.startsWith(key) ||
+            key.startsWith(normalizedSubjectName)) {
+          matchedCourseId = value;
+        }
+      });
+
+      if (matchedCourseId != null) {
+        entry.courseId = matchedCourseId;
+      } else {
+        // 3. 新しい授業として登録
+        final newCourseId = 'course_${_globalCourseIdCounter++}';
+        _globalSubjectToCourseId[normalizedSubjectName] = newCourseId;
+        entry.courseId = newCourseId;
         print(
-          'DEBUG: 新しい授業 "$normalizedSubjectName" -> courseId: ${_globalSubjectToCourseId[normalizedSubjectName]}',
+          'DEBUG: 新しい授業 "$normalizedSubjectName" -> courseId: $newCourseId',
         );
       }
-      entry.courseId = _globalSubjectToCourseId[normalizedSubjectName]!;
       print(
         'DEBUG: ${entry.subjectName} -> 正規化: "$normalizedSubjectName" -> courseId: ${entry.courseId}',
       );
@@ -422,6 +441,35 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
   }
 
   String _getNoteForCell(int dayIndex, {int? periodIndex}) {
+    // ★★★ courseIdベースでメモを取得するように修正 ★★★
+    if (periodIndex != null &&
+        _timetableGrid.isNotEmpty &&
+        dayIndex < _timetableGrid.length &&
+        periodIndex < _timetableGrid[dayIndex].length) {
+      final entry = _timetableGrid[dayIndex][periodIndex];
+      if (entry != null) {
+        final String oneTimeNoteKey;
+        if (entry.courseId != null) {
+          oneTimeNoteKey =
+              "${entry.courseId}_${DateFormat('yyyyMMdd').format(_displayedMonday.add(Duration(days: dayIndex)))}";
+        } else {
+          // 後方互換性のため、courseIdがない場合は古い形式を使用
+          oneTimeNoteKey =
+              "C_${dayIndex}_${periodIndex}_${DateFormat('yyyyMMdd').format(_displayedMonday.add(Duration(days: dayIndex)))}";
+        }
+        final String weeklyNoteKey = "W_C_${dayIndex}_$periodIndex";
+
+        // 週次メモが存在する場合は週次メモを優先表示
+        if (weeklyNotes.containsKey(weeklyNoteKey)) {
+          return weeklyNotes[weeklyNoteKey] ?? '';
+        }
+
+        // 週次メモが存在しない場合は、その週の特定の日付のメモのみを表示
+        return cellNotes[oneTimeNoteKey] ?? '';
+      }
+    }
+
+    // フォールバック：古い形式のキーを使用
     final oneTimeNoteKey =
         "C_${dayIndex}_${periodIndex}_${DateFormat('yyyyMMdd').format(_displayedMonday.add(Duration(days: dayIndex)))}";
     final weeklyNoteKey = "W_C_${dayIndex}_$periodIndex";
@@ -437,41 +485,76 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
 
   void _setAttendanceStatus(
     String uniqueKey,
-    String entryId,
+    String courseId,
     AttendanceStatus status,
   ) {
     setState(() {
-      final oldStatus = attendanceStatus[uniqueKey] ?? AttendanceStatus.none;
-      final newStatus = (oldStatus == status) ? AttendanceStatus.none : status;
+      // ★★★ 新しい構造を使用：courseIdと日付で出席状態を管理 ★★★
+      final date = DateFormat('yyyyMMdd').format(
+        _displayedMonday.add(
+          Duration(days: _getDayIndexFromUniqueKey(uniqueKey)),
+        ),
+      );
 
-      // Provider経由でデータを更新
-      final newAttendanceStatus = Map<String, String>.from(attendanceStatus);
-      newAttendanceStatus[uniqueKey] = newStatus.toString();
-      _updateAttendanceStatus(newAttendanceStatus);
+      // Providerの新しいメソッドを使用
+      if (status == AttendanceStatus.none) {
+        // 出席状態を削除
+        ref
+            .read(timetableProvider.notifier)
+            .setAttendanceStatus(courseId, date, '');
+      } else {
+        // 出席状態を設定
+        ref
+            .read(timetableProvider.notifier)
+            .setAttendanceStatus(courseId, date, status.toString());
+      }
+
+      // courseId を使って欠席・遅刻をカウント
+      final currentStatus = ref
+          .read(timetableProvider.notifier)
+          .getAttendanceStatus(courseId, date);
+      final oldStatus =
+          currentStatus != null
+              ? AttendanceStatus.values.firstWhere(
+                (e) => e.toString() == currentStatus,
+              )
+              : AttendanceStatus.none;
 
       if (oldStatus != AttendanceStatus.absent &&
-          newStatus == AttendanceStatus.absent) {
+          status == AttendanceStatus.absent) {
         final newAbsenceCount = Map<String, int>.from(absenceCount);
-        newAbsenceCount[entryId] = (newAbsenceCount[entryId] ?? 0) + 1;
+        newAbsenceCount[courseId] = (newAbsenceCount[courseId] ?? 0) + 1;
         _updateAbsenceCount(newAbsenceCount);
       } else if (oldStatus == AttendanceStatus.absent &&
-          newStatus != AttendanceStatus.absent) {
+          status != AttendanceStatus.absent) {
         final newAbsenceCount = Map<String, int>.from(absenceCount);
-        newAbsenceCount[entryId] = (newAbsenceCount[entryId] ?? 1) - 1;
+        newAbsenceCount[courseId] = (newAbsenceCount[courseId] ?? 1) - 1;
         _updateAbsenceCount(newAbsenceCount);
       }
       if (oldStatus != AttendanceStatus.late &&
-          newStatus == AttendanceStatus.late) {
+          status == AttendanceStatus.late) {
         final newLateCount = Map<String, int>.from(lateCount);
-        newLateCount[entryId] = (newLateCount[entryId] ?? 0) + 1;
+        newLateCount[courseId] = (newLateCount[courseId] ?? 0) + 1;
         _updateLateCount(newLateCount);
       } else if (oldStatus == AttendanceStatus.late &&
-          newStatus != AttendanceStatus.late) {
+          status != AttendanceStatus.late) {
         final newLateCount = Map<String, int>.from(lateCount);
-        newLateCount[entryId] = (newLateCount[entryId] ?? 1) - 1;
+        newLateCount[courseId] = (newLateCount[courseId] ?? 1) - 1;
         _updateLateCount(newLateCount);
       }
     });
+  }
+
+  // ★★★ uniqueKeyから日付のインデックスを取得するヘルパーメソッド ★★★
+  int _getDayIndexFromUniqueKey(String uniqueKey) {
+    // uniqueKeyの形式: "courseId_20241201" または "C_0_1_20241201"
+    final parts = uniqueKey.split('_');
+    if (parts.length >= 2) {
+      final dateStr = parts.last;
+      final date = DateFormat('yyyyMMdd').parse(dateStr);
+      return date.difference(_displayedMonday).inDays;
+    }
+    return 0; // フォールバック
   }
 
   TimeOfDay _parseTime(String time) {
@@ -479,9 +562,12 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
     return TimeOfDay(hour: int.parse(parts[0]), minute: int.parse(parts[1]));
   }
 
-  Color _getNeonWarningColor(Color baseColor, String entryId) {
-    final int absenceCount = this.absenceCount[entryId] ?? 0;
-    final int lateCount = this.lateCount[entryId] ?? 0;
+  Color _getNeonWarningColor(Color baseColor, String? courseId) {
+    if (courseId == null) {
+      return baseColor;
+    }
+    final int absenceCount = this.absenceCount[courseId] ?? 0;
+    final int lateCount = this.lateCount[courseId] ?? 0;
     final double warningLevel = (absenceCount * 1.0) + (lateCount * 0.5);
     final double t = (warningLevel / 3.0).clamp(0.0, 1.0);
     final warningColor = Colors.redAccent[400]!;
@@ -519,14 +605,31 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
       final double top = visualRowIndex * rowHeight;
       final double height = rowHeight;
 
-      final uniqueKey =
-          "${entry.id}_${DateFormat('yyyyMMdd').format(_displayedMonday.add(Duration(days: dayIndex)))}";
-      final policyString =
-          attendancePolicies[entry.id] ?? AttendancePolicy.flexible.toString();
-      final policy = AttendancePolicy.values.firstWhere(
+      // ★★★ uniqueKeyをcourseIdベースに変更 ★★★
+      final String uniqueKey;
+      if (entry.courseId != null) {
+        uniqueKey =
+            "${entry.courseId}_${DateFormat('yyyyMMdd').format(_displayedMonday.add(Duration(days: dayIndex)))}";
+      } else {
+        // 後方互換性のため、courseIdがない場合は古い形式を使用
+        uniqueKey =
+            "${entry.id}_${DateFormat('yyyyMMdd').format(_displayedMonday.add(Duration(days: dayIndex)))}";
+      }
+
+      // ★★★ 後方互換性のためのロジック変更 ★★★
+      // まずcourseIdで出席方針を試し、なければ古い形式(id)で試す
+      String? policyString = attendancePolicies[entry.courseId];
+      if (policyString == null) {
+        policyString = attendancePolicies[entry.id];
+      }
+      // それでもなければデフォルト値を設定
+      policyString ??= AttendancePolicy.flexible.toString();
+
+      final AttendancePolicy policy = AttendancePolicy.values.firstWhere(
         (p) => p.toString() == policyString,
         orElse: () => AttendancePolicy.flexible,
       );
+
       Color textColor = Colors.white;
       BoxDecoration decoration = BoxDecoration();
 
@@ -549,7 +652,7 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
               'DEBUG: ${entry.subjectName} (${entry.dayOfWeek}曜${entry.period}限) -> フォールバック色: $baseColor',
             );
           }
-          final neonColor = _getNeonWarningColor(baseColor, entry.id);
+          final neonColor = _getNeonWarningColor(baseColor, entry.courseId);
           textColor = neonColor;
           decoration = BoxDecoration(
             color: neonColor.withOpacity(0.1),
@@ -586,8 +689,8 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
         );
       }
 
-      final int absenceCount = this.absenceCount[entry.id] ?? 0;
-      final int lateCount = this.lateCount[entry.id] ?? 0;
+      final int absenceCount = this.absenceCount[entry.courseId] ?? 0;
+      final int lateCount = this.lateCount[entry.courseId] ?? 0;
       final bool hasCount = absenceCount > 0 || lateCount > 0;
       final String noteText = _getNoteForCell(
         dayIndex,
@@ -1391,8 +1494,16 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
       return;
     }
 
-    final String oneTimeNoteKey =
-        "C_${dayIndex}_${academicPeriodIndex}_${DateFormat('yyyyMMdd').format(_displayedMonday.add(Duration(days: dayIndex)))}";
+    // ★★★ uniqueKeyをcourseIdベースに変更 ★★★
+    final String oneTimeNoteKey;
+    if (entry?.courseId != null) {
+      oneTimeNoteKey =
+          "${entry!.courseId}_${DateFormat('yyyyMMdd').format(_displayedMonday.add(Duration(days: dayIndex)))}";
+    } else {
+      // 後方互換性のため、courseIdがない場合は古い形式を使用
+      oneTimeNoteKey =
+          "C_${dayIndex}_${academicPeriodIndex}_${DateFormat('yyyyMMdd').format(_displayedMonday.add(Duration(days: dayIndex)))}";
+    }
     final String weeklyNoteKey = "W_C_${dayIndex}_$academicPeriodIndex";
 
     final String initialText =
@@ -1400,11 +1511,18 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
     final bool isInitiallyWeekly =
         weeklyNotes.containsKey(weeklyNoteKey) &&
         !cellNotes.containsKey(oneTimeNoteKey);
+    // ★★★ 出席方針の初期値もcourseIdベースで取得 ★★★
+    String? initialPolicyString;
+    if (entry?.courseId != null) {
+      initialPolicyString = attendancePolicies[entry!.courseId];
+    }
+    if (initialPolicyString == null && entry?.id != null) {
+      initialPolicyString = attendancePolicies[entry!.id];
+    }
+    initialPolicyString ??= AttendancePolicy.flexible.toString();
+
     final AttendancePolicy initialPolicy = AttendancePolicy.values.firstWhere(
-      (p) =>
-          p.toString() ==
-          (attendancePolicies[entry!.id] ??
-              AttendancePolicy.flexible.toString()),
+      (p) => p.toString() == initialPolicyString,
       orElse: () => AttendancePolicy.flexible,
     );
 
@@ -1521,15 +1639,25 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                       children: [
                         Text('出席確認:'),
                         DropdownButton<AttendanceStatus>(
-                          value:
-                              attendanceStatus[oneTimeNoteKey] != null
-                                  ? AttendanceStatus.values.firstWhere(
-                                    (status) =>
-                                        status.toString() ==
-                                        attendanceStatus[oneTimeNoteKey],
-                                    orElse: () => AttendanceStatus.none,
-                                  )
-                                  : AttendanceStatus.none,
+                          value: () {
+                            // ★★★ 新しい構造で出席状態を取得 ★★★
+                            if (entry?.courseId != null) {
+                              final date = DateFormat('yyyyMMdd').format(
+                                _displayedMonday.add(Duration(days: dayIndex)),
+                              );
+                              final currentStatusString = ref
+                                  .read(timetableProvider.notifier)
+                                  .getAttendanceStatus(entry!.courseId!, date);
+                              if (currentStatusString != null) {
+                                return AttendanceStatus.values.firstWhere(
+                                  (status) =>
+                                      status.toString() == currentStatusString,
+                                  orElse: () => AttendanceStatus.none,
+                                );
+                              }
+                            }
+                            return AttendanceStatus.none;
+                          }(),
                           items:
                               AttendanceStatus.values.map((status) {
                                 return DropdownMenuItem(
@@ -1538,11 +1666,16 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                                 );
                               }).toList(),
                           onChanged: (newStatus) {
+                            final TimetableEntry? currentEntry = entry;
+                            if (currentEntry == null ||
+                                newStatus == null ||
+                                currentEntry.courseId == null)
+                              return;
                             setState(() {
                               _setAttendanceStatus(
                                 oneTimeNoteKey,
-                                entry!.id,
-                                newStatus!,
+                                currentEntry.courseId!,
+                                newStatus,
                               );
                             });
                             Navigator.pop(context); // 必要に応じて
@@ -1601,10 +1734,12 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
             _updateWeeklyNotes({...weeklyNotes}..remove(weeklyNoteKey));
           }
         }
-        _updateAttendancePolicies({
-          ...attendancePolicies,
-          currentEntry.id: selectedPolicy.toString(),
-        });
+        if (currentEntry.courseId != null) {
+          _updateAttendancePolicies({
+            ...attendancePolicies,
+            currentEntry.courseId!: selectedPolicy.toString(),
+          });
+        }
       }
     }
   }
@@ -1628,26 +1763,45 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
   }
 
   Widget _buildAttendancePopupMenu(String uniqueKey, TimetableEntry entry) {
-    if (attendancePolicies[entry.id] != AttendancePolicy.mandatory.toString()) {
+    // ★★★ 後方互換性のためのロジック変更 ★★★
+    String? policyString = attendancePolicies[entry.courseId];
+    if (policyString == null) {
+      policyString = attendancePolicies[entry.id];
+    }
+
+    if (policyString != AttendancePolicy.mandatory.toString()) {
       return const SizedBox.shrink();
     }
+
+    // ★★★ 新しい構造で出席状態を取得 ★★★
+    final date = DateFormat('yyyyMMdd').format(
+      _displayedMonday.add(
+        Duration(days: _getDayIndexFromUniqueKey(uniqueKey)),
+      ),
+    );
+    final currentStatusString = ref
+        .read(timetableProvider.notifier)
+        .getAttendanceStatus(entry.courseId ?? '', date);
+    final currentStatus =
+        currentStatusString != null
+            ? AttendanceStatus.values.firstWhere(
+              (status) => status.toString() == currentStatusString,
+              orElse: () => AttendanceStatus.none,
+            )
+            : AttendanceStatus.none;
+
     return Theme(
       data: Theme.of(
         context,
       ).copyWith(materialTapTargetSize: MaterialTapTargetSize.shrinkWrap),
       child: PopupMenuButton<AttendanceStatus>(
-        child: _buildAttendanceStatusIcon(
-          attendanceStatus[uniqueKey] != null
-              ? AttendanceStatus.values.firstWhere(
-                (status) => status.toString() == attendanceStatus[uniqueKey],
-                orElse: () => AttendanceStatus.none,
-              )
-              : AttendanceStatus.none,
-        ),
+        child: _buildAttendanceStatusIcon(currentStatus),
         tooltip: '出欠を記録',
-        onSelected:
-            (AttendanceStatus newStatus) =>
-                _setAttendanceStatus(uniqueKey, entry.id, newStatus),
+        onSelected: (AttendanceStatus newStatus) {
+          if (entry.courseId != null) {
+            _setAttendanceStatus(uniqueKey, entry.courseId!, newStatus);
+          }
+        },
         itemBuilder:
             (BuildContext context) => <PopupMenuEntry<AttendanceStatus>>[
               const PopupMenuItem<AttendanceStatus>(
