@@ -1077,14 +1077,12 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
               backgroundColor: const Color.fromARGB(255, 22, 22, 22),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(15.0),
-                side: BorderSide(color: Colors.amberAccent.withOpacity(0.5)),
               ),
               title: Text(
-                '${_days[dayIndex]}曜日の予定を編集',
+                '${_days[dayIndex]}の予定',
                 style: const TextStyle(
-                  fontFamily: 'misaki',
                   color: Colors.white,
-                  fontWeight: FontWeight.bold,
+                  fontFamily: 'misaki',
                 ),
               ),
               content: Column(
@@ -1092,14 +1090,11 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                 children: [
                   TextField(
                     controller: titleController,
-                    style: const TextStyle(color: Colors.white),
-                    decoration: const InputDecoration(
+                    style: const TextStyle(color: Colors.white, fontSize: 14),
+                    decoration: InputDecoration(
                       hintText: '予定のタイトル',
-                      hintStyle: TextStyle(color: Colors.white54),
-                      enabledBorder: UnderlineInputBorder(
-                        borderSide: BorderSide(color: Colors.white54),
-                      ),
-                      focusedBorder: UnderlineInputBorder(
+                      hintStyle: TextStyle(color: Colors.grey[600]),
+                      focusedBorder: const UnderlineInputBorder(
                         borderSide: BorderSide(color: Colors.amberAccent),
                       ),
                     ),
@@ -1114,8 +1109,9 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                             context: context,
                             initialTime: startTime,
                           );
-                          if (picked != null)
+                          if (picked != null) {
                             setDialogState(() => startTime = picked);
+                          }
                         },
                         child: Text(
                           "開始: ${startTime.format(context)}",
@@ -1131,8 +1127,9 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                             context: context,
                             initialTime: endTime,
                           );
-                          if (picked != null)
+                          if (picked != null) {
                             setDialogState(() => endTime = picked);
+                          }
                         },
                         child: Text(
                           "終了: ${endTime.format(context)}",
@@ -1165,13 +1162,14 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                 ],
               ),
               actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop('delete'),
-                  child: const Text(
-                    '削除',
-                    style: TextStyle(color: Colors.redAccent),
+                if (eventIndex != -1)
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop('delete'),
+                    child: const Text(
+                      '削除',
+                      style: TextStyle(color: Colors.redAccent),
+                    ),
                   ),
-                ),
                 const Spacer(),
                 TextButton(
                   onPressed: () => Navigator.of(context).pop(null),
@@ -1558,17 +1556,27 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
             });
 
             return AlertDialog(
+              backgroundColor: const Color.fromARGB(255, 22, 22, 22),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(15.0),
+              ),
               title: const Text(
-                '日曜の予定を追加',
-                style: TextStyle(fontFamily: 'misaki'),
+                '日曜の予定',
+                style: TextStyle(color: Colors.white, fontFamily: 'misaki'),
               ),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   TextField(
                     controller: titleController,
-                    style: const TextStyle(fontSize: 14),
-                    decoration: const InputDecoration(hintText: '予定のタイトル'),
+                    style: const TextStyle(color: Colors.white, fontSize: 14),
+                    decoration: InputDecoration(
+                      hintText: '予定のタイトル',
+                      hintStyle: TextStyle(color: Colors.grey[600]),
+                      focusedBorder: const UnderlineInputBorder(
+                        borderSide: BorderSide(color: Colors.amberAccent),
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 20),
                   Row(
@@ -1580,13 +1588,14 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                             context: context,
                             initialTime: startTime ?? TimeOfDay.now(),
                           );
-                          if (picked != null)
+                          if (picked != null) {
                             setDialogState(() => startTime = picked);
+                          }
                         },
                         child: Text(
                           "開始: ${startTime?.format(context) ?? '未選択'}",
                           style: const TextStyle(
-                            color: Colors.blue,
+                            color: Colors.amberAccent,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -1598,13 +1607,14 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                             initialTime:
                                 endTime ?? startTime ?? TimeOfDay.now(),
                           );
-                          if (picked != null)
+                          if (picked != null) {
                             setDialogState(() => endTime = picked);
+                          }
                         },
                         child: Text(
                           "終了: ${endTime?.format(context) ?? '未選択'}",
                           style: const TextStyle(
-                            color: Colors.blue,
+                            color: Colors.amberAccent,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -1614,9 +1624,15 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                   CheckboxListTile(
                     title: const Text(
                       "毎週の予定にする",
-                      style: TextStyle(fontFamily: 'misaki', fontSize: 13),
+                      style: TextStyle(
+                        fontFamily: 'misaki',
+                        fontSize: 13,
+                        color: Colors.white,
+                      ),
                     ),
                     value: isWeekly,
+                    activeColor: Colors.amberAccent,
+                    checkColor: Colors.black,
                     onChanged:
                         (bool? value) =>
                             setDialogState(() => isWeekly = value ?? false),
@@ -1628,19 +1644,18 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.of(context).pop(false),
-                  child: const Text('キャンセル'),
+                  child: const Text(
+                    'キャンセル',
+                    style: TextStyle(color: Colors.white70),
+                  ),
                 ),
                 TextButton(
-                  onPressed: () {
-                    if (titleController.text.isNotEmpty &&
-                        startTime != null &&
-                        endTime != null &&
-                        (endTime!.hour * 60 + endTime!.minute) >
-                            (startTime!.hour * 60 + startTime!.minute)) {
-                      Navigator.of(context).pop(true);
-                    }
-                  },
-                  child: const Text('保存'),
+                  onPressed:
+                      canSave ? () => Navigator.of(context).pop(true) : null,
+                  child: const Text(
+                    '保存',
+                    style: TextStyle(color: Colors.amberAccent),
+                  ),
                 ),
               ],
             );
@@ -1735,7 +1750,7 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                 selectedPolicy != initialPolicy;
 
             return AlertDialog(
-              backgroundColor: Colors.brown[50],
+              backgroundColor: const Color.fromARGB(255, 22, 22, 22),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(15.0),
               ),
@@ -1747,7 +1762,7 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                     style: TextStyle(
                       fontFamily: 'misaki',
                       fontSize: 16,
-                      color: Colors.brown[800],
+                      color: Colors.white,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -1757,7 +1772,7 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                     style: TextStyle(
                       fontFamily: 'misaki',
                       fontSize: 12,
-                      color: Colors.brown[600],
+                      color: Colors.grey[400],
                     ),
                   ),
                 ],
@@ -1772,15 +1787,18 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                       controller: noteController,
                       maxLines: 5,
                       minLines: 3,
-                      style: const TextStyle(fontSize: 14),
+                      style: const TextStyle(fontSize: 14, color: Colors.white),
                       decoration: InputDecoration(
                         hintText: '授業のメモをどうぞ...',
-                        hintStyle: TextStyle(color: Colors.brown[400]),
-                        border: OutlineInputBorder(
+                        hintStyle: TextStyle(color: Colors.grey[600]),
+                        enabledBorder: OutlineInputBorder(
+                          borderSide: BorderSide(color: Colors.grey[700]!),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         focusedBorder: OutlineInputBorder(
-                          borderSide: BorderSide(color: Colors.orange[700]!),
+                          borderSide: const BorderSide(
+                            color: Colors.amberAccent,
+                          ),
                           borderRadius: BorderRadius.circular(10),
                         ),
                       ),
@@ -1788,49 +1806,50 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                     CheckboxListTile(
                       title: const Text(
                         "毎週のメモにする",
-                        style: TextStyle(fontFamily: 'misaki', fontSize: 13),
+                        style: TextStyle(
+                          fontFamily: 'misaki',
+                          fontSize: 13,
+                          color: Colors.white,
+                        ),
                       ),
                       value: isWeekly,
+                      activeColor: Colors.amberAccent,
+                      checkColor: Colors.black,
                       onChanged:
                           (bool? value) =>
                               setDialogState(() => isWeekly = value ?? false),
                       controlAffinity: ListTileControlAffinity.leading,
                       contentPadding: EdgeInsets.zero,
                     ),
-                    const Divider(),
-                    const Padding(
-                      padding: EdgeInsets.only(
+                    const Divider(color: Color.fromARGB(255, 78, 78, 78)),
+                    Padding(
+                      padding: const EdgeInsets.only(
                         top: 8.0,
                         bottom: 8.0,
                         left: 4.0,
                       ),
                       child: Text(
                         "出席方針:",
-                        style: TextStyle(fontFamily: 'misaki', fontSize: 13),
+                        style: TextStyle(
+                          fontFamily: 'misaki',
+                          fontSize: 13,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
                     SegmentedButton<AttendancePolicy>(
                       segments: const <ButtonSegment<AttendancePolicy>>[
                         ButtonSegment<AttendancePolicy>(
                           value: AttendancePolicy.mandatory,
-                          label: Text(
-                            '毎回',
-                            style: TextStyle(fontFamily: 'misaki'),
-                          ),
+                          label: Text('毎回'),
                         ),
                         ButtonSegment<AttendancePolicy>(
                           value: AttendancePolicy.flexible,
-                          label: Text(
-                            '気分',
-                            style: TextStyle(fontFamily: 'misaki'),
-                          ),
+                          label: Text('気分'),
                         ),
                         ButtonSegment<AttendancePolicy>(
                           value: AttendancePolicy.skip,
-                          label: Text(
-                            '切る',
-                            style: TextStyle(fontFamily: 'misaki'),
-                          ),
+                          label: Text('切る'),
                         ),
                       ],
                       selected: {selectedPolicy},
@@ -1840,83 +1859,32 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                         );
                       },
                       style: SegmentedButton.styleFrom(
-                        backgroundColor: Colors.brown[100],
-                        selectedBackgroundColor: Colors.orange[300],
-                        selectedForegroundColor: Colors.white,
+                        backgroundColor: Colors.grey[800],
+                        foregroundColor: Colors.white70,
+                        selectedBackgroundColor: Colors.amberAccent,
+                        selectedForegroundColor: Colors.black,
                       ),
-                    ),
-                    // 出席確認
-                    Row(
-                      children: [
-                        Text('出席確認:'),
-                        DropdownButton<AttendanceStatus>(
-                          value: () {
-                            // ★★★ 新しい構造で出席状態を取得 ★★★
-                            if (entry?.courseId != null) {
-                              final date = DateFormat('yyyyMMdd').format(
-                                _displayedMonday.add(Duration(days: dayIndex)),
-                              );
-                              final currentStatusString = ref
-                                  .read(timetableProvider.notifier)
-                                  .getAttendanceStatus(entry!.courseId!, date);
-                              if (currentStatusString != null) {
-                                return AttendanceStatus.values.firstWhere(
-                                  (status) =>
-                                      status.toString() == currentStatusString,
-                                  orElse: () => AttendanceStatus.none,
-                                );
-                              }
-                            }
-                            return AttendanceStatus.none;
-                          }(),
-                          items:
-                              AttendanceStatus.values.map((status) {
-                                return DropdownMenuItem(
-                                  value: status,
-                                  child: Text(_attendanceStatusLabel(status)),
-                                );
-                              }).toList(),
-                          onChanged: (newStatus) {
-                            final TimetableEntry? currentEntry = entry;
-                            if (currentEntry == null ||
-                                newStatus == null ||
-                                currentEntry.courseId == null)
-                              return;
-                            setState(() {
-                              _setAttendanceStatus(
-                                oneTimeNoteKey,
-                                currentEntry.courseId!,
-                                newStatus,
-                              );
-                            });
-                            Navigator.pop(context); // 必要に応じて
-                          },
-                        ),
-                      ],
                     ),
                   ],
                 ),
               ),
               actions: <Widget>[
                 TextButton(
-                  child: Text(
+                  child: const Text(
                     'キャンセル',
-                    style: TextStyle(
-                      fontFamily: 'misaki',
-                      color: Colors.brown[600],
-                    ),
+                    style: TextStyle(color: Colors.white70),
                   ),
                   onPressed: () => Navigator.of(dialogContext).pop(false),
                 ),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.orange[700],
+                    backgroundColor: Colors.amberAccent,
+                    disabledBackgroundColor: Colors.grey[800],
                   ),
-                  child: const Text(
+                  child: Text(
                     '保存',
-                    style: TextStyle(fontFamily: 'misaki', color: Colors.white),
+                    style: TextStyle(fontFamily: 'misaki', color: Colors.black),
                   ),
-                  // ★★★ 変更があった場合のみボタンを有効化 ★★★
                   onPressed:
                       hasChanged
                           ? () => Navigator.of(dialogContext).pop(true)
