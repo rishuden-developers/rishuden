@@ -482,30 +482,44 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
           oneTimeNoteKey =
               "C_${dayIndex}_${periodIndex}_${DateFormat('yyyyMMdd').format(_displayedMonday.add(Duration(days: dayIndex)))}";
         }
-        final String weeklyNoteKey = "W_C_${dayIndex}_$periodIndex";
+        final String weeklyNoteKey;
+        if (entry.courseId != null) {
+          weeklyNoteKey = "W_${entry.courseId}";
+        } else {
+          // 後方互換性のため、courseIdがない場合は古い形式を使用
+          weeklyNoteKey = "W_C_${dayIndex}_$periodIndex";
+        }
 
-        // 週次メモが存在する場合は週次メモを優先表示
+        // ★★★ 修正：その日の特定のメモが存在する場合はそれを優先表示 ★★★
+        if (cellNotes.containsKey(oneTimeNoteKey)) {
+          return cellNotes[oneTimeNoteKey] ?? '';
+        }
+
+        // ★★★ その日の特定のメモが存在しない場合のみ、週次メモを表示 ★★★
         if (weeklyNotes.containsKey(weeklyNoteKey)) {
           return weeklyNotes[weeklyNoteKey] ?? '';
         }
 
-        // 週次メモが存在しない場合は、その週の特定の日付のメモのみを表示
-        return cellNotes[oneTimeNoteKey] ?? '';
+        return '';
       }
     }
 
     // フォールバック：古い形式のキーを使用
     final oneTimeNoteKey =
         "C_${dayIndex}_${periodIndex}_${DateFormat('yyyyMMdd').format(_displayedMonday.add(Duration(days: dayIndex)))}";
-    final weeklyNoteKey = "W_C_${dayIndex}_$periodIndex";
+    final String weeklyNoteKey = "W_C_${dayIndex}_$periodIndex";
 
-    // 週次メモが存在する場合は週次メモを優先表示
+    // ★★★ 修正：その日の特定のメモが存在する場合はそれを優先表示 ★★★
+    if (cellNotes.containsKey(oneTimeNoteKey)) {
+      return cellNotes[oneTimeNoteKey] ?? '';
+    }
+
+    // ★★★ その日の特定のメモが存在しない場合のみ、週次メモを表示 ★★★
     if (weeklyNotes.containsKey(weeklyNoteKey)) {
       return weeklyNotes[weeklyNoteKey] ?? '';
     }
 
-    // 週次メモが存在しない場合は、その週の特定の日付のメモのみを表示
-    return cellNotes[oneTimeNoteKey] ?? '';
+    return '';
   }
 
   void _setAttendanceStatus(
@@ -919,23 +933,38 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
     double totalHeight,
   ) {
     List<Widget> positionedWidgets = [];
-    final events = _weekdayEvents[dayIndex] ?? [];
-    const double timetableStartInMinutes = 8 * 60 + 50;
-    const double totalMinutesInTimetable = (20 * 60) - timetableStartInMinutes;
+    final double totalMinutes = (20 * 60 + 0) - (8 * 60 + 50);
 
-    for (int i = 0; i < events.length; i++) {
-      final event = events[i];
+    if (!_weekdayEvents.containsKey(dayIndex)) {
+      return positionedWidgets;
+    }
+
+    // ★★★ 表示する週の日付を取得 ★★★
+    final DateTime currentDay = _displayedMonday.add(Duration(days: dayIndex));
+
+    // ★★★ 毎週の予定と、今週の予定のみをフィルタリング ★★★
+    final List<Map<String, dynamic>> eventsToShow =
+        _weekdayEvents[dayIndex]!.where((event) {
+          if (event['isWeekly'] == true) {
+            return true; // 毎週の予定は常に表示
+          }
+          // isWeeklyでない場合は日付をチェック
+          final DateTime eventDate = event['date'];
+          return eventDate.year == currentDay.year &&
+              eventDate.month == currentDay.month &&
+              eventDate.day == currentDay.day;
+        }).toList();
+
+    for (var event in eventsToShow) {
       final TimeOfDay startTime = event['start'];
       final TimeOfDay endTime = event['end'];
       final String title = event['title'];
 
       final startMinutes =
-          (startTime.hour * 60 + startTime.minute) - timetableStartInMinutes;
-      final endMinutes =
-          (endTime.hour * 60 + endTime.minute) - timetableStartInMinutes;
-      final top = (startMinutes / totalMinutesInTimetable) * totalHeight;
-      final height =
-          ((endMinutes - startMinutes) / totalMinutesInTimetable) * totalHeight;
+          (startTime.hour * 60 + startTime.minute) - (8 * 60 + 50);
+      final endMinutes = (endTime.hour * 60 + endTime.minute) - (8 * 60 + 50);
+      final top = (startMinutes / totalMinutes) * totalHeight;
+      final height = ((endMinutes - startMinutes) / totalMinutes) * totalHeight;
       if (height <= 0) continue;
 
       const eventColor = Colors.amberAccent;
@@ -971,7 +1000,10 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
             // ★ InkWellで囲んでタップできるようにする
             onTap: () {
               // 新しい編集ダイアログを呼び出す
-              _showEditWeekdayEventDialog(dayIndex, i);
+              _showEditWeekdayEventDialog(
+                dayIndex,
+                eventsToShow.indexOf(event),
+              );
             },
             child: eventWidget,
           ),
@@ -997,8 +1029,25 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setDialogState) {
+            // ★★★ 変更検知ロジック ★★★
+            final isTitleValid = titleController.text.isNotEmpty;
+            final isTimeValid =
+                (endTime.hour * 60 + endTime.minute) >
+                (startTime.hour * 60 + startTime.minute);
+            final hasChanged =
+                titleController.text != eventToEdit['title'] ||
+                startTime != eventToEdit['start'] ||
+                endTime != eventToEdit['end'] ||
+                isWeekly != eventToEdit['isWeekly'];
+            final canSave = isTitleValid && isTimeValid && hasChanged;
+
+            // ★★★ テキスト変更時にUIを更新 ★★★
+            titleController.addListener(() {
+              setDialogState(() {});
+            });
+
             return AlertDialog(
-              backgroundColor: Colors.grey[900],
+              backgroundColor: const Color.fromARGB(255, 22, 22, 22),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(15.0),
                 side: BorderSide(color: Colors.amberAccent.withOpacity(0.5)),
@@ -1105,13 +1154,10 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                   ),
                 ),
                 TextButton(
-                  onPressed: () {
-                    if (titleController.text.isNotEmpty &&
-                        (endTime.hour * 60 + endTime.minute) >
-                            (startTime.hour * 60 + startTime.minute)) {
-                      Navigator.of(context).pop('update');
-                    }
-                  },
+                  onPressed:
+                      canSave
+                          ? () => Navigator.of(context).pop('update')
+                          : null,
                   child: const Text(
                     '保存',
                     style: TextStyle(color: Colors.amberAccent),
@@ -1397,6 +1443,20 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setDialogState) {
+            // ★★★ 変更を検知するためのロジックを追加 ★★★
+            final bool isTitleValid = titleController.text.isNotEmpty;
+            final bool isTimeValid =
+                startTime != null &&
+                endTime != null &&
+                (endTime!.hour * 60 + endTime!.minute) >
+                    (startTime!.hour * 60 + startTime!.minute);
+            final bool canSave = isTitleValid && isTimeValid;
+
+            // ★★★ テキストが変更されたときにUIを更新 ★★★
+            titleController.addListener(() {
+              setDialogState(() {});
+            });
+
             return AlertDialog(
               title: const Text(
                 '日曜の予定を追加',
@@ -1529,7 +1589,13 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
       oneTimeNoteKey =
           "C_${dayIndex}_${academicPeriodIndex}_${DateFormat('yyyyMMdd').format(_displayedMonday.add(Duration(days: dayIndex)))}";
     }
-    final String weeklyNoteKey = "W_C_${dayIndex}_$academicPeriodIndex";
+    final String weeklyNoteKey;
+    if (entry?.courseId != null) {
+      weeklyNoteKey = "W_${entry!.courseId}";
+    } else {
+      // 後方互換性のため、courseIdがない場合は古い形式を使用
+      weeklyNoteKey = "W_C_${dayIndex}_$academicPeriodIndex";
+    }
 
     final String initialText =
         cellNotes[oneTimeNoteKey] ?? weeklyNotes[weeklyNoteKey] ?? '';
@@ -1562,6 +1628,12 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
       builder: (BuildContext dialogContext) {
         return StatefulBuilder(
           builder: (context, setDialogState) {
+            // ★★★ 変更を検知するためのロジックを追加 ★★★
+            final bool hasChanged =
+                noteController.text != initialText ||
+                isWeekly != isInitiallyWeekly ||
+                selectedPolicy != initialPolicy;
+
             return AlertDialog(
               backgroundColor: Colors.brown[50],
               shape: RoundedRectangleBorder(
@@ -1730,7 +1802,11 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                     '保存',
                     style: TextStyle(fontFamily: 'misaki', color: Colors.white),
                   ),
-                  onPressed: () => Navigator.of(dialogContext).pop(true),
+                  // ★★★ 変更があった場合のみボタンを有効化 ★★★
+                  onPressed:
+                      hasChanged
+                          ? () => Navigator.of(dialogContext).pop(true)
+                          : null,
                 ),
               ],
             );
@@ -1743,22 +1819,31 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
       final currentEntry = entry;
       if (currentEntry != null) {
         final newText = noteController.text.trim();
+
+        // ★★★ メモ保存ロジックを全面的に修正 ★★★
+        final newCellNotes = Map<String, String>.from(cellNotes);
+        final newWeeklyNotes = Map<String, String>.from(weeklyNotes);
+
         if (newText.isEmpty) {
-          _updateCellNotes({...cellNotes}..remove(oneTimeNoteKey));
-          _updateWeeklyNotes({...weeklyNotes}..remove(weeklyNoteKey));
+          // テキストが空なら両方のメモを削除
+          newCellNotes.remove(oneTimeNoteKey);
+          newWeeklyNotes.remove(weeklyNoteKey);
         } else {
           if (isWeekly) {
-            _updateWeeklyNotes(
-              {...weeklyNotes, weeklyNoteKey: newText}..remove(oneTimeNoteKey),
-            );
-            _updateCellNotes({...cellNotes}..remove(oneTimeNoteKey));
+            // 「毎週」がオンの場合
+            newWeeklyNotes[weeklyNoteKey] = newText; // 週次メモとして保存
+            newCellNotes.remove(oneTimeNoteKey); // その日のメモは削除
           } else {
-            _updateCellNotes(
-              {...cellNotes, oneTimeNoteKey: newText}..remove(weeklyNoteKey),
-            );
-            _updateWeeklyNotes({...weeklyNotes}..remove(weeklyNoteKey));
+            // 「毎週」がオフの場合
+            newCellNotes[oneTimeNoteKey] = newText; // その日のメモとして保存
+            newWeeklyNotes.remove(weeklyNoteKey); // 週次メモは削除
           }
         }
+
+        // 更新されたマップでStateを更新
+        _updateCellNotes(newCellNotes);
+        _updateWeeklyNotes(newWeeklyNotes);
+
         if (currentEntry.courseId != null) {
           _updateAttendancePolicies({
             ...attendancePolicies,
