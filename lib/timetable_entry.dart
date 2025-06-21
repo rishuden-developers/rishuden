@@ -13,6 +13,7 @@ class TimetableEntry {
   final String id;
   final String subjectName;
   final String classroom;
+  final String originalLocation;
   final int dayOfWeek;
   final int period;
   final Color color;
@@ -38,6 +39,7 @@ class TimetableEntry {
     required this.id,
     required this.subjectName,
     required this.classroom,
+    required this.originalLocation,
     required this.dayOfWeek,
     required this.period,
     required this.date,
@@ -55,6 +57,7 @@ class TimetableEntry {
       'id': id,
       'subjectName': subjectName,
       'classroom': classroom,
+      'originalLocation': originalLocation,
       'dayOfWeek': dayOfWeek,
       'period': period,
       'date': date,
@@ -73,6 +76,8 @@ class TimetableEntry {
       id: map['id'],
       subjectName: map['subjectName'],
       classroom: map['classroom'],
+      originalLocation:
+          map['originalLocation'] as String? ?? map['classroom'] as String,
       dayOfWeek: map['dayOfWeek'],
       period: map['period'],
       date: map['date'],

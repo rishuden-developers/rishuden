@@ -6,6 +6,7 @@ import 'utils/course_pattern_detector.dart';
 import 'utils/course_color_generator.dart';
 import 'course_pattern.dart';
 import 'providers/timetable_provider.dart';
+import 'package:intl/intl.dart';
 
 class QuestCreationWidget extends ConsumerStatefulWidget {
   final void Function() onCancel;
@@ -466,12 +467,15 @@ class _QuestCreationWidgetState extends ConsumerState<QuestCreationWidget> {
                                   e.period == periodIndex + 1,
                               orElse:
                                   () => TimetableEntry(
-                                    id: 'empty',
-                                    subjectName: '',
+                                    id: 'default',
+                                    subjectName: '未選択',
                                     classroom: '',
-                                    dayOfWeek: dayIndex,
-                                    period: periodIndex + 1,
-                                    date: '',
+                                    originalLocation: '',
+                                    dayOfWeek: 0,
+                                    period: 0,
+                                    date: DateFormat(
+                                      'yyyy-MM-dd',
+                                    ).format(DateTime.now()),
                                   ),
                             );
 

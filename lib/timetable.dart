@@ -166,10 +166,70 @@ Future<List<TimetableEntry>> getWeeklyTimetableEntries(DateTime date) async {
     final String dateStr =
         '${eventDate.year}-${eventDate.month.toString().padLeft(2, '0')}-${eventDate.day.toString().padLeft(2, '0')}';
 
+    final description = ev['subject'] as String;
+    final location = ev['location'] as String;
+
+    // ★★★ 教室名を整形するロジックを強化 ★★★
+    String formattedLocation = '';
+    if (location.toLowerCase().contains('zoom') ||
+        location.toLowerCase().contains('webex') ||
+        location.toLowerCase().contains('online')) {
+      formattedLocation = 'オンライン';
+    } else {
+      // 1. 全角英数字を半角に変換
+      final normalizedLocation = location.replaceAllMapped(
+        RegExp(r'[Ａ-Ｚａ-ｚ０-９]'),
+        (Match m) => String.fromCharCode(m.group(0)!.codeUnitAt(0) - 0xFEE0),
+      );
+
+      // 2. 優先順位を付けた正規表現で教室名を抽出
+      final regex = RegExp(
+        r'(全教/豊中総合学館\d+)|' // ★特定のパターンを追加
+        r'([A-Z]+-?\d+)|' // A-101, C101など
+        r'(\w+総合学館\d+)|' // 豊中総合学館302 → 豊中302
+        r'(\d+号館-?\d+[a-zA-Z]?室?)|' // 5号館-201, 5号館201室など
+        r'(\w+教室|\w+実習室|\w+ホール|総合体育館|武道館)|' // 〇〇教室など
+        r'(\d+号館)|' // 5号館
+        r'\(([^)]+)\)|' // (A-101)など括弧の中身
+        r'(\b[A-Z]+\b)',
+      ); // KIC, OICなどの大文字の略称
+
+      final match = regex.firstMatch(normalizedLocation);
+
+      if (match != null) {
+        // マッチした部分（キャプチャグループ）を順番に探し、最初に見つかったものを採用
+        for (int i = 1; i <= match.groupCount; i++) {
+          if (match.group(i) != null) {
+            formattedLocation = match.group(i)!;
+            break;
+          }
+        }
+        if (formattedLocation.isEmpty) {
+          formattedLocation = match.group(0)!; // フォールバック
+        }
+
+        // ★★★ 特定の文字列を短縮する処理 ★★★
+        if (formattedLocation.startsWith('全教/豊中総合学館')) {
+          formattedLocation = formattedLocation.replaceAll('全教/豊中総合学館', '豊中');
+        } else if (formattedLocation.contains('総合学館')) {
+          formattedLocation = formattedLocation.replaceAll('総合学館', '');
+        }
+      } else {
+        // 3. マッチしない場合のフォールバック（不要な部分を削除）
+        formattedLocation =
+            normalizedLocation
+                .replaceAll(RegExp(r'【.*】'), '')
+                .replaceAll(RegExp(r'全教/共|OIC |BKC |KIC '), '')
+                .replaceAll(RegExp(r'\(.*?\)'), '')
+                .trim();
+      }
+    }
+
     final info = TimetableEntry(
       id: '${weekday * 10 + period}', // IDは曜日と時限の組み合わせ
-      subjectName: ev['subject'] as String,
-      classroom: ev['location'] as String,
+      subjectName: description,
+      classroom: formattedLocation, // ★★★ 整形した教室名を使用 ★★★
+      originalLocation: location, // ★★★ 整形前の正式名称を保存 ★★★
       dayOfWeek: weekday, // 曜日（0=月曜, 6=日曜）
       period: period, // 時限（1〜6）
       date: dateStr,

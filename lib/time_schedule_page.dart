@@ -1739,14 +1739,28 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(15.0),
               ),
-              title: Text(
-                "${_days[dayIndex]}曜 ${academicPeriodIndex! + 1}限",
-                style: TextStyle(
-                  fontFamily: 'misaki',
-                  fontSize: 16,
-                  color: Colors.brown[800],
-                  fontWeight: FontWeight.bold,
-                ),
+              title: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "${_days[dayIndex]}曜 ${academicPeriodIndex! + 1}限",
+                    style: TextStyle(
+                      fontFamily: 'misaki',
+                      fontSize: 16,
+                      color: Colors.brown[800],
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    "${entry?.subjectName ?? ''} (${entry?.originalLocation ?? ''})",
+                    style: TextStyle(
+                      fontFamily: 'misaki',
+                      fontSize: 12,
+                      color: Colors.brown[600],
+                    ),
+                  ),
+                ],
               ),
               contentPadding: const EdgeInsets.fromLTRB(20, 15, 20, 0),
               content: SingleChildScrollView(
