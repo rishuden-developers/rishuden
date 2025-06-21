@@ -3,9 +3,8 @@ import 'package:icalendar_parser/icalendar_parser.dart';
 import 'dart:convert';
 import 'timetable_entry.dart';
 import 'package:flutter/material.dart';
-
-final urlStr =
-    "https://g-calendar.koan.osaka-u.ac.jp/calendar/40cf6f8c7f9a1f4b07f787548d9d0007cb87f96a-J.ics";
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 // dateを含む週の月曜日と日曜日のDateTimeを計算する関数
 DateTime _getThisMonday(DateTime date) {
@@ -53,7 +52,33 @@ int _getClassPeriodNumber(DateTime start) {
 
 /// 今週のイベントをリストで返す（曜日・時限順ソート済み）
 Future<List<Map<String, dynamic>>> _getWeeklyEventList(DateTime date) async {
-  final url = Uri.parse(urlStr);
+  final user = FirebaseAuth.instance.currentUser;
+  if (user == null) {
+    print('Error: User not logged in for timetable.');
+    return [];
+  }
+
+  String calendarUrl = '';
+  try {
+    final userDoc =
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
+    if (userDoc.exists && userDoc.data()!.containsKey('calendarUrl')) {
+      calendarUrl = userDoc.data()!['calendarUrl'] as String? ?? '';
+    }
+  } catch (e) {
+    print('Error fetching calendar URL from Firestore: $e');
+    return [];
+  }
+
+  if (calendarUrl.isEmpty || !Uri.parse(calendarUrl).isAbsolute) {
+    print('Calendar URL is empty or invalid: $calendarUrl');
+    return [];
+  }
+
+  final url = Uri.parse(calendarUrl);
 
   final res = await http.get(url);
   if (res.statusCode != 200) {

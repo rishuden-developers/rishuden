@@ -269,8 +269,151 @@ class _ParkPageState extends ConsumerState<ParkPage> {
     await _loadQuestsFromFirestore();
   }
 
+  void _showOztechDialog(BuildContext context) {
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: 'Close',
+      barrierColor: Colors.black.withOpacity(0.6),
+      transitionDuration: const Duration(milliseconds: 300),
+      pageBuilder: (ctx, anim1, anim2) {
+        return Center(
+          child: Material(
+            type: MaterialType.transparency,
+            child: ScaleTransition(
+              scale: anim1,
+              child: FadeTransition(
+                opacity: anim1,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(15.0),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
+                    child: Container(
+                      width: MediaQuery.of(context).size.width * 0.85,
+                      padding: const EdgeInsets.all(24.0),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(15.0),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.3),
+                        ),
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text(
+                            '学生団体 OZTECH', // ★ タイトルを変更
+                            style: TextStyle(
+                              fontFamily: 'misaki',
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          const Text(
+                            '★★★ ここに学生団体の紹介文を入れてください ★★★\n\n例：OZTECHは、学生の技術力向上と交流を目的とした団体です。アプリ開発や勉強会を定期的に開催しています。',
+                            style: TextStyle(
+                              fontFamily: 'misaki',
+                              fontSize: 16,
+                              color: Colors.white,
+                              height: 1.5,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 24),
+                          ElevatedButton(
+                            onPressed: () => Navigator.of(ctx).pop(),
+                            child: const Text('閉じる'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // 2. 開発サークルロゴ用のダイアログ
+  void _showPotiPotiDialog(BuildContext context) {
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: 'Close',
+      barrierColor: Colors.black.withOpacity(0.6),
+      transitionDuration: const Duration(milliseconds: 300),
+      pageBuilder: (ctx, anim1, anim2) {
+        return Center(
+          child: Material(
+            type: MaterialType.transparency,
+            child: ScaleTransition(
+              scale: anim1,
+              child: FadeTransition(
+                opacity: anim1,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(15.0),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
+                    child: Container(
+                      width: MediaQuery.of(context).size.width * 0.85,
+                      padding: const EdgeInsets.all(24.0),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(15.0),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.3),
+                        ),
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text(
+                            '開発サークル ぽちぽち', // ★ タイトルを変更
+                            style: TextStyle(
+                              fontFamily: 'misaki',
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          const Text(
+                            '★★★ ここに開発サークルの紹介文を入れてください ★★★\n\n例：このアプリ「履修伝説」を開発している、ゲーム好きが集まるサークルです。いつでもメンバー募集中！',
+                            style: TextStyle(
+                              fontFamily: 'misaki',
+                              fontSize: 16,
+                              color: Colors.white,
+                              height: 1.5,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 24),
+                          ElevatedButton(
+                            onPressed: () => Navigator.of(ctx).pop(),
+                            child: const Text('閉じる'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    // Riverpodから時間割データを取得
+    final timetableAsyncValue = ref.watch(timetableProvider);
     final screenHeight = MediaQuery.of(context).size.height;
     final screenWidth = MediaQuery.of(context).size.width;
     final double topBarHeight = screenHeight * 0.08;
@@ -444,6 +587,44 @@ class _ParkPageState extends ConsumerState<ParkPage> {
                 )
               else
                 _buildRpgMessageBox(),
+              Positioned(
+                right: 115,
+                top: 0,
+                child: GestureDetector(
+                  onTap: () => _showOztechDialog(context),
+                  child: Opacity(
+                    opacity: 1.0,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12.0),
+                      child: Image.asset(
+                        'assets/oztech.png',
+                        width: logoSize,
+                        height: logoSize,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                right: 50,
+                top: 0,
+                child: GestureDetector(
+                  onTap: () => _showPotiPotiDialog(context),
+                  child: Opacity(
+                    opacity: 1.0,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12.0),
+                      child: Image.asset(
+                        'assets/potipoti.png',
+                        width: logoSize,
+                        height: logoSize,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             ],
           ),
         ),

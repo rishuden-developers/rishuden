@@ -35,7 +35,8 @@ class CreditResultPage extends StatefulWidget {
   final String? filterTag; // タグフィルター
   final String? filterCategory; // 種類フィルター (必修/選択)
   final String? filterDayOfWeek; // 曜日フィルター
-  final String? rankingType; // ランキングの種類 ('easiness', 'satisfaction', 'faculty_specific')
+  final String?
+  rankingType; // ランキングの種類 ('easiness', 'satisfaction', 'faculty_specific')
 
   const CreditResultPage({
     super.key,
@@ -141,41 +142,46 @@ class _CreditResultPageState extends State<CreditResultPage> {
   }
 
   void _applyFiltersAndRankings() {
-    _filteredLectures = _allLectures.where((lecture) {
-      bool matches = true;
+    _filteredLectures =
+        _allLectures.where((lecture) {
+          bool matches = true;
 
-      // 検索クエリフィルター
-      if (widget.searchQuery != null && widget.searchQuery!.isNotEmpty) {
-        final query = widget.searchQuery!.toLowerCase();
-        matches = matches &&
-            (lecture.name.toLowerCase().contains(query) ||
-                lecture.teacher.toLowerCase().contains(query));
-      }
+          // 検索クエリフィルター
+          if (widget.searchQuery != null && widget.searchQuery!.isNotEmpty) {
+            final query = widget.searchQuery!.toLowerCase();
+            matches =
+                matches &&
+                (lecture.name.toLowerCase().contains(query) ||
+                    lecture.teacher.toLowerCase().contains(query));
+          }
 
-      // 学部フィルター
-      if (widget.filterFaculty != null && widget.filterFaculty!.isNotEmpty) {
-        matches = matches && lecture.faculty == widget.filterFaculty;
-      }
+          // 学部フィルター
+          if (widget.filterFaculty != null &&
+              widget.filterFaculty!.isNotEmpty) {
+            matches = matches && lecture.faculty == widget.filterFaculty;
+          }
 
-      // TODO: ここにタグ、カテゴリ、曜日のフィルタリングロジックを追加
-      // 現在のLectureResultにはこれらのプロパティがないため、ダミーデータと合わせて追加が必要です。
-      // 例: if (widget.filterTag != null && lecture.tags.contains(widget.filterTag))
+          // TODO: ここにタグ、カテゴリ、曜日のフィルタリングロジックを追加
+          // 現在のLectureResultにはこれらのプロパティがないため、ダミーデータと合わせて追加が必要です。
+          // 例: if (widget.filterTag != null && lecture.tags.contains(widget.filterTag))
 
-      return matches;
-    }).toList();
+          return matches;
+        }).toList();
 
     // ランキングの適用
     if (widget.rankingType != null) {
       if (widget.rankingType == 'easiness') {
         _filteredLectures.sort((a, b) => b.easiness.compareTo(a.easiness));
       } else if (widget.rankingType == 'satisfaction') {
-        _filteredLectures
-            .sort((a, b) => b.overallSatisfaction.compareTo(a.overallSatisfaction));
+        _filteredLectures.sort(
+          (a, b) => b.overallSatisfaction.compareTo(a.overallSatisfaction),
+        );
       } else if (widget.rankingType == 'faculty_specific') {
         // 学部フィルターは既に適用されているので、ここではランキングのみ
         // 例えば、満足度順にソート
-        _filteredLectures
-            .sort((a, b) => b.overallSatisfaction.compareTo(a.overallSatisfaction));
+        _filteredLectures.sort(
+          (a, b) => b.overallSatisfaction.compareTo(a.overallSatisfaction),
+        );
       }
     }
   }
@@ -189,7 +195,8 @@ class _CreditResultPageState extends State<CreditResultPage> {
       return '総合満足度ランキング';
     } else if (widget.rankingType == 'faculty_specific') {
       return '${widget.filterFaculty ?? '全学部'} 注目授業';
-    } else if (widget.filterFaculty != null && widget.filterFaculty!.isNotEmpty) {
+    } else if (widget.filterFaculty != null &&
+        widget.filterFaculty!.isNotEmpty) {
       return '${widget.filterFaculty} の講義';
     }
     return '講義一覧';
@@ -215,130 +222,144 @@ class _CreditResultPageState extends State<CreditResultPage> {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      bottomNavigationBar: CommonBottomNavigation(),
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [
-              Colors.indigo[800]!,
-              Colors.indigo[600]!,
-            ],
+            colors: [Colors.indigo[800]!, Colors.indigo[600]!],
           ),
         ),
         child: SafeArea(
           child: Padding(
             padding: const EdgeInsets.all(16.0),
-            child: _filteredLectures.isEmpty
-                ? Center(
-                    child: Text(
-                      widget.searchQuery != null && widget.searchQuery!.isNotEmpty
-                          ? '「${widget.searchQuery}」に一致する講義は見つかりませんでした。'
-                          : '講義が見つかりませんでした。',
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(fontSize: 18, color: Colors.white70),
-                    ),
-                  )
-                : ListView.builder(
-                    itemCount: _filteredLectures.length,
-                    itemBuilder: (context, index) {
-                      final lecture = _filteredLectures[index];
-                      return Card(
-                        margin: const EdgeInsets.symmetric(vertical: 8.0),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(15),
+            child:
+                _filteredLectures.isEmpty
+                    ? Center(
+                      child: Text(
+                        widget.searchQuery != null &&
+                                widget.searchQuery!.isNotEmpty
+                            ? '「${widget.searchQuery}」に一致する講義は見つかりませんでした。'
+                            : '講義が見つかりませんでした。',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          color: Colors.white70,
                         ),
-                        elevation: 5,
-                        color: Colors.white,
-                        child: InkWell(
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => CreditReviewPage(
-                                  lectureName: lecture.name,
-                                  teacherName: lecture.teacher,
-                                  initialDescription: lecture.description,
-                                  initialOverallSatisfaction: lecture.overallSatisfaction,
-                                  initialEasiness: lecture.easiness,
-                                ),
-                              ),
-                            );
-                          },
-                          child: Padding(
-                            padding: const EdgeInsets.all(16.0),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  lecture.name,
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.indigo[900],
-                                    fontFamily: 'NotoSansJP',
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  lecture.teacher,
-                                  style: TextStyle(
-                                    fontSize: 15,
-                                    color: Colors.grey[700],
-                                    fontFamily: 'NotoSansJP',
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                Row(
-                                  children: [
-                                    RatingBarIndicator(
-                                      rating: lecture.overallSatisfaction,
-                                      itemBuilder: (context, index) => const Icon(
-                                        Icons.star,
-                                        color: Colors.amber,
+                      ),
+                    )
+                    : ListView.builder(
+                      itemCount: _filteredLectures.length,
+                      itemBuilder: (context, index) {
+                        final lecture = _filteredLectures[index];
+                        return Card(
+                          margin: const EdgeInsets.symmetric(vertical: 8.0),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(15),
+                          ),
+                          elevation: 5,
+                          color: Colors.white,
+                          child: InkWell(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder:
+                                      (context) => CreditReviewPage(
+                                        lectureName: lecture.name,
+                                        teacherName: lecture.teacher,
+                                        initialDescription: lecture.description,
+                                        initialOverallSatisfaction:
+                                            lecture.overallSatisfaction,
+                                        initialEasiness: lecture.easiness,
                                       ),
-                                      itemCount: 5,
-                                      itemSize: 20.0,
-                                      direction: Axis.horizontal,
+                                ),
+                              );
+                            },
+                            child: Padding(
+                              padding: const EdgeInsets.all(16.0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    lecture.name,
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.indigo[900],
+                                      fontFamily: 'NotoSansJP',
                                     ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      lecture.overallSatisfaction.toStringAsFixed(1),
-                                      style: const TextStyle(
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    lecture.teacher,
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      color: Colors.grey[700],
+                                      fontFamily: 'NotoSansJP',
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Row(
+                                    children: [
+                                      RatingBarIndicator(
+                                        rating: lecture.overallSatisfaction,
+                                        itemBuilder:
+                                            (context, index) => const Icon(
+                                              Icons.star,
+                                              color: Colors.amber,
+                                            ),
+                                        itemCount: 5,
+                                        itemSize: 20.0,
+                                        direction: Axis.horizontal,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        lecture.overallSatisfaction
+                                            .toStringAsFixed(1),
+                                        style: const TextStyle(
                                           fontSize: 16,
                                           fontWeight: FontWeight.bold,
-                                          color: Colors.deepOrange),
-                                    ),
-                                    const SizedBox(width: 16),
-                                    const Icon(Icons.sentiment_satisfied,
-                                        color: Colors.lightGreen, size: 18),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      '楽単度: ${lecture.easiness.toStringAsFixed(1)}',
-                                      style: const TextStyle(fontSize: 14, color: Colors.black87),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 8),
-                                Align(
-                                  alignment: Alignment.bottomRight,
-                                  child: Text(
-                                    'レビュー数: ${lecture.reviewCount}件',
-                                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                                          color: Colors.deepOrange,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 16),
+                                      const Icon(
+                                        Icons.sentiment_satisfied,
+                                        color: Colors.lightGreen,
+                                        size: 18,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        '楽単度: ${lecture.easiness.toStringAsFixed(1)}',
+                                        style: const TextStyle(
+                                          fontSize: 14,
+                                          color: Colors.black87,
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                ),
-                              ],
+                                  const SizedBox(height: 8),
+                                  Align(
+                                    alignment: Alignment.bottomRight,
+                                    child: Text(
+                                      'レビュー数: ${lecture.reviewCount}件',
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.grey,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
-                        ),
-                      );
-                    },
-                  ),
+                        );
+                      },
+                    ),
           ),
         ),
       ),
     );
   }
-  }
-  
+}

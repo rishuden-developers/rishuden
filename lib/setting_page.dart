@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'common_bottom_navigation.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class SettingPage extends StatefulWidget {
   const SettingPage({super.key});
@@ -20,36 +21,79 @@ class _SettingPageState extends State<SettingPage> {
   }
 
   Future<void> _loadCurrentUrl() async {
-    final prefs = await SharedPreferences.getInstance();
-    final url = prefs.getString('koanScheduleUrl') ?? '';
-    setState(() {
-      _currentUrl = url;
-      _urlController.text = url;
-    });
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      print('Error: User not logged in for settings.');
+      return;
+    }
+
+    try {
+      final userDoc =
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .get();
+
+      if (userDoc.exists && userDoc.data()!.containsKey('calendarUrl')) {
+        final url = userDoc.data()!['calendarUrl'] as String? ?? '';
+        setState(() {
+          _currentUrl = url;
+          _urlController.text = url;
+        });
+      }
+    } catch (e) {
+      print('Error fetching calendar URL from Firestore: $e');
+    }
   }
 
   Future<void> _saveUrl() async {
-    final url = _urlController.text.trim();
-    if (url.isNotEmpty && url.contains('koan.osaka-u.ac.jp')) {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('koanScheduleUrl', url);
-
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('スケジュールURLを保存しました！'),
-            backgroundColor: Colors.green,
+            content: Text('ログインが必要です'),
+            backgroundColor: Colors.red,
           ),
         );
-        setState(() {
-          _currentUrl = url;
-        });
+      }
+      return;
+    }
+
+    final url = _urlController.text.trim();
+    if (url.isNotEmpty) {
+      try {
+        await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+          'calendarUrl': url,
+        }, SetOptions(merge: true));
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('カレンダーURLを保存しました！'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          setState(() {
+            _currentUrl = url;
+          });
+        }
+      } catch (e) {
+        print('Error saving calendar URL to Firestore: $e');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('保存に失敗しました'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
       }
     } else {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('正しいKOANのURLを入力してください'),
+            content: Text('URLを入力してください'),
             backgroundColor: Colors.red,
           ),
         );
@@ -105,7 +149,7 @@ class _SettingPageState extends State<SettingPage> {
                             Icon(Icons.schedule, color: Colors.indigo[800]),
                             const SizedBox(width: 8),
                             Text(
-                              'KOANのスケジュール設定',
+                              'カレンダーURL設定',
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
@@ -116,7 +160,7 @@ class _SettingPageState extends State<SettingPage> {
                         ),
                         const SizedBox(height: 16),
                         const Text(
-                          'あなたのKOANのスケジュールを表示するために、以下の手順でURLを取得してください：',
+                          '時間割を表示するために、iCal形式のカレンダーURLを設定してください：',
                           style: TextStyle(fontSize: 14),
                         ),
                         const SizedBox(height: 12),
@@ -127,9 +171,9 @@ class _SettingPageState extends State<SettingPage> {
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: const Text(
-                            '1. 大阪大学KOANにログイン\n'
-                            '2. スケジュール画面を開く\n'
-                            '3. 「カレンダー」タブをクリック\n'
+                            '1. 大学のシステム（KOAN等）にログイン\n'
+                            '2. スケジュール/時間割画面を開く\n'
+                            '3. 「カレンダー」または「iCal」タブをクリック\n'
                             '4. 「iCal」ボタンをクリック\n'
                             '5. 表示されたURLをコピー',
                             style: TextStyle(
@@ -142,9 +186,8 @@ class _SettingPageState extends State<SettingPage> {
                         TextField(
                           controller: _urlController,
                           decoration: const InputDecoration(
-                            labelText: 'KOANのスケジュールURL',
-                            hintText:
-                                'https://g-calendar.koan.osaka-u.ac.jp/calendar/...',
+                            labelText: 'カレンダーURL',
+                            hintText: 'https://example.com/calendar/...',
                             border: OutlineInputBorder(),
                           ),
                           maxLines: 3,
@@ -219,7 +262,7 @@ class _SettingPageState extends State<SettingPage> {
                                     ),
                                     const SizedBox(width: 8),
                                     Text(
-                                      '現在のURL',
+                                      '現在のカレンダーURL',
                                       style: TextStyle(
                                         fontSize: 12,
                                         fontWeight: FontWeight.bold,
@@ -290,7 +333,6 @@ class _SettingPageState extends State<SettingPage> {
           ),
         ),
       ),
-      bottomNavigationBar: const CommonBottomNavigation(),
     );
   }
 
