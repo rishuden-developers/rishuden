@@ -82,6 +82,7 @@ class _ParkPageState extends ConsumerState<ParkPage> {
     _loadTakoyakiStatus();
     _loadCharacterInfoFromFirebase();
     _loadQuestsFromFirestore();
+    _loadUserDataFromFirebase();
   }
 
   @override
@@ -120,6 +121,9 @@ class _ParkPageState extends ConsumerState<ParkPage> {
       _takoyakiCount += 10;
       _isTakoyakiClaimed = true;
     });
+
+    // Firebaseにたこ焼き数を保存
+    await _saveTakoyakiCountToFirebase();
 
     final prefs = await SharedPreferences.getInstance();
     final String todayKey =
@@ -184,6 +188,9 @@ class _ParkPageState extends ConsumerState<ParkPage> {
       }
       _quests.removeWhere((quest) => quest['id'] == questId);
     });
+
+    // Firebaseにたこ焼き数を保存
+    await _saveTakoyakiCountToFirebase();
   }
 
   Future<void> _loadCharacterInfoFromFirebase() async {
@@ -452,6 +459,7 @@ class _ParkPageState extends ConsumerState<ParkPage> {
                       key: _gaugeKey,
                       width: screenWidth * 0.28,
                       height: topBarHeight * 0.70,
+                      onExpChanged: _saveExpAndLevelToFirebase,
                     ),
                   ],
                 ),
@@ -961,6 +969,92 @@ class _ParkPageState extends ConsumerState<ParkPage> {
   String _formatDeadline(Timestamp deadline) {
     // This is a placeholder. You'll need a proper countdown logic.
     return DateFormat('MM/dd HH:mm').format(deadline.toDate());
+  }
+
+  // ★★★ ユーザーデータ（たこ焼き、EXP、レベル）をFirebaseから読み込み ★★★
+  Future<void> _loadUserDataFromFirebase() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        final doc =
+            await FirebaseFirestore.instance
+                .collection('users')
+                .doc(user.uid)
+                .get();
+        if (doc.exists) {
+          final data = doc.data() as Map<String, dynamic>;
+          if (!mounted) return;
+          setState(() {
+            _takoyakiCount = data['takoyakiCount'] ?? 13800;
+          });
+          // EXPとレベルも読み込み
+          final currentExp = data['currentExp'] ?? 0;
+          final currentLevel = data['currentLevel'] ?? 1;
+          final expForNextLevel = data['expForNextLevel'] ?? 100;
+          _gaugeKey.currentState?.loadFromFirebase(
+            currentExp,
+            currentLevel,
+            expForNextLevel,
+          );
+
+          // デフォルト値が設定されていない場合は保存
+          if (data['takoyakiCount'] == null ||
+              data['currentExp'] == null ||
+              data['currentLevel'] == null) {
+            await _saveTakoyakiCountToFirebase();
+            await _saveExpAndLevelToFirebase(
+              currentExp,
+              currentLevel,
+              expForNextLevel,
+            );
+          }
+        } else {
+          // ユーザードキュメントが存在しない場合はデフォルト値を保存
+          await _saveTakoyakiCountToFirebase();
+          await _saveExpAndLevelToFirebase(0, 1, 100);
+        }
+      }
+    } catch (e) {
+      print('Error loading user data from Firebase: $e');
+    }
+  }
+
+  // ★★★ たこ焼き数をFirebaseに保存 ★★★
+  Future<void> _saveTakoyakiCountToFirebase() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .update({'takoyakiCount': _takoyakiCount});
+      }
+    } catch (e) {
+      print('Error saving takoyaki count to Firebase: $e');
+    }
+  }
+
+  // ★★★ EXPとレベルをFirebaseに保存 ★★★
+  Future<void> _saveExpAndLevelToFirebase(
+    int currentExp,
+    int currentLevel,
+    int expForNextLevel,
+  ) async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .update({
+              'currentExp': currentExp,
+              'currentLevel': currentLevel,
+              'expForNextLevel': expForNextLevel,
+            });
+      }
+    } catch (e) {
+      print('Error saving EXP and level to Firebase: $e');
+    }
   }
 }
 

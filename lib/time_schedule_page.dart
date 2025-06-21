@@ -31,6 +31,9 @@ class TimeSchedulePage extends ConsumerStatefulWidget {
 }
 
 class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
+  late PageController _pageController;
+  static const int _initialPage = 5000; // 無限スクロールのための開始ページ
+
   final List<String> _days = const ['月', '火', '水', '木', '金', '土', '日'];
   final int _academicPeriods = 6;
   String _mainCharacterName = 'キャラクター';
@@ -124,30 +127,34 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
 
   // 時間割データを読み込み
   void _loadTimetableData() {
+    print('Loading timetable data from Firebase...');
     ref.read(timetableProvider.notifier).loadFromFirestore();
   }
 
   @override
   void initState() {
     super.initState();
+    _pageController = PageController(initialPage: _initialPage);
     _loadTimetableData();
-    final now = DateTime.now();
-    _displayedMonday = now.subtract(Duration(days: now.weekday - 1));
-    final tuesdayDate = _displayedMonday.add(const Duration(days: 1));
-    final cancellationKey = "14_${DateFormat('yyyyMMdd').format(tuesdayDate)}";
-    _cancellations = {cancellationKey};
-    _initializeTimetableGrid(now);
-    _updateWeekDates();
     _updateHighlight();
     _highlightTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
-      _updateHighlight();
+      if (mounted) {
+        _updateHighlight();
+      }
     });
   }
 
+  bool _isInitialWeekLoaded = false;
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    if (!_isInitialWeekLoaded) {
+      _changeWeek(_initialPage);
+      _isInitialWeekLoaded = true;
+    }
     _fetchCharacterInfoFromFirebase();
+    // ホットリロード時にもデータを再読み込み
+    _loadTimetableData();
   }
 
   Future<void> _fetchCharacterInfoFromFirebase() async {
@@ -176,7 +183,21 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
   @override
   void dispose() {
     _highlightTimer?.cancel();
+    _pageController.dispose();
     super.dispose();
+  }
+
+  // ★週を変更するためのメソッド
+  void _changeWeek(int page) {
+    setState(() {
+      final weekOffset = page - _initialPage;
+      final today = DateTime.now();
+      _displayedMonday = today
+          .subtract(Duration(days: today.weekday - 1))
+          .add(Duration(days: weekOffset * 7));
+      _initializeTimetableGrid(_displayedMonday);
+      _updateWeekDates();
+    });
   }
 
   Future<void> _initializeTimetableGrid(DateTime weekStart) async {
@@ -1730,61 +1751,6 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
     return eventCells;
   }
 
-  Widget _buildNewTimetableHeader() {
-    return Row(
-      children: [
-        SizedBox(width: _timeColumnWidth), // ★ 変数を使用
-        Expanded(
-          child: Row(
-            children: List.generate(7, (dayIndex) {
-              final isSunday = dayIndex == 6;
-              return Expanded(
-                flex: 1,
-                child: Container(
-                  margin: const EdgeInsets.all(1.5),
-                  height: 40,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 4.0,
-                  ), // ★ 左右にパディングを追加
-                  child: Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          _days[dayIndex],
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12,
-                            fontFamily: 'misaki',
-                            color: isSunday ? Colors.red[300] : Colors.white,
-                            shadows: const [
-                              Shadow(color: Colors.black45, blurRadius: 2),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          _dayDates.isNotEmpty ? _dayDates[dayIndex] : "",
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontFamily: 'misaki',
-                            color: isSunday ? Colors.red[200] : Colors.white70,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              );
-            }),
-          ),
-        ),
-      ],
-    );
-  }
-
-  // ★★★ このメソッドを、以下の完成版に丸ごと置き換えてください ★★★
-
   // ★★★ このメソッドを、以下の完成版に丸ごと置き換えてください ★★★
   Widget _buildNewContinuousTimeColumn({
     required double periodRowHeight,
@@ -1963,6 +1929,105 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
     );
   }
 
+  // 新しいデザインの時間割ヘッダー（日付と曜日）
+  Widget _buildNewTimetableHeader() {
+    return Row(
+      children: [
+        SizedBox(width: _timeColumnWidth), // ★ 変数を使用
+        Expanded(
+          child: Row(
+            children: List.generate(7, (dayIndex) {
+              final isSunday = dayIndex == 6;
+              return Expanded(
+                flex: 1,
+                child: Container(
+                  margin: const EdgeInsets.all(1.5),
+                  height: 40,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 4.0,
+                  ), // ★ 左右にパディングを追加
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          _days[dayIndex],
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                            fontFamily: 'misaki',
+                            color: isSunday ? Colors.red[300] : Colors.white,
+                            shadows: const [
+                              Shadow(color: Colors.black45, blurRadius: 2),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          _dayDates.isNotEmpty ? _dayDates[dayIndex] : "",
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontFamily: 'misaki',
+                            color: isSunday ? Colors.red[200] : Colors.white70,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ★週選択UI
+  Widget _buildWeekSelector() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          IconButton(
+            icon: const Icon(
+              Icons.arrow_back_ios,
+              color: Colors.white,
+              size: 18,
+            ),
+            onPressed:
+                () => _pageController.previousPage(
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeOut,
+                ),
+          ),
+          Text(
+            _weekDateRange,
+            style: const TextStyle(
+              fontSize: 18.0,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+              shadows: [Shadow(color: Colors.black45, blurRadius: 2)],
+            ),
+          ),
+          IconButton(
+            icon: const Icon(
+              Icons.arrow_forward_ios,
+              color: Colors.white,
+              size: 18,
+            ),
+            onPressed:
+                () => _pageController.nextPage(
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeOut,
+                ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     const double bottomPaddingForNavBar = 100.0;
@@ -1982,51 +2047,62 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
               padding: const EdgeInsets.symmetric(horizontal: 8.0),
               child: Column(
                 children: [
+                  _buildWeekSelector(),
                   _buildNewTimetableHeader(),
                   Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.only(top: 4.0, bottom: 8.0),
-                      child: LayoutBuilder(
-                        builder: (context, constraints) {
-                          final availableHeight = constraints.maxHeight;
-                          final dynamicRowHeight = availableHeight / 8.0;
+                    child: PageView.builder(
+                      controller: _pageController,
+                      onPageChanged: _changeWeek,
+                      itemBuilder: (context, page) {
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 4.0, bottom: 8.0),
+                          child: LayoutBuilder(
+                            builder: (context, constraints) {
+                              final availableHeight = constraints.maxHeight;
+                              final dynamicRowHeight = availableHeight / 8.0;
 
-                          return Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _buildNewContinuousTimeColumn(
-                                periodRowHeight: dynamicRowHeight,
-                                lunchRowHeight: dynamicRowHeight,
-                              ),
-                              Expanded(
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(12),
-                                  child: BackdropFilter(
-                                    filter: ImageFilter.blur(
-                                      sigmaX: 4.0,
-                                      sigmaY: 4.0,
-                                    ),
-                                    child: Container(
-                                      decoration: BoxDecoration(
-                                        color: Colors.black.withOpacity(0.3),
-                                        borderRadius: BorderRadius.circular(12),
-                                        border: Border.all(
-                                          color: Colors.grey[800]!,
-                                          width: 1.0,
+                              return Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  _buildNewContinuousTimeColumn(
+                                    periodRowHeight: dynamicRowHeight,
+                                    lunchRowHeight: dynamicRowHeight,
+                                  ),
+                                  Expanded(
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(12),
+                                      child: BackdropFilter(
+                                        filter: ImageFilter.blur(
+                                          sigmaX: 4.0,
+                                          sigmaY: 4.0,
                                         ),
-                                      ),
-                                      child: _buildNewTimetableGrid(
-                                        periodRowHeight: dynamicRowHeight,
-                                        lunchRowHeight: dynamicRowHeight,
+                                        child: Container(
+                                          decoration: BoxDecoration(
+                                            color: Colors.black.withOpacity(
+                                              0.3,
+                                            ),
+                                            borderRadius: BorderRadius.circular(
+                                              12,
+                                            ),
+                                            border: Border.all(
+                                              color: Colors.grey[800]!,
+                                              width: 1.0,
+                                            ),
+                                          ),
+                                          child: _buildNewTimetableGrid(
+                                            periodRowHeight: dynamicRowHeight,
+                                            lunchRowHeight: dynamicRowHeight,
+                                          ),
+                                        ),
                                       ),
                                     ),
                                   ),
-                                ),
-                              ),
-                            ],
-                          );
-                        },
-                      ),
+                                ],
+                              );
+                            },
+                          ),
+                        );
+                      },
                     ),
                   ),
                 ],

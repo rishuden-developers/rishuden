@@ -271,15 +271,6 @@ class _QuestCreationWidgetState extends ConsumerState<QuestCreationWidget> {
                     },
                     child: const Text("キャンセル"),
                   ),
-                  TextButton(
-                    onPressed: () {
-                      // 新規作成：前回のデータをクリア
-                      ref.read(timetableProvider.notifier).resetQuestData();
-                      _hasShownDialog = false; // フラグをリセット
-                      Navigator.of(context).pop();
-                    },
-                    child: const Text("新規作成"),
-                  ),
                   ElevatedButton(
                     onPressed:
                         (tempTaskType != null && tempDeadline != null)
@@ -299,7 +290,10 @@ class _QuestCreationWidgetState extends ConsumerState<QuestCreationWidget> {
                                 tempDeadline!,
                                 tempDescription,
                               );
-                              // クエスト作成完了後、データをリセットしない（保持する）
+                              // クエスト作成完了後、データをリセット
+                              ref
+                                  .read(timetableProvider.notifier)
+                                  .resetQuestData();
                               _hasShownDialog = false; // フラグをリセット
                               Navigator.of(context).pop();
                             }

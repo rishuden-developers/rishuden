@@ -16,7 +16,19 @@ class TimetableNotifier extends StateNotifier<Map<String, dynamic>> {
         'questTaskType': null,
         'questDeadline': null,
         'questDescription': '',
-      });
+      }) {
+    // 初期化時にFirebaseからデータを読み込み
+    _initializeFromFirebase();
+  }
+
+  // ★★★ 初期化時にFirebaseからデータを読み込む ★★★
+  Future<void> _initializeFromFirebase() async {
+    try {
+      await loadFromFirestore();
+    } catch (e) {
+      print('Error initializing from Firebase: $e');
+    }
+  }
 
   // セルメモを更新
   void updateCellNotes(Map<String, String> cellNotes) {
@@ -120,6 +132,7 @@ class TimetableNotifier extends StateNotifier<Map<String, dynamic>> {
       print('TimetableProvider - Starting loadFromFirestore');
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
+        print('TimetableProvider - User found: ${user.uid}');
         final doc =
             await FirebaseFirestore.instance
                 .collection('users')
@@ -130,7 +143,13 @@ class TimetableNotifier extends StateNotifier<Map<String, dynamic>> {
 
         if (doc.exists) {
           final data = doc.data()!;
-          print('TimetableProvider - Firestore data: $data');
+          print('TimetableProvider - Firestore data loaded: ${data.keys}');
+          print(
+            'TimetableProvider - Cell notes count: ${(data['cellNotes'] as Map<String, dynamic>?)?.length ?? 0}',
+          );
+          print(
+            'TimetableProvider - Weekly notes count: ${(data['weeklyNotes'] as Map<String, dynamic>?)?.length ?? 0}',
+          );
           state = {
             'cellNotes': Map<String, String>.from(data['cellNotes'] ?? {}),
             'weeklyNotes': Map<String, String>.from(data['weeklyNotes'] ?? {}),
@@ -147,9 +166,9 @@ class TimetableNotifier extends StateNotifier<Map<String, dynamic>> {
             'questDeadline': data['questDeadline'],
             'questDescription': data['questDescription'] ?? '',
           };
-          print('TimetableProvider - State updated: $state');
+          print('TimetableProvider - State updated successfully');
         } else {
-          print('TimetableProvider - No document found');
+          print('TimetableProvider - No document found, using default state');
         }
       } else {
         print('TimetableProvider - No user found');
