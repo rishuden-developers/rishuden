@@ -4,6 +4,7 @@ import 'dart:math';
 import 'dart:ui';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -19,25 +20,23 @@ import 'timetable.dart';
 import 'utils/course_pattern_detector.dart';
 import 'utils/course_color_generator.dart';
 import 'course_pattern.dart';
+import 'providers/timetable_provider.dart';
 
 enum AttendanceStatus { present, absent, late, none }
 
-class TimeSchedulePage extends StatefulWidget {
+class TimeSchedulePage extends ConsumerStatefulWidget {
   const TimeSchedulePage({super.key});
   @override
-  State<TimeSchedulePage> createState() => _TimeSchedulePageState();
+  ConsumerState<TimeSchedulePage> createState() => _TimeSchedulePageState();
 }
 
-class _TimeSchedulePageState extends State<TimeSchedulePage> {
+class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
   final List<String> _days = const ['月', '火', '水', '木', '金', '土', '日'];
   final int _academicPeriods = 6;
   String _mainCharacterName = 'キャラクター';
   String _mainCharacterImagePath = 'assets/character_unknown.png';
   List<List<TimetableEntry?>> _timetableGrid = [];
-  Map<String, String> _cellNotes = {};
-  Map<String, String> _weeklyNotes = {};
   Set<String> _cancellations = {};
-  Map<String, AttendancePolicy> _attendancePolicies = {};
   List<Map<String, String>> _displayedCharacters = [];
   final List<String> _otherCharacterImagePaths = [
     'assets/character_wizard.png',
@@ -84,9 +83,54 @@ class _TimeSchedulePageState extends State<TimeSchedulePage> {
   static Map<String, String> _globalSubjectToCourseId = {};
   static int _globalCourseIdCounter = 0;
 
+  // データの取得メソッド（UIは変更しない）
+  Map<String, String> get cellNotes =>
+      ref.watch(timetableProvider)['cellNotes'] ?? {};
+  Map<String, String> get weeklyNotes =>
+      ref.watch(timetableProvider)['weeklyNotes'] ?? {};
+  Map<String, String> get attendancePolicies =>
+      ref.watch(timetableProvider)['attendancePolicies'] ?? {};
+  Map<String, String> get attendanceStatus =>
+      ref.watch(timetableProvider)['attendanceStatus'] ?? {};
+  Map<String, int> get absenceCount =>
+      ref.watch(timetableProvider)['absenceCount'] ?? {};
+  Map<String, int> get lateCount =>
+      ref.watch(timetableProvider)['lateCount'] ?? {};
+
+  // データの更新メソッド（UIは変更しない）
+  void _updateCellNotes(Map<String, String> notes) {
+    ref.read(timetableProvider.notifier).updateCellNotes(notes);
+  }
+
+  void _updateWeeklyNotes(Map<String, String> notes) {
+    ref.read(timetableProvider.notifier).updateWeeklyNotes(notes);
+  }
+
+  void _updateAttendancePolicies(Map<String, String> policies) {
+    ref.read(timetableProvider.notifier).updateAttendancePolicies(policies);
+  }
+
+  void _updateAttendanceStatus(Map<String, String> status) {
+    ref.read(timetableProvider.notifier).updateAttendanceStatus(status);
+  }
+
+  void _updateAbsenceCount(Map<String, int> count) {
+    ref.read(timetableProvider.notifier).updateAbsenceCount(count);
+  }
+
+  void _updateLateCount(Map<String, int> count) {
+    ref.read(timetableProvider.notifier).updateLateCount(count);
+  }
+
+  // 時間割データを読み込み
+  void _loadTimetableData() {
+    ref.read(timetableProvider.notifier).loadFromFirestore();
+  }
+
   @override
   void initState() {
     super.initState();
+    _loadTimetableData();
     final now = DateTime.now();
     _displayedMonday = now.subtract(Duration(days: now.weekday - 1));
     final tuesdayDate = _displayedMonday.add(const Duration(days: 1));
@@ -197,14 +241,11 @@ class _TimeSchedulePageState extends State<TimeSchedulePage> {
       _days.length,
       (dayIndex) => List.generate(_academicPeriods, (periodIndex) => null),
     );
-    Map<String, AttendancePolicy> policies = {};
     for (var entry in timeTableEntries) {
       grid[entry.dayOfWeek][entry.period - 1] = entry;
-      policies[entry.id] = entry.initialPolicy;
     }
     setState(() {
       _timetableGrid = grid;
-      _attendancePolicies = policies;
     });
   }
 
@@ -363,7 +404,14 @@ class _TimeSchedulePageState extends State<TimeSchedulePage> {
     final oneTimeNoteKey =
         "C_${dayIndex}_${periodIndex}_${DateFormat('yyyyMMdd').format(_displayedMonday.add(Duration(days: dayIndex)))}";
     final weeklyNoteKey = "W_C_${dayIndex}_$periodIndex";
-    return _cellNotes[oneTimeNoteKey] ?? _weeklyNotes[weeklyNoteKey] ?? '';
+
+    // 週次メモが存在する場合は週次メモを優先表示
+    if (weeklyNotes.containsKey(weeklyNoteKey)) {
+      return weeklyNotes[weeklyNoteKey] ?? '';
+    }
+
+    // 週次メモが存在しない場合は、その週の特定の日付のメモのみを表示
+    return cellNotes[oneTimeNoteKey] ?? '';
   }
 
   void _setAttendanceStatus(
@@ -372,22 +420,35 @@ class _TimeSchedulePageState extends State<TimeSchedulePage> {
     AttendanceStatus status,
   ) {
     setState(() {
-      final oldStatus = _attendanceStatus[uniqueKey] ?? AttendanceStatus.none;
+      final oldStatus = attendanceStatus[uniqueKey] ?? AttendanceStatus.none;
       final newStatus = (oldStatus == status) ? AttendanceStatus.none : status;
-      _attendanceStatus[uniqueKey] = newStatus;
+
+      // Provider経由でデータを更新
+      final newAttendanceStatus = Map<String, String>.from(attendanceStatus);
+      newAttendanceStatus[uniqueKey] = newStatus.toString();
+      _updateAttendanceStatus(newAttendanceStatus);
+
       if (oldStatus != AttendanceStatus.absent &&
           newStatus == AttendanceStatus.absent) {
-        _absenceCount[entryId] = (_absenceCount[entryId] ?? 0) + 1;
+        final newAbsenceCount = Map<String, int>.from(absenceCount);
+        newAbsenceCount[entryId] = (newAbsenceCount[entryId] ?? 0) + 1;
+        _updateAbsenceCount(newAbsenceCount);
       } else if (oldStatus == AttendanceStatus.absent &&
           newStatus != AttendanceStatus.absent) {
-        _absenceCount[entryId] = (_absenceCount[entryId] ?? 1) - 1;
+        final newAbsenceCount = Map<String, int>.from(absenceCount);
+        newAbsenceCount[entryId] = (newAbsenceCount[entryId] ?? 1) - 1;
+        _updateAbsenceCount(newAbsenceCount);
       }
       if (oldStatus != AttendanceStatus.late &&
           newStatus == AttendanceStatus.late) {
-        _lateCount[entryId] = (_lateCount[entryId] ?? 0) + 1;
+        final newLateCount = Map<String, int>.from(lateCount);
+        newLateCount[entryId] = (newLateCount[entryId] ?? 0) + 1;
+        _updateLateCount(newLateCount);
       } else if (oldStatus == AttendanceStatus.late &&
           newStatus != AttendanceStatus.late) {
-        _lateCount[entryId] = (_lateCount[entryId] ?? 1) - 1;
+        final newLateCount = Map<String, int>.from(lateCount);
+        newLateCount[entryId] = (newLateCount[entryId] ?? 1) - 1;
+        _updateLateCount(newLateCount);
       }
     });
   }
@@ -398,8 +459,8 @@ class _TimeSchedulePageState extends State<TimeSchedulePage> {
   }
 
   Color _getNeonWarningColor(Color baseColor, String entryId) {
-    final int absenceCount = _absenceCount[entryId] ?? 0;
-    final int lateCount = _lateCount[entryId] ?? 0;
+    final int absenceCount = this.absenceCount[entryId] ?? 0;
+    final int lateCount = this.lateCount[entryId] ?? 0;
     final double warningLevel = (absenceCount * 1.0) + (lateCount * 0.5);
     final double t = (warningLevel / 3.0).clamp(0.0, 1.0);
     final warningColor = Colors.redAccent[400]!;
@@ -439,9 +500,14 @@ class _TimeSchedulePageState extends State<TimeSchedulePage> {
 
       final uniqueKey =
           "${entry.id}_${DateFormat('yyyyMMdd').format(_displayedMonday.add(Duration(days: dayIndex)))}";
-      final policy = _attendancePolicies[entry.id] ?? AttendancePolicy.flexible;
+      final policyString =
+          attendancePolicies[entry.id] ?? AttendancePolicy.flexible.toString();
+      final policy = AttendancePolicy.values.firstWhere(
+        (p) => p.toString() == policyString,
+        orElse: () => AttendancePolicy.flexible,
+      );
       Color textColor = Colors.white;
-      BoxDecoration decoration;
+      BoxDecoration decoration = BoxDecoration();
 
       switch (policy) {
         case AttendancePolicy.mandatory:
@@ -499,8 +565,8 @@ class _TimeSchedulePageState extends State<TimeSchedulePage> {
         );
       }
 
-      final int absenceCount = _absenceCount[entry.id] ?? 0;
-      final int lateCount = _lateCount[entry.id] ?? 0;
+      final int absenceCount = this.absenceCount[entry.id] ?? 0;
+      final int lateCount = this.lateCount[entry.id] ?? 0;
       final bool hasCount = absenceCount > 0 || lateCount > 0;
       final String noteText = _getNoteForCell(
         dayIndex,
@@ -665,23 +731,23 @@ class _TimeSchedulePageState extends State<TimeSchedulePage> {
                   top: 2,
                   right: 2,
                   child:
-                      _attendanceStatus[uniqueKey] != null &&
-                              _attendanceStatus[uniqueKey] !=
-                                  AttendanceStatus.none
+                      attendanceStatus[uniqueKey] != null &&
+                              attendanceStatus[uniqueKey] !=
+                                  AttendanceStatus.none.toString()
                           ? Icon(
-                            _attendanceStatus[uniqueKey] ==
-                                    AttendanceStatus.present
+                            attendanceStatus[uniqueKey] ==
+                                    AttendanceStatus.present.toString()
                                 ? Icons.check_circle
-                                : _attendanceStatus[uniqueKey] ==
-                                    AttendanceStatus.absent
+                                : attendanceStatus[uniqueKey] ==
+                                    AttendanceStatus.absent.toString()
                                 ? Icons.cancel
                                 : Icons.access_time,
                             color:
-                                _attendanceStatus[uniqueKey] ==
-                                        AttendanceStatus.present
+                                attendanceStatus[uniqueKey] ==
+                                        AttendanceStatus.present.toString()
                                     ? Colors.green
-                                    : _attendanceStatus[uniqueKey] ==
-                                        AttendanceStatus.absent
+                                    : attendanceStatus[uniqueKey] ==
+                                        AttendanceStatus.absent.toString()
                                     ? Colors.red
                                     : Colors.orange,
                             size: 16,
@@ -1309,12 +1375,17 @@ class _TimeSchedulePageState extends State<TimeSchedulePage> {
     final String weeklyNoteKey = "W_C_${dayIndex}_$academicPeriodIndex";
 
     final String initialText =
-        _cellNotes[oneTimeNoteKey] ?? _weeklyNotes[weeklyNoteKey] ?? '';
+        cellNotes[oneTimeNoteKey] ?? weeklyNotes[weeklyNoteKey] ?? '';
     final bool isInitiallyWeekly =
-        _weeklyNotes.containsKey(weeklyNoteKey) &&
-        !_cellNotes.containsKey(oneTimeNoteKey);
-    final AttendancePolicy initialPolicy =
-        (_attendancePolicies[entry!.id] ?? AttendancePolicy.flexible);
+        weeklyNotes.containsKey(weeklyNoteKey) &&
+        !cellNotes.containsKey(oneTimeNoteKey);
+    final AttendancePolicy initialPolicy = AttendancePolicy.values.firstWhere(
+      (p) =>
+          p.toString() ==
+          (attendancePolicies[entry!.id] ??
+              AttendancePolicy.flexible.toString()),
+      orElse: () => AttendancePolicy.flexible,
+    );
 
     TextEditingController noteController = TextEditingController(
       text: initialText,
@@ -1430,8 +1501,14 @@ class _TimeSchedulePageState extends State<TimeSchedulePage> {
                         Text('出席確認:'),
                         DropdownButton<AttendanceStatus>(
                           value:
-                              _attendanceStatus[oneTimeNoteKey] ??
-                              AttendanceStatus.none,
+                              attendanceStatus[oneTimeNoteKey] != null
+                                  ? AttendanceStatus.values.firstWhere(
+                                    (status) =>
+                                        status.toString() ==
+                                        attendanceStatus[oneTimeNoteKey],
+                                    orElse: () => AttendanceStatus.none,
+                                  )
+                                  : AttendanceStatus.none,
                           items:
                               AttendanceStatus.values.map((status) {
                                 return DropdownMenuItem(
@@ -1486,21 +1563,26 @@ class _TimeSchedulePageState extends State<TimeSchedulePage> {
     if (noteWasSaved == true) {
       final currentEntry = entry;
       if (currentEntry != null) {
-        setState(() {
-          _attendancePolicies[currentEntry.id] = selectedPolicy;
-          final newText = noteController.text.trim();
-          if (newText.isEmpty) {
-            _cellNotes.remove(oneTimeNoteKey);
-            _weeklyNotes.remove(weeklyNoteKey);
+        final newText = noteController.text.trim();
+        if (newText.isEmpty) {
+          _updateCellNotes({...cellNotes}..remove(oneTimeNoteKey));
+          _updateWeeklyNotes({...weeklyNotes}..remove(weeklyNoteKey));
+        } else {
+          if (isWeekly) {
+            _updateWeeklyNotes(
+              {...weeklyNotes, weeklyNoteKey: newText}..remove(oneTimeNoteKey),
+            );
+            _updateCellNotes({...cellNotes}..remove(oneTimeNoteKey));
           } else {
-            if (isWeekly) {
-              _weeklyNotes[weeklyNoteKey] = newText;
-              _cellNotes.remove(oneTimeNoteKey);
-            } else {
-              _cellNotes[oneTimeNoteKey] = newText;
-              _weeklyNotes.remove(weeklyNoteKey);
-            }
+            _updateCellNotes(
+              {...cellNotes, oneTimeNoteKey: newText}..remove(weeklyNoteKey),
+            );
+            _updateWeeklyNotes({...weeklyNotes}..remove(weeklyNoteKey));
           }
+        }
+        _updateAttendancePolicies({
+          ...attendancePolicies,
+          currentEntry.id: selectedPolicy.toString(),
         });
       }
     }
@@ -1525,7 +1607,7 @@ class _TimeSchedulePageState extends State<TimeSchedulePage> {
   }
 
   Widget _buildAttendancePopupMenu(String uniqueKey, TimetableEntry entry) {
-    if (_attendancePolicies[entry.id] != AttendancePolicy.mandatory) {
+    if (attendancePolicies[entry.id] != AttendancePolicy.mandatory.toString()) {
       return const SizedBox.shrink();
     }
     return Theme(
@@ -1534,7 +1616,12 @@ class _TimeSchedulePageState extends State<TimeSchedulePage> {
       ).copyWith(materialTapTargetSize: MaterialTapTargetSize.shrinkWrap),
       child: PopupMenuButton<AttendanceStatus>(
         child: _buildAttendanceStatusIcon(
-          _attendanceStatus[uniqueKey] ?? AttendanceStatus.none,
+          attendanceStatus[uniqueKey] != null
+              ? AttendanceStatus.values.firstWhere(
+                (status) => status.toString() == attendanceStatus[uniqueKey],
+                orElse: () => AttendanceStatus.none,
+              )
+              : AttendanceStatus.none,
         ),
         tooltip: '出欠を記録',
         onSelected:
@@ -1879,135 +1966,74 @@ class _TimeSchedulePageState extends State<TimeSchedulePage> {
   @override
   Widget build(BuildContext context) {
     const double bottomPaddingForNavBar = 100.0;
-    return Scaffold(
-      extendBodyBehindAppBar: true,
-      extendBody: true,
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        centerTitle: true,
-        title: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            IconButton(
-              icon: const Icon(Icons.arrow_back_ios, size: 17),
-              onPressed: _goToPreviousWeek,
-              color: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 12.0),
-              constraints: const BoxConstraints(),
-            ),
-            Text(
-              _weekDateRange,
-              style: const TextStyle(
-                fontFamily: 'misaki',
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-                fontSize: 20,
-              ),
-            ),
-            IconButton(
-              icon: const Icon(Icons.arrow_forward_ios, size: 17),
-              onPressed: _goToNextWeek,
-              color: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 12.0),
-              constraints: const BoxConstraints(),
-            ),
-          ],
-        ),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.save_alt, color: Colors.white),
-            tooltip: '壁紙として保存',
-            onPressed: () {},
+    return Container(
+      width: double.infinity,
+      height: double.infinity,
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: Image.asset("assets/night_view.png", fit: BoxFit.cover),
           ),
-        ],
-      ),
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        child: Stack(
-          children: [
-            Positioned.fill(
-              child: Image.asset("assets/night_view.png", fit: BoxFit.cover),
-            ),
-            Positioned.fill(
-              child: Container(color: Colors.black.withOpacity(0.4)),
-            ),
-            Padding(
-              padding: const EdgeInsets.only(bottom: bottomPaddingForNavBar),
-              child: SafeArea(
-                bottom: false,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                  child: Column(
-                    children: [
-                      _buildNewTimetableHeader(),
-                      Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.only(top: 4.0, bottom: 8.0),
-                          child: LayoutBuilder(
-                            builder: (context, constraints) {
-                              final availableHeight = constraints.maxHeight;
-                              final dynamicRowHeight = availableHeight / 8.0;
+          Positioned.fill(
+            child: Container(color: Colors.black.withOpacity(0.4)),
+          ),
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8.0),
+              child: Column(
+                children: [
+                  _buildNewTimetableHeader(),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 4.0, bottom: 8.0),
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          final availableHeight = constraints.maxHeight;
+                          final dynamicRowHeight = availableHeight / 8.0;
 
-                              return Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  _buildNewContinuousTimeColumn(
-                                    periodRowHeight: dynamicRowHeight,
-                                    lunchRowHeight: dynamicRowHeight,
-                                  ),
-                                  Expanded(
-                                    child: ClipRRect(
-                                      borderRadius: BorderRadius.circular(12),
-                                      child: BackdropFilter(
-                                        filter: ImageFilter.blur(
-                                          sigmaX: 4.0,
-                                          sigmaY: 4.0,
+                          return Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildNewContinuousTimeColumn(
+                                periodRowHeight: dynamicRowHeight,
+                                lunchRowHeight: dynamicRowHeight,
+                              ),
+                              Expanded(
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: BackdropFilter(
+                                    filter: ImageFilter.blur(
+                                      sigmaX: 4.0,
+                                      sigmaY: 4.0,
+                                    ),
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        color: Colors.black.withOpacity(0.3),
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(
+                                          color: Colors.grey[800]!,
+                                          width: 1.0,
                                         ),
-                                        child: Container(
-                                          decoration: BoxDecoration(
-                                            color: Colors.black.withOpacity(
-                                              0.3,
-                                            ),
-                                            borderRadius: BorderRadius.circular(
-                                              12,
-                                            ),
-                                            border: Border.all(
-                                              color: Colors.grey[800]!,
-                                              width: 1.0,
-                                            ),
-                                          ),
-                                          child: _buildNewTimetableGrid(
-                                            periodRowHeight: dynamicRowHeight,
-                                            lunchRowHeight: dynamicRowHeight,
-                                          ),
-                                        ),
+                                      ),
+                                      child: _buildNewTimetableGrid(
+                                        periodRowHeight: dynamicRowHeight,
+                                        lunchRowHeight: dynamicRowHeight,
                                       ),
                                     ),
                                   ),
-                                ],
-                              );
-                            },
-                          ),
-                        ),
+                                ),
+                              ),
+                            ],
+                          );
+                        },
                       ),
-                    ],
+                    ),
                   ),
-                ),
+                ],
               ),
             ),
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: CommonBottomNavigation(),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

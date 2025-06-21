@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'timetable_entry.dart';
 import 'timetable.dart';
 import 'utils/course_pattern_detector.dart';
 import 'utils/course_color_generator.dart';
 import 'course_pattern.dart';
+import 'providers/timetable_provider.dart';
 
-class QuestCreationWidget extends StatefulWidget {
+class QuestCreationWidget extends ConsumerStatefulWidget {
   final void Function() onCancel;
   final void Function(
     String selectedClass,
@@ -22,10 +24,11 @@ class QuestCreationWidget extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  _QuestCreationWidgetState createState() => _QuestCreationWidgetState();
+  ConsumerState<QuestCreationWidget> createState() =>
+      _QuestCreationWidgetState();
 }
 
-class _QuestCreationWidgetState extends State<QuestCreationWidget> {
+class _QuestCreationWidgetState extends ConsumerState<QuestCreationWidget> {
   List<TimetableEntry> _weeklyClasses = [];
   TimetableEntry? _selectedClass;
   String? _selectedTaskType;
@@ -33,13 +36,51 @@ class _QuestCreationWidgetState extends State<QuestCreationWidget> {
   String _description = '';
   bool _isLoading = true;
   Map<String, Color> _courseColors = {};
+  bool _hasShownDialog = false; // ダイアログ表示フラグ
+  bool _isDataLoaded = false; // データ読み込みフラグ
+  bool _firestoreLoaded = false;
 
   final List<String> taskTypes = ['レポート', '出席', '発表', '試験', 'その他'];
+
+  // Provider経由でデータを取得
+  Map<String, dynamic>? get selectedClass =>
+      ref.watch(timetableProvider)['questSelectedClass'];
+  String? get selectedTaskType => ref.watch(timetableProvider)['questTaskType'];
+  DateTime? get selectedDeadline {
+    final deadlineString = ref.watch(timetableProvider)['questDeadline'];
+    return deadlineString != null ? DateTime.parse(deadlineString) : null;
+  }
+
+  String get description =>
+      ref.watch(timetableProvider)['questDescription'] ?? '';
 
   @override
   void initState() {
     super.initState();
+    print('Quest Create - initState called');
+    _firestoreLoaded = false;
+    _initializeData();
     _loadWeeklyClasses();
+  }
+
+  Future<void> _initializeData() async {
+    print('Quest Create - Starting _initializeData');
+    try {
+      await ref.read(timetableProvider.notifier).loadFromFirestore();
+      print('Quest Create - Firestore data loaded successfully');
+      if (mounted) {
+        setState(() {
+          _firestoreLoaded = true;
+        });
+      }
+    } catch (e) {
+      print('Quest Create - Error loading Firestore data: $e');
+      if (mounted) {
+        setState(() {
+          _firestoreLoaded = true; // エラーでもtrueにしてUIを表示
+        });
+      }
+    }
   }
 
   Future<void> _loadWeeklyClasses() async {
@@ -120,12 +161,17 @@ class _QuestCreationWidgetState extends State<QuestCreationWidget> {
   }
 
   void _showTaskDetailsDialog() {
-    if (_selectedClass == null) return;
+    if (selectedClass == null) return;
 
-    // ダイアログ内での状態管理用の変数
-    String? tempTaskType = _selectedTaskType;
-    DateTime? tempDeadline = _selectedDeadline;
-    String tempDescription = _description;
+    // ダイアログ内での状態管理用の変数（既存データを初期値として使用）
+    String? tempTaskType = selectedTaskType;
+    DateTime? tempDeadline = selectedDeadline;
+    String tempDescription = description;
+
+    // TextEditingControllerを適切に管理
+    final TextEditingController descriptionController = TextEditingController(
+      text: tempDescription,
+    );
 
     showDialog(
       context: context,
@@ -135,7 +181,7 @@ class _QuestCreationWidgetState extends State<QuestCreationWidget> {
               Future<void> pickDateTime() async {
                 final date = await showDatePicker(
                   context: context,
-                  initialDate: DateTime.now(),
+                  initialDate: tempDeadline ?? DateTime.now(),
                   firstDate: DateTime.now(),
                   lastDate: DateTime(2100),
                 );
@@ -143,7 +189,10 @@ class _QuestCreationWidgetState extends State<QuestCreationWidget> {
 
                 final time = await showTimePicker(
                   context: context,
-                  initialTime: TimeOfDay.now(),
+                  initialTime:
+                      tempDeadline != null
+                          ? TimeOfDay.fromDateTime(tempDeadline!)
+                          : TimeOfDay.now(),
                 );
                 if (time == null) return;
 
@@ -163,7 +212,7 @@ class _QuestCreationWidgetState extends State<QuestCreationWidget> {
                 content: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text('選択された授業: ${_selectedClass!.subjectName}'),
+                    Text('選択された授業: ${selectedClass!['subjectName']}'),
                     const SizedBox(height: 16),
                     DropdownButtonFormField<String>(
                       decoration: const InputDecoration(labelText: "タスクの種類"),
@@ -184,10 +233,11 @@ class _QuestCreationWidgetState extends State<QuestCreationWidget> {
                     const SizedBox(height: 12),
                     TextField(
                       decoration: const InputDecoration(
-                        labelText: "課題の詳細",
-                        hintText: "課題の内容を入力してください",
+                        labelText: "課題の詳細 (任意)",
+                        hintText: "(例) A4一枚、手書き、表紙必須",
                       ),
                       maxLines: 3,
+                      controller: descriptionController,
                       onChanged: (value) {
                         setDialogState(() {
                           tempDescription = value;
@@ -214,26 +264,43 @@ class _QuestCreationWidgetState extends State<QuestCreationWidget> {
                 ),
                 actions: [
                   TextButton(
-                    onPressed: () => Navigator.of(context).pop(),
+                    onPressed: () {
+                      // キャンセル時にもデータをリセットしない（保持する）
+                      _hasShownDialog = false; // フラグをリセット
+                      Navigator.of(context).pop();
+                    },
                     child: const Text("キャンセル"),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      // 新規作成：前回のデータをクリア
+                      ref.read(timetableProvider.notifier).resetQuestData();
+                      _hasShownDialog = false; // フラグをリセット
+                      Navigator.of(context).pop();
+                    },
+                    child: const Text("新規作成"),
                   ),
                   ElevatedButton(
                     onPressed:
-                        (tempTaskType != null &&
-                                tempDeadline != null &&
-                                tempDescription.isNotEmpty)
+                        (tempTaskType != null && tempDeadline != null)
                             ? () {
-                              setState(() {
-                                _selectedTaskType = tempTaskType;
-                                _selectedDeadline = tempDeadline;
-                                _description = tempDescription;
-                              });
+                              ref
+                                  .read(timetableProvider.notifier)
+                                  .updateQuestTaskType(tempTaskType);
+                              ref
+                                  .read(timetableProvider.notifier)
+                                  .updateQuestDeadline(tempDeadline);
+                              ref
+                                  .read(timetableProvider.notifier)
+                                  .updateQuestDescription(tempDescription);
                               widget.onCreate(
-                                _selectedClass!.subjectName,
+                                selectedClass!['subjectName'],
                                 tempTaskType!,
                                 tempDeadline!,
                                 tempDescription,
                               );
+                              // クエスト作成完了後、データをリセットしない（保持する）
+                              _hasShownDialog = false; // フラグをリセット
                               Navigator.of(context).pop();
                             }
                             : null,
@@ -248,9 +315,21 @@ class _QuestCreationWidgetState extends State<QuestCreationWidget> {
 
   @override
   Widget build(BuildContext context) {
+    final timetableData = ref.watch(timetableProvider);
+
+    // 授業データの読み込みが終わるまでローディング
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
+
+    // デバッグ用ログ出力
+    print('Quest Create - Provider Data: $timetableData');
+    print('Quest Create - selectedClass: $selectedClass');
+    print('Quest Create - selectedTaskType: $selectedTaskType');
+    print('Quest Create - selectedDeadline: $selectedDeadline');
+    print('Quest Create - description: $description');
+    print('Quest Create - _hasShownDialog: $_hasShownDialog');
+    print('Quest Create - _firestoreLoaded: $_firestoreLoaded');
 
     return Center(
       child: Container(
@@ -273,6 +352,51 @@ class _QuestCreationWidgetState extends State<QuestCreationWidget> {
               style: TextStyle(fontSize: 14, color: Colors.grey),
             ),
             const SizedBox(height: 16),
+
+            // 既存データがある場合は情報を表示
+            if (selectedClass != null &&
+                selectedTaskType != null &&
+                selectedDeadline != null)
+              Container(
+                padding: const EdgeInsets.all(12),
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: Colors.blue[50],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.blue[200]!),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '前回の入力内容:',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.blue[700],
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '授業: ${selectedClass!['subjectName']}',
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                    Text(
+                      'タスク: $selectedTaskType',
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                    Text(
+                      '締切: ${selectedDeadline!.toLocal().toString().split('.')[0]}',
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                    if (description.isNotEmpty)
+                      Text(
+                        '詳細: $description',
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                  ],
+                ),
+              ),
 
             // 一週間の授業コマ表示（時間割表形式）
             Container(
@@ -371,14 +495,38 @@ class _QuestCreationWidgetState extends State<QuestCreationWidget> {
                             }
 
                             final courseColor = _getCourseColor(entry);
-                            final isSelected = _selectedClass?.id == entry.id;
+                            // 既存データがある場合は、その授業が選択された状態で表示
+                            final isSelected =
+                                selectedClass?['id'] == entry.id ||
+                                (selectedClass != null &&
+                                    selectedTaskType != null &&
+                                    selectedDeadline != null);
 
                             return Expanded(
                               child: InkWell(
                                 onTap: () {
-                                  setState(() {
-                                    _selectedClass = entry;
-                                  });
+                                  ref
+                                      .read(timetableProvider.notifier)
+                                      .updateQuestSelectedClass({
+                                        'id': entry.id,
+                                        'subjectName': entry.subjectName,
+                                        'classroom': entry.classroom,
+                                        'dayOfWeek': entry.dayOfWeek,
+                                        'period': entry.period,
+                                        'date': entry.date,
+                                      });
+
+                                  // 既存データがある場合は前回のデータを表示、ない場合は新規作成
+                                  if (selectedTaskType != null &&
+                                      selectedDeadline != null) {
+                                    print(
+                                      'Quest Create - Showing dialog with existing data for ${entry.subjectName}',
+                                    );
+                                  } else {
+                                    print(
+                                      'Quest Create - Showing dialog for new quest for ${entry.subjectName}',
+                                    );
+                                  }
                                   _showTaskDetailsDialog();
                                 },
                                 child: Container(
@@ -445,7 +593,12 @@ class _QuestCreationWidgetState extends State<QuestCreationWidget> {
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
                 ElevatedButton(
-                  onPressed: widget.onCancel,
+                  onPressed: () {
+                    // クエスト作成画面を完全に閉じる時のみデータをリセット
+                    ref.read(timetableProvider.notifier).resetQuestData();
+                    _hasShownDialog = false; // フラグをリセット
+                    widget.onCancel();
+                  },
                   child: const Text("キャンセル"),
                   style: ElevatedButton.styleFrom(backgroundColor: Colors.grey),
                 ),
