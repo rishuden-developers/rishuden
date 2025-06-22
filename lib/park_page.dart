@@ -864,42 +864,68 @@ class _ParkPageState extends ConsumerState<ParkPage> {
             top: screenHeight * 0.33,
             right: screenWidth * 0.13,
             child: GestureDetector(
-              onTap: _claimDailyTakoyaki,
-              child: Container(
-                width: screenWidth * 0.15,
-                height: screenWidth * 0.15,
-                decoration: BoxDecoration(
-                  image: DecorationImage(
-                    image: AssetImage(
-                      _isTakoyakiClaimed
-                          ? 'assets/takoyaki.png'
-                          : 'assets/takoyaki_off.png',
-                    ),
-                    fit: BoxFit.contain,
+              onTap:
+                  () => _toggleTakoyakiSupport(
+                    questId,
+                    taskData['createdBy'] as String?,
                   ),
-                ),
+              child: FutureBuilder<bool>(
+                future: _isCurrentUserSupporting(questId),
+                builder: (context, snapshot) {
+                  final bool isSupporting = snapshot.data ?? false;
+                  return Container(
+                    width: screenWidth * 0.15,
+                    height: screenWidth * 0.15,
+                    decoration: BoxDecoration(
+                      image: DecorationImage(
+                        image: AssetImage(
+                          isSupporting
+                              ? 'assets/takoyaki.png'
+                              : 'assets/takoyaki_off.png',
+                        ),
+                        fit: BoxFit.contain,
+                      ),
+                    ),
+                  );
+                },
               ),
             ),
           ),
           Positioned(
             top: screenHeight * 0.2,
             left: screenWidth * 0.09,
-            child: Container(
-              width: screenWidth * 0.14,
-              height: screenWidth * 0.14,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: Colors.white.withOpacity(0.5),
-                  width: 1.2,
-                ),
-                image: DecorationImage(
-                  image: AssetImage(
-                    _getCharacterImagePath(taskData['createdBy'] ?? 'ゴリラ'),
-                  ),
-                  fit: BoxFit.cover,
-                ),
+            child: FutureBuilder<String>(
+              future: _getCreatorCharacterImage(
+                taskData['createdBy'] as String?,
               ),
+              builder: (context, snapshot) {
+                Widget imageWidget;
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  imageWidget = const Center(
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  );
+                } else if (snapshot.hasError || !snapshot.hasData) {
+                  imageWidget = Image.asset(
+                    'assets/character_gorilla.png',
+                    fit: BoxFit.cover,
+                  );
+                } else {
+                  imageWidget = Image.asset(snapshot.data!, fit: BoxFit.cover);
+                }
+
+                return Container(
+                  width: screenWidth * 0.14,
+                  height: screenWidth * 0.14,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: Colors.white.withOpacity(0.5),
+                      width: 1.2,
+                    ),
+                  ),
+                  child: ClipOval(child: imageWidget),
+                );
+              },
             ),
           ),
           if (isCracking)
@@ -1127,6 +1153,111 @@ class _ParkPageState extends ConsumerState<ParkPage> {
   }
 
   // ★★★ このメソッドを新しく追加 ★★★
+  Future<String> _getCreatorCharacterImage(String? userId) async {
+    if (userId == null) {
+      return 'assets/character_gorilla.png'; // デフォルト画像
+    }
+    try {
+      final userDoc =
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(userId)
+              .get();
+      if (userDoc.exists) {
+        return (userDoc.data()?['characterImage'] as String?) ??
+            'assets/character_gorilla.png';
+      }
+      return 'assets/character_gorilla.png';
+    } catch (e) {
+      print('Error getting creator character image: $e');
+      return 'assets/character_gorilla.png';
+    }
+  }
+
+  // ★★★ この2つのメソッドを新しく追加 ★★★
+  Future<bool> _isCurrentUserSupporting(String questId) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return false;
+    try {
+      final questDoc =
+          await FirebaseFirestore.instance
+              .collection('quests')
+              .doc(questId)
+              .get();
+      final supporters = (questDoc.data()?['supporterIds'] as List?) ?? [];
+      return supporters.contains(user.uid);
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<void> _toggleTakoyakiSupport(String questId, String? creatorId) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null || creatorId == null) return;
+    if (user.uid == creatorId) {
+      // 自分自身には贈れない
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('自分のクエストにたこ焼きは贈れません！')));
+      return;
+    }
+
+    final bool isCurrentlySupporting = await _isCurrentUserSupporting(questId);
+    final int takoyakiChange = isCurrentlySupporting ? -1 : 1;
+
+    // 自分のたこ焼きが足りるかチェック
+    if (takoyakiChange > 0 && _takoyakiCount < 1) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('たこ焼きが足りません！')));
+      return;
+    }
+
+    final questRef = FirebaseFirestore.instance
+        .collection('quests')
+        .doc(questId);
+    final creatorRef = FirebaseFirestore.instance
+        .collection('users')
+        .doc(creatorId);
+    final selfRef = FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid);
+
+    try {
+      await FirebaseFirestore.instance.runTransaction((transaction) async {
+        // 1. クエストの応援者リストを更新
+        transaction.update(questRef, {
+          'supporterIds':
+              isCurrentlySupporting
+                  ? FieldValue.arrayRemove([user.uid])
+                  : FieldValue.arrayUnion([user.uid]),
+        });
+
+        // 2. 作成者のたこ焼きを増減
+        transaction.update(creatorRef, {
+          'takoyakiCount': FieldValue.increment(takoyakiChange),
+        });
+
+        // 3. 自分のたこ焼きを増減
+        transaction.update(selfRef, {
+          'takoyakiCount': FieldValue.increment(-takoyakiChange),
+        });
+      });
+
+      // UIを更新
+      setState(() {
+        _takoyakiCount -= takoyakiChange;
+      });
+    } catch (e) {
+      print("Error toggling takoyaki support: $e");
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('処理に失敗しました。')));
+    }
+  }
+
+  // ★★★ ここまで ★★★
+
   Future<Map<String, int>> _getSubjugationInfo(String? questId) async {
     if (questId == null) {
       return {'completed': 0, 'total': 0};
@@ -1161,8 +1292,6 @@ class _ParkPageState extends ConsumerState<ParkPage> {
       return {'completed': 0, 'total': 0};
     }
   }
-
-  // ★★★ ここまで ★★★
 }
 
 class _CountdownWidget extends StatefulWidget {
