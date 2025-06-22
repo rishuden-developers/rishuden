@@ -136,7 +136,13 @@ class _CreditExplorePageState extends State<CreditExplorePage> {
                         _buildSearchButton(),
                         const SizedBox(height: 40),
 
-                        // ランキング表示へのボタン (既存のものを維持)
+                        // ★ レビュー管理セクションを先に表示
+                        _buildSectionTitle('レビューを管理', Icons.edit),
+                        const SizedBox(height: 10),
+                        _buildMyReviewsButton(context),
+
+                        const SizedBox(height: 20), // ★ スペースを追加
+                        // ランキング表示へのボタン
                         _buildSectionTitle('人気ランキング', Icons.bar_chart),
                         const SizedBox(height: 10),
                         _buildRankingButton(context, '楽単ランキング', 'easiness'),
@@ -150,12 +156,6 @@ class _CreditExplorePageState extends State<CreditExplorePage> {
                           '学部別注目授業',
                           'faculty_specific',
                         ),
-
-                        const SizedBox(height: 20), // ★ スペースを追加
-                        // ★ レビュー管理ページへのボタン
-                        _buildSectionTitle('レビューを管理', Icons.edit),
-                        const SizedBox(height: 10),
-                        _buildMyReviewsButton(context),
 
                         const Spacer(), // 下部のナビゲーションバーのためのスペース
                       ],
