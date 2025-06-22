@@ -900,52 +900,26 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
           ],
         ),
       );
+      // ★★★ シンプルな構造でPositionedウィジェットを作成 ★★★
       positionedWidgets.add(
         Positioned(
           top: top,
           left: 0,
           right: 0,
           height: height,
-          child: InkWell(
+          child: GestureDetector(
+            behavior: HitTestBehavior.translucent,
             onTap: () {
+              print(
+                'DEBUG: Cell tapped - dayIndex: $dayIndex, periodIndex: $periodIndex, subject: ${entry.subjectName}',
+              );
               _showNoteDialog(
                 context,
                 dayIndex,
                 academicPeriodIndex: periodIndex,
               );
             },
-            child: Stack(
-              children: [
-                classWidget,
-                Positioned(
-                  top: 2,
-                  right: 2,
-                  child:
-                      attendanceStatus[uniqueKey] != null &&
-                              attendanceStatus[uniqueKey] !=
-                                  AttendanceStatus.none.toString()
-                          ? Icon(
-                            attendanceStatus[uniqueKey] ==
-                                    AttendanceStatus.present.toString()
-                                ? Icons.check_circle
-                                : attendanceStatus[uniqueKey] ==
-                                    AttendanceStatus.absent.toString()
-                                ? Icons.cancel
-                                : Icons.access_time,
-                            color:
-                                attendanceStatus[uniqueKey] ==
-                                        AttendanceStatus.present.toString()
-                                    ? Colors.green
-                                    : attendanceStatus[uniqueKey] ==
-                                        AttendanceStatus.absent.toString()
-                                    ? Colors.red
-                                    : Colors.orange,
-                            size: 16,
-                          )
-                          : const SizedBox.shrink(),
-                ),
-              ],
-            ),
+            child: classWidget,
           ),
         ),
       );
@@ -1349,7 +1323,38 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
           return GestureDetector(
             behavior: HitTestBehavior.opaque,
             onTapDown: (details) {
+              // ★★★ タップされた位置に授業コマがあるかチェック ★★★
               final double tappedY = details.localPosition.dy;
+              final double rowHeight = totalHeight / 8.0;
+
+              // タップされた位置の行インデックスを計算
+              int tappedRowIndex = (tappedY / rowHeight).floor();
+
+              // 行インデックスを時間割の時限インデックスに変換
+              int periodIndex;
+              if (tappedRowIndex < 2) {
+                periodIndex = tappedRowIndex; // 1限、2限
+              } else if (tappedRowIndex == 2) {
+                return; // 昼休みは無視
+              } else {
+                periodIndex = tappedRowIndex - 1; // 3限以降
+              }
+
+              // ★★★ 授業コマが存在する場合は、予定追加の処理を完全にスキップ ★★★
+              if (periodIndex >= 0 &&
+                  periodIndex < _timetableGrid[dayIndex].length &&
+                  _timetableGrid[dayIndex][periodIndex] != null) {
+                print(
+                  'DEBUG: Skipping event dialog - class exists at period $periodIndex',
+                );
+                return;
+              }
+
+              print(
+                'DEBUG: Showing event dialog - no class at period $periodIndex',
+              );
+
+              // 授業コマが存在しない場合のみ、予定追加ダイアログを表示
               const double timetableStartInMinutes = 8 * 60 + 50;
               const double timetableEndInMinutes = 20 * 60 + 0;
               const double totalMinutesInTimetable =
