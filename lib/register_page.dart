@@ -50,9 +50,22 @@ class _RegisterPageState extends State<RegisterPage> {
                   child: Text('再送信'),
                 ),
                 TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                    Navigator.of(context).pop(); // WelcomePageまで戻る
+                  onPressed: () async {
+                    await userCredential.user!.reload();
+                    final user = FirebaseAuth.instance.currentUser;
+                    if (user != null && user.emailVerified) {
+                      Navigator.of(context).pop(); // ダイアログを閉じる
+                      // 認証済みなら次の画面へ遷移
+                      Navigator.of(context).pushReplacement(
+                        MaterialPageRoute(
+                          builder: (_) => CharacterQuestionPage(),
+                        ),
+                      );
+                    } else {
+                      ScaffoldMessenger.of(
+                        context,
+                      ).showSnackBar(SnackBar(content: Text('まだ認証が完了していません')));
+                    }
                   },
                   child: Text('OK'),
                 ),
