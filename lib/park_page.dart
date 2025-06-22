@@ -255,6 +255,17 @@ class _ParkPageState extends ConsumerState<ParkPage> {
   // Firestoreからクエストデータを読み込む
   Future<void> _loadQuestsFromFirestore() async {
     try {
+      // ユーザーの時間割データからcourseIdを取得
+      final timetableData = ref.read(timetableProvider);
+      final userCourseIds = <String>{};
+
+      // 出席方針が設定されている授業のcourseIdを収集
+      final attendancePolicies =
+          timetableData['attendancePolicies'] as Map<String, String>? ?? {};
+      userCourseIds.addAll(attendancePolicies.keys);
+
+      print('DEBUG: ユーザーのcourseId: $userCourseIds');
+
       final snapshot =
           await FirebaseFirestore.instance
               .collection('quests')
@@ -264,11 +275,19 @@ class _ParkPageState extends ConsumerState<ParkPage> {
       if (mounted) {
         setState(() {
           _quests =
-              snapshot.docs.map((doc) {
-                final data = doc.data();
-                data['id'] = doc.id;
-                return data;
-              }).toList();
+              snapshot.docs
+                  .map((doc) {
+                    final data = doc.data();
+                    data['id'] = doc.id;
+                    return data;
+                  })
+                  .where((quest) {
+                    // ユーザーが持っているcourseIdのクエストのみを表示
+                    final questCourseId = quest['courseId'] as String?;
+                    return questCourseId != null &&
+                        userCourseIds.contains(questCourseId);
+                  })
+                  .toList();
           _isLoadingQuests = false;
         });
       }
@@ -679,6 +698,12 @@ class _ParkPageState extends ConsumerState<ParkPage> {
                     );
                     return;
                   }
+
+                  // 選択された授業のcourseIdを取得
+                  final selectedClassData =
+                      ref.read(timetableProvider)['questSelectedClass'];
+                  final courseId = selectedClassData?['courseId'];
+
                   final newQuest = {
                     'subject': selectedClass,
                     'name': taskType,
@@ -690,6 +715,7 @@ class _ParkPageState extends ConsumerState<ParkPage> {
                     'reward': 10,
                     'createdBy': widget.userName,
                     'creatorId': user.uid,
+                    'courseId': courseId,
                     'createdAt': FieldValue.serverTimestamp(),
                   };
                   FirebaseFirestore.instance
