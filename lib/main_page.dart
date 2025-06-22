@@ -21,7 +21,9 @@ import 'credit_explore_page.dart';
 import 'setting_page.dart';
 
 class MainPage extends ConsumerWidget {
-  MainPage({super.key});
+  final bool showLoginBonus;
+
+  MainPage({super.key, this.showLoginBonus = false});
 
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
@@ -70,6 +72,18 @@ class MainPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // ログインボーナス通知を表示
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (showLoginBonus) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('ログインボーナス！たこ焼きを1個獲得しました！'),
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+    });
+
     final currentPage = ref.watch(currentPageProvider);
     final user = FirebaseAuth.instance.currentUser;
     final userName = user?.displayName ?? 'ゲスト';

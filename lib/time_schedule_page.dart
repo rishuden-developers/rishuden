@@ -535,57 +535,70 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
     AttendanceStatus status,
   ) {
     setState(() {
-      // ★★★ 新しい構造を使用：courseIdと日付で出席状態を管理 ★★★
       final date = DateFormat('yyyyMMdd').format(
         _displayedMonday.add(
           Duration(days: _getDayIndexFromUniqueKey(uniqueKey)),
         ),
       );
 
-      // Providerの新しいメソッドを使用
-      if (status == AttendanceStatus.none) {
-        // 出席状態を削除
+      // ★★★ 修正点：ステータス更新前に現在の状態を取得 ★★★
+      final oldStatusString = ref
+          .read(timetableProvider.notifier)
+          .getAttendanceStatus(courseId, date);
+      final oldStatus =
+          oldStatusString != null && oldStatusString.isNotEmpty
+              ? AttendanceStatus.values.firstWhere(
+                (s) => s.toString() == oldStatusString,
+                orElse: () => AttendanceStatus.none,
+              )
+              : AttendanceStatus.none;
+
+      final newStatus = status;
+
+      // 状態が変化しない場合は何もしない
+      if (oldStatus == newStatus) {
+        return;
+      }
+
+      // ★★★ 新しいステータスをProviderに保存 ★★★
+      if (newStatus == AttendanceStatus.none) {
         ref
             .read(timetableProvider.notifier)
             .setAttendanceStatus(courseId, date, '');
       } else {
-        // 出席状態を設定
         ref
             .read(timetableProvider.notifier)
-            .setAttendanceStatus(courseId, date, status.toString());
+            .setAttendanceStatus(courseId, date, newStatus.toString());
       }
 
-      // courseId を使って欠席・遅刻をカウント
-      final currentStatus = ref
-          .read(timetableProvider.notifier)
-          .getAttendanceStatus(courseId, date);
-      final oldStatus =
-          currentStatus != null
-              ? AttendanceStatus.values.firstWhere(
-                (e) => e.toString() == currentStatus,
-              )
-              : AttendanceStatus.none;
+      // ★★★ 状態の変化に基づいてカウントを更新 ★★★
 
+      // 欠席カウントのロジック
       if (oldStatus != AttendanceStatus.absent &&
-          status == AttendanceStatus.absent) {
+          newStatus == AttendanceStatus.absent) {
         final newAbsenceCount = Map<String, int>.from(absenceCount);
         newAbsenceCount[courseId] = (newAbsenceCount[courseId] ?? 0) + 1;
         _updateAbsenceCount(newAbsenceCount);
       } else if (oldStatus == AttendanceStatus.absent &&
-          status != AttendanceStatus.absent) {
+          newStatus != AttendanceStatus.absent) {
         final newAbsenceCount = Map<String, int>.from(absenceCount);
-        newAbsenceCount[courseId] = (newAbsenceCount[courseId] ?? 1) - 1;
+        newAbsenceCount[courseId] = max(
+          0,
+          (newAbsenceCount[courseId] ?? 1) - 1,
+        );
         _updateAbsenceCount(newAbsenceCount);
       }
+
+      // 遅刻カウントのロジック
       if (oldStatus != AttendanceStatus.late &&
-          status == AttendanceStatus.late) {
+          newStatus == AttendanceStatus.late) {
         final newLateCount = Map<String, int>.from(lateCount);
         newLateCount[courseId] = (newLateCount[courseId] ?? 0) + 1;
         _updateLateCount(newLateCount);
       } else if (oldStatus == AttendanceStatus.late &&
-          status != AttendanceStatus.late) {
+          newStatus != AttendanceStatus.late) {
         final newLateCount = Map<String, int>.from(lateCount);
-        newLateCount[courseId] = (newLateCount[courseId] ?? 1) - 1;
+        newLateCount[courseId] = max(0, (newLateCount[courseId] ?? 1) - 1);
         _updateLateCount(newLateCount);
       }
     });
@@ -597,8 +610,17 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
     final parts = uniqueKey.split('_');
     if (parts.length >= 2) {
       final dateStr = parts.last;
-      final date = DateFormat('yyyyMMdd').parse(dateStr);
-      return date.difference(_displayedMonday).inDays;
+      try {
+        // 安全な解析を試みる
+        final date = DateFormat('yyyyMMdd').parse(dateStr);
+        return date.difference(_displayedMonday).inDays;
+      } on FormatException catch (e) {
+        // 解析失敗時にエラーログを出力
+        print('Error parsing date from uniqueKey: "$uniqueKey"');
+        print('Date string was: "$dateStr"');
+        print('FormatException: $e');
+        return 0; // エラー時はフォールバック
+      }
     }
     return 0; // フォールバック
   }
@@ -773,9 +795,38 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
-                // 教員名を表示
-                if (entry.courseId != null &&
-                    teacherNames[entry.courseId] != null) ...[
+                // ★★★ 表示優先順位のロジック ★★★
+                if (hasCount) ...[
+                  const SizedBox(height: 2),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      if (absenceCount > 0)
+                        Text(
+                          '$absenceCount',
+                          style: const TextStyle(
+                            color: Colors.redAccent,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      if (absenceCount > 0 && lateCount > 0)
+                        const SizedBox(width: 6),
+                      if (lateCount > 0)
+                        Text(
+                          '$lateCount',
+                          style: const TextStyle(
+                            color: Colors.orangeAccent,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                    ],
+                  ),
+                ] else if (entry.courseId != null &&
+                    teacherNames.containsKey(entry.courseId) &&
+                    teacherNames[entry.courseId]!.isNotEmpty) ...[
                   const SizedBox(height: 1),
                   Text(
                     teacherNames[entry.courseId]!,
@@ -788,78 +839,6 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                     overflow: TextOverflow.ellipsis,
                   ),
                 ],
-                // ★★★ ここからが修正箇所 ★★★
-                if (hasCount) ...[
-                  const SizedBox(height: 2),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    children: [
-                      if (absenceCount > 0)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 4,
-                            vertical: 1,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.red[900]?.withOpacity(0.8),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.cancel,
-                                color: Colors.red[200],
-                                size: 9,
-                              ),
-                              const SizedBox(width: 2),
-                              Text(
-                                '$absenceCount',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 8,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      if (absenceCount > 0 && lateCount > 0)
-                        const SizedBox(width: 3),
-                      if (lateCount > 0)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 4,
-                            vertical: 1,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.orange[900]?.withOpacity(0.8),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.watch_later,
-                                color: Colors.orange[200],
-                                size: 9,
-                              ),
-                              const SizedBox(width: 2),
-                              Text(
-                                '$lateCount',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 8,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                    ],
-                  ),
-                ],
-                // ★★★ ここまでが修正箇所 ★★★
                 const Spacer(),
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.end,
@@ -869,16 +848,6 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          if (entry.classroom.isNotEmpty)
-                            Text(
-                              entry.classroom,
-                              style: TextStyle(
-                                fontSize: 9,
-                                color: Colors.white.withOpacity(0.7),
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
                           if (noteText.isNotEmpty)
                             Text(
                               noteText,
@@ -886,6 +855,16 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                                 fontSize: 9,
                                 color: Colors.tealAccent.withOpacity(0.8),
                                 fontStyle: FontStyle.italic,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            )
+                          else if (entry.classroom.isNotEmpty)
+                            Text(
+                              entry.classroom,
+                              style: TextStyle(
+                                fontSize: 9,
+                                color: Colors.white.withOpacity(0.7),
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -900,52 +879,26 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
           ],
         ),
       );
+      // ★★★ シンプルな構造でPositionedウィジェットを作成 ★★★
       positionedWidgets.add(
         Positioned(
           top: top,
           left: 0,
           right: 0,
           height: height,
-          child: InkWell(
+          child: GestureDetector(
+            behavior: HitTestBehavior.translucent,
             onTap: () {
+              print(
+                'DEBUG: Cell tapped - dayIndex: $dayIndex, periodIndex: $periodIndex, subject: ${entry.subjectName}',
+              );
               _showNoteDialog(
                 context,
                 dayIndex,
                 academicPeriodIndex: periodIndex,
               );
             },
-            child: Stack(
-              children: [
-                classWidget,
-                Positioned(
-                  top: 2,
-                  right: 2,
-                  child:
-                      attendanceStatus[uniqueKey] != null &&
-                              attendanceStatus[uniqueKey] !=
-                                  AttendanceStatus.none.toString()
-                          ? Icon(
-                            attendanceStatus[uniqueKey] ==
-                                    AttendanceStatus.present.toString()
-                                ? Icons.check_circle
-                                : attendanceStatus[uniqueKey] ==
-                                    AttendanceStatus.absent.toString()
-                                ? Icons.cancel
-                                : Icons.access_time,
-                            color:
-                                attendanceStatus[uniqueKey] ==
-                                        AttendanceStatus.present.toString()
-                                    ? Colors.green
-                                    : attendanceStatus[uniqueKey] ==
-                                        AttendanceStatus.absent.toString()
-                                    ? Colors.red
-                                    : Colors.orange,
-                            size: 16,
-                          )
-                          : const SizedBox.shrink(),
-                ),
-              ],
-            ),
+            child: classWidget,
           ),
         ),
       );
@@ -1349,7 +1302,38 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
           return GestureDetector(
             behavior: HitTestBehavior.opaque,
             onTapDown: (details) {
+              // ★★★ タップされた位置に授業コマがあるかチェック ★★★
               final double tappedY = details.localPosition.dy;
+              final double rowHeight = totalHeight / 8.0;
+
+              // タップされた位置の行インデックスを計算
+              int tappedRowIndex = (tappedY / rowHeight).floor();
+
+              // 行インデックスを時間割の時限インデックスに変換
+              int periodIndex;
+              if (tappedRowIndex < 2) {
+                periodIndex = tappedRowIndex; // 1限、2限
+              } else if (tappedRowIndex == 2) {
+                return; // 昼休みは無視
+              } else {
+                periodIndex = tappedRowIndex - 1; // 3限以降
+              }
+
+              // ★★★ 授業コマが存在する場合は、予定追加の処理を完全にスキップ ★★★
+              if (periodIndex >= 0 &&
+                  periodIndex < _timetableGrid[dayIndex].length &&
+                  _timetableGrid[dayIndex][periodIndex] != null) {
+                print(
+                  'DEBUG: Skipping event dialog - class exists at period $periodIndex',
+                );
+                return;
+              }
+
+              print(
+                'DEBUG: Showing event dialog - no class at period $periodIndex',
+              );
+
+              // 授業コマが存在しない場合のみ、予定追加ダイアログを表示
               const double timetableStartInMinutes = 8 * 60 + 50;
               const double timetableEndInMinutes = 20 * 60 + 0;
               const double totalMinutesInTimetable =
@@ -1937,6 +1921,288 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                         selectedForegroundColor: Colors.black,
                       ),
                     ),
+                    // ★★★ 出席記録セクションを追加 ★★★
+                    if (selectedPolicy == AttendancePolicy.mandatory) ...[
+                      const SizedBox(height: 16),
+                      const Divider(color: Color.fromARGB(255, 78, 78, 78)),
+                      Padding(
+                        padding: const EdgeInsets.only(
+                          top: 8.0,
+                          bottom: 8.0,
+                          left: 4.0,
+                        ),
+                        child: Text(
+                          "出席記録:",
+                          style: TextStyle(
+                            fontFamily: 'misaki',
+                            fontSize: 13,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                      // 現在の出席状態を表示
+                      Builder(
+                        builder: (context) {
+                          final date = DateFormat('yyyyMMdd').format(
+                            _displayedMonday.add(Duration(days: dayIndex)),
+                          );
+                          final currentStatusString =
+                              entry?.courseId != null
+                                  ? ref
+                                      .read(timetableProvider.notifier)
+                                      .getAttendanceStatus(
+                                        entry!.courseId!,
+                                        date,
+                                      )
+                                  : null;
+                          final currentStatus =
+                              currentStatusString != null &&
+                                      currentStatusString.isNotEmpty
+                                  ? AttendanceStatus.values.firstWhere(
+                                    (s) => s.toString() == currentStatusString,
+                                    orElse: () => AttendanceStatus.none,
+                                  )
+                                  : AttendanceStatus.none;
+
+                          // 欠席や遅刻の場合のみ表示
+                          if (currentStatus == AttendanceStatus.absent ||
+                              currentStatus == AttendanceStatus.late) {
+                            return Column(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey[800],
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        currentStatus == AttendanceStatus.absent
+                                            ? Icons.cancel
+                                            : Icons.watch_later,
+                                        color:
+                                            currentStatus ==
+                                                    AttendanceStatus.absent
+                                                ? Colors.red
+                                                : Colors.orange,
+                                        size: 20,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        currentStatus == AttendanceStatus.absent
+                                            ? '欠席'
+                                            : '遅刻',
+                                        style: TextStyle(
+                                          color:
+                                              currentStatus ==
+                                                      AttendanceStatus.absent
+                                                  ? Colors.red
+                                                  : Colors.orange,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                              ],
+                            );
+                          }
+
+                          return const SizedBox.shrink();
+                        },
+                      ),
+                      // 出席記録ボタン
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: () {
+                                if (entry?.courseId != null) {
+                                  final date = DateFormat('yyyyMMdd').format(
+                                    _displayedMonday.add(
+                                      Duration(days: dayIndex),
+                                    ),
+                                  );
+                                  final currentStatusString = ref
+                                      .read(timetableProvider.notifier)
+                                      .getAttendanceStatus(
+                                        entry!.courseId!,
+                                        date,
+                                      );
+                                  final currentStatus =
+                                      currentStatusString != null &&
+                                              currentStatusString.isNotEmpty
+                                          ? AttendanceStatus.values.firstWhere(
+                                            (s) =>
+                                                s.toString() ==
+                                                currentStatusString,
+                                            orElse: () => AttendanceStatus.none,
+                                          )
+                                          : AttendanceStatus.none;
+
+                                  final newStatus =
+                                      currentStatus == AttendanceStatus.absent
+                                          ? AttendanceStatus.none
+                                          : AttendanceStatus.absent;
+                                  final uniqueKey =
+                                      "${entry!.courseId}_${DateFormat('yyyyMMdd').format(_displayedMonday.add(Duration(days: dayIndex)))}";
+                                  _setAttendanceStatus(
+                                    uniqueKey,
+                                    entry.courseId!,
+                                    newStatus,
+                                  );
+                                  setDialogState(() {});
+                                }
+                              },
+                              icon: const Icon(
+                                Icons.cancel_outlined,
+                                color: Colors.white,
+                              ),
+                              label: const Text(
+                                '欠席',
+                                style: TextStyle(color: Colors.white),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.red[600],
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 12,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: () {
+                                if (entry?.courseId != null) {
+                                  final date = DateFormat('yyyyMMdd').format(
+                                    _displayedMonday.add(
+                                      Duration(days: dayIndex),
+                                    ),
+                                  );
+                                  final currentStatusString = ref
+                                      .read(timetableProvider.notifier)
+                                      .getAttendanceStatus(
+                                        entry!.courseId!,
+                                        date,
+                                      );
+                                  final currentStatus =
+                                      currentStatusString != null &&
+                                              currentStatusString.isNotEmpty
+                                          ? AttendanceStatus.values.firstWhere(
+                                            (s) =>
+                                                s.toString() ==
+                                                currentStatusString,
+                                            orElse: () => AttendanceStatus.none,
+                                          )
+                                          : AttendanceStatus.none;
+
+                                  final newStatus =
+                                      currentStatus == AttendanceStatus.late
+                                          ? AttendanceStatus.none
+                                          : AttendanceStatus.late;
+
+                                  final uniqueKey =
+                                      "${entry!.courseId}_${DateFormat('yyyyMMdd').format(_displayedMonday.add(Duration(days: dayIndex)))}";
+                                  _setAttendanceStatus(
+                                    uniqueKey,
+                                    entry.courseId!,
+                                    newStatus,
+                                  );
+                                  setDialogState(() {});
+                                }
+                              },
+                              icon: const Icon(
+                                Icons.watch_later_outlined,
+                                color: Colors.white,
+                              ),
+                              label: const Text(
+                                '遅刻',
+                                style: TextStyle(color: Colors.white),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.orange[600],
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 12,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      // 累計回数表示
+                      if (entry?.courseId != null) ...[
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[850],
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.grey[700]!),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceAround,
+                            children: [
+                              Column(
+                                children: [
+                                  Icon(
+                                    Icons.cancel,
+                                    color: Colors.red[400],
+                                    size: 20,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    '欠席',
+                                    style: TextStyle(
+                                      color: Colors.red[400],
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  Text(
+                                    '${absenceCount[entry!.courseId] ?? 0}回',
+                                    style: TextStyle(
+                                      color: Colors.grey[400],
+                                      fontSize: 10,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              Column(
+                                children: [
+                                  Icon(
+                                    Icons.watch_later,
+                                    color: Colors.orange[400],
+                                    size: 20,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    '遅刻',
+                                    style: TextStyle(
+                                      color: Colors.orange[400],
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  Text(
+                                    '${lateCount[entry!.courseId] ?? 0}回',
+                                    style: TextStyle(
+                                      color: Colors.grey[400],
+                                      fontSize: 10,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
                   ],
                 ),
               ),
@@ -1957,10 +2223,7 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                     '保存',
                     style: TextStyle(fontFamily: 'misaki', color: Colors.black),
                   ),
-                  onPressed:
-                      hasChanged
-                          ? () => Navigator.of(dialogContext).pop(true)
-                          : null,
+                  onPressed: () => Navigator.of(dialogContext).pop(true),
                 ),
               ],
             );
@@ -1974,37 +2237,41 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
       if (currentEntry != null) {
         final newText = noteController.text.trim();
 
-        // ★★★ メモ保存ロジックを全面的に修正 ★★★
         final newCellNotes = Map<String, String>.from(cellNotes);
         final newWeeklyNotes = Map<String, String>.from(weeklyNotes);
 
         if (newText.isEmpty) {
-          // テキストが空なら両方のメモを削除
           newCellNotes.remove(oneTimeNoteKey);
           newWeeklyNotes.remove(weeklyNoteKey);
         } else {
           if (isWeekly) {
-            // 「毎週」がオンの場合
-            newWeeklyNotes[weeklyNoteKey] = newText; // 週次メモとして保存
-            newCellNotes.remove(oneTimeNoteKey); // その日のメモは削除
+            newWeeklyNotes[weeklyNoteKey] = newText;
+            newCellNotes.remove(oneTimeNoteKey);
           } else {
-            // 「毎週」がオフの場合
-            newCellNotes[oneTimeNoteKey] = newText; // その日のメモとして保存
-            newWeeklyNotes.remove(weeklyNoteKey); // 週次メモは削除
+            newCellNotes[oneTimeNoteKey] = newText;
+            newWeeklyNotes.remove(weeklyNoteKey);
           }
         }
 
-        // 更新されたマップでStateを更新
         _updateCellNotes(newCellNotes);
         _updateWeeklyNotes(newWeeklyNotes);
 
         if (currentEntry.courseId != null) {
+          final user = FirebaseAuth.instance.currentUser;
+          if (user != null) {
+            FirebaseFirestore.instance
+                .collection('course_enrollments')
+                .doc(currentEntry.courseId!)
+                .set({
+                  'enrolledUserIds': FieldValue.arrayUnion([user.uid]),
+                }, SetOptions(merge: true));
+          }
+
           _updateAttendancePolicies({
             ...attendancePolicies,
             currentEntry.courseId!: selectedPolicy.toString(),
           });
 
-          // 教員名を保存（空でも保存してクリアできるようにする）
           final teacherName = teacherNameController.text.trim();
           ref
               .read(timetableProvider.notifier)

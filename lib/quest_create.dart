@@ -12,7 +12,7 @@ import 'package:intl/intl.dart';
 class QuestCreationWidget extends ConsumerStatefulWidget {
   final void Function() onCancel;
   final void Function(
-    String selectedClass,
+    Map<String, dynamic> selectedClass,
     String taskType,
     DateTime deadline,
     String description,
@@ -287,7 +287,7 @@ class _QuestCreationWidgetState extends ConsumerState<QuestCreationWidget> {
                                   .read(timetableProvider.notifier)
                                   .updateQuestDescription(tempDescription);
                               widget.onCreate(
-                                selectedClass!['subjectName'],
+                                selectedClass!,
                                 tempTaskType!,
                                 tempDeadline!,
                                 tempDescription,
@@ -462,29 +462,23 @@ class _QuestCreationWidgetState extends ConsumerState<QuestCreationWidget> {
 
                           // 各曜日の授業
                           ...List.generate(5, (dayIndex) {
-                            final entry = _weeklyClasses.firstWhere(
-                              (e) =>
-                                  e.dayOfWeek == dayIndex &&
-                                  e.period == periodIndex + 1,
-                              orElse:
-                                  () => TimetableEntry(
-                                    id: 'default',
-                                    subjectName: '未選択',
-                                    classroom: '',
-                                    originalLocation: '',
-                                    dayOfWeek: 0,
-                                    period: 0,
-                                    date: DateFormat(
-                                      'yyyy-MM-dd',
-                                    ).format(DateTime.now()),
-                                  ),
-                            );
+                            TimetableEntry? entry;
+                            try {
+                              entry = _weeklyClasses.firstWhere(
+                                (e) =>
+                                    e.dayOfWeek == dayIndex &&
+                                    e.period == periodIndex + 1,
+                              );
+                            } catch (e) {
+                              entry = null;
+                            }
 
-                            if (entry.subjectName.isEmpty) {
+                            if (entry == null || entry.subjectName.isEmpty) {
                               return Expanded(
                                 child: Container(
                                   height: 60,
                                   decoration: BoxDecoration(
+                                    color: Colors.grey[100],
                                     border: Border.all(
                                       color: Colors.grey[300]!,
                                     ),
@@ -494,7 +488,6 @@ class _QuestCreationWidgetState extends ConsumerState<QuestCreationWidget> {
                             }
 
                             final courseColor = _getCourseColor(entry);
-                            // 既存データがある場合は、その授業が選択された状態で表示
                             final isSelected =
                                 selectedClass?['id'] == entry.id ||
                                 (selectedClass != null &&
@@ -507,7 +500,7 @@ class _QuestCreationWidgetState extends ConsumerState<QuestCreationWidget> {
                                   ref
                                       .read(timetableProvider.notifier)
                                       .updateQuestSelectedClass({
-                                        'id': entry.id,
+                                        'id': entry!.id,
                                         'subjectName': entry.subjectName,
                                         'classroom': entry.classroom,
                                         'dayOfWeek': entry.dayOfWeek,
@@ -516,7 +509,6 @@ class _QuestCreationWidgetState extends ConsumerState<QuestCreationWidget> {
                                         'courseId': entry.courseId,
                                       });
 
-                                  // 既存データがある場合は前回のデータを表示、ない場合は新規作成
                                   if (selectedTaskType != null &&
                                       selectedDeadline != null) {
                                     print(
@@ -561,16 +553,6 @@ class _QuestCreationWidgetState extends ConsumerState<QuestCreationWidget> {
                                           maxLines: 2,
                                           overflow: TextOverflow.ellipsis,
                                         ),
-                                        if (entry.classroom.isNotEmpty)
-                                          Text(
-                                            entry.classroom,
-                                            style: TextStyle(
-                                              fontSize: 8,
-                                              color: Colors.grey[600],
-                                            ),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
                                       ],
                                     ),
                                   ),
