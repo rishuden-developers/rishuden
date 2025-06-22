@@ -67,7 +67,7 @@ class _RegisterPageState extends State<RegisterPage> {
                       ).showSnackBar(SnackBar(content: Text('まだ認証が完了していません')));
                     }
                   },
-                  child: Text('OK'),
+                  child: Text('次へ'),
                 ),
               ],
             ),
