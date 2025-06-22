@@ -21,6 +21,10 @@ import 'utils/course_pattern_detector.dart';
 import 'utils/course_color_generator.dart';
 import 'course_pattern.dart';
 import 'providers/timetable_provider.dart';
+import 'providers/current_page_provider.dart';
+import 'providers/global_course_mapping_provider.dart';
+import 'level_gauge.dart';
+import 'task_progress_gauge.dart';
 
 enum AttendanceStatus { present, absent, late, none }
 
@@ -204,81 +208,25 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
       weekStart,
     );
 
-    // ★★★ 授業名だけでcourseIdを決定するロジックを改善 ★★★
+    // ★★★ グローバルマッピングを使用してcourseIdを決定 ★★★
     for (var entry in timeTableEntries) {
-      // 1. 正規化処理の強化
-      String normalizedSubjectName =
-          entry.subjectName
-              .replaceAll(RegExp(r'[（）()【】\[\]]'), '') // 括弧類を削除
-              .replaceAllMapped(
-                RegExp(r'[Ａ-Ｚａ-ｚ０-９]'),
-                (Match m) =>
-                    String.fromCharCode(m.group(0)!.codeUnitAt(0) - 0xFEE0),
-              ) // 全角英数字を半角に
-              .replaceAll(RegExp(r'\s+'), '') // 全ての空白文字を削除
-              .replaceAll('　', '')
-              .replaceAll('・', '')
-              .replaceAll('Ⅰ', 'I')
-              .replaceAll('Ⅱ', 'II')
-              .replaceAll('Ⅲ', 'III')
-              .replaceAll('Ⅳ', 'IV')
-              .replaceAll('Ⅴ', 'V')
-              .replaceAll('Ⅵ', 'VI')
-              .replaceAll('Ⅶ', 'VII')
-              .replaceAll('Ⅷ', 'VIII')
-              .replaceAll('Ⅸ', 'IX')
-              .replaceAll('Ⅹ', 'X')
-              .toLowerCase() // 全て小文字に
-              .trim();
+      // グローバルマッピングからcourseIdを取得または生成
+      final courseId = ref
+          .read(globalCourseMappingProvider.notifier)
+          .getOrCreateCourseId(entry.subjectName);
+      entry.courseId = courseId;
 
-      // 2. 既存のcourseIdと前方一致するかチェック
-      String? matchedCourseId;
-      _globalSubjectToCourseId.forEach((key, value) {
-        if (normalizedSubjectName.startsWith(key) ||
-            key.startsWith(normalizedSubjectName)) {
-          matchedCourseId = value;
-        }
-      });
-
-      if (matchedCourseId != null) {
-        entry.courseId = matchedCourseId;
-      } else {
-        // 3. 新しい授業として登録
-        final newCourseId = 'course_${_globalCourseIdCounter++}';
-        _globalSubjectToCourseId[normalizedSubjectName] = newCourseId;
-        entry.courseId = newCourseId;
-
-        // ★★★ 新しい授業にデフォルトの出席方針を設定 ★★★
-        final currentPolicies = Map<String, String>.from(attendancePolicies);
-        if (!currentPolicies.containsKey(newCourseId)) {
-          currentPolicies[newCourseId] = AttendancePolicy.mandatory.toString();
-          _updateAttendancePolicies(currentPolicies);
-          print(
-            'DEBUG: 新しい授業 "$normalizedSubjectName" -> courseId: $newCourseId -> デフォルト出席方針: mandatory',
-          );
-        }
-
+      // ★★★ 新しい授業にデフォルトの出席方針を設定 ★★★
+      final currentPolicies = Map<String, String>.from(attendancePolicies);
+      if (!currentPolicies.containsKey(courseId)) {
+        currentPolicies[courseId] = AttendancePolicy.mandatory.toString();
+        _updateAttendancePolicies(currentPolicies);
         print(
-          'DEBUG: 新しい授業 "$normalizedSubjectName" -> courseId: $newCourseId',
+          'DEBUG: 新しい授業 "${entry.subjectName}" -> courseId: $courseId -> デフォルト出席方針: mandatory',
         );
       }
 
-      // ★★★ 既存の授業も含めて、出席方針が未設定の場合はデフォルト値を設定 ★★★
-      if (entry.courseId != null) {
-        final currentPolicies = Map<String, String>.from(attendancePolicies);
-        if (!currentPolicies.containsKey(entry.courseId!)) {
-          currentPolicies[entry.courseId!] =
-              AttendancePolicy.mandatory.toString();
-          _updateAttendancePolicies(currentPolicies);
-          print(
-            'DEBUG: 既存授業 "${entry.subjectName}" -> courseId: ${entry.courseId} -> デフォルト出席方針: mandatory',
-          );
-        }
-      }
-
-      print(
-        'DEBUG: ${entry.subjectName} -> 正規化: "$normalizedSubjectName" -> courseId: ${entry.courseId}',
-      );
+      print('DEBUG: ${entry.subjectName} -> courseId: ${entry.courseId}');
     }
 
     // ★★★ 乱数で色を生成 ★★★

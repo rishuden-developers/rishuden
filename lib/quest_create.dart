@@ -6,6 +6,7 @@ import 'utils/course_pattern_detector.dart';
 import 'utils/course_color_generator.dart';
 import 'course_pattern.dart';
 import 'providers/timetable_provider.dart';
+import 'providers/global_course_mapping_provider.dart';
 import 'package:intl/intl.dart';
 
 class QuestCreationWidget extends ConsumerStatefulWidget {
@@ -512,6 +513,7 @@ class _QuestCreationWidgetState extends ConsumerState<QuestCreationWidget> {
                                         'dayOfWeek': entry.dayOfWeek,
                                         'period': entry.period,
                                         'date': entry.date,
+                                        'courseId': entry.courseId,
                                       });
 
                                   // 既存データがある場合は前回のデータを表示、ない場合は新規作成
