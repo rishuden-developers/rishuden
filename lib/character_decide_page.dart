@@ -211,7 +211,7 @@ class _CharacterDecidePageState extends State<CharacterDecidePage> {
                   style: const TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
-                    color: Colors.brown,
+                    color: Colors.white,
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -220,7 +220,7 @@ class _CharacterDecidePageState extends State<CharacterDecidePage> {
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Text(
                     displayCharacterData["personality"],
-                    style: const TextStyle(fontSize: 16, color: Colors.brown),
+                    style: const TextStyle(fontSize: 16, color: Colors.white),
                     textAlign: TextAlign.center,
                   ),
                 ),
@@ -230,7 +230,7 @@ class _CharacterDecidePageState extends State<CharacterDecidePage> {
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Text(
                     (displayCharacterData["skills"] as List<String>).join(', '),
-                    style: const TextStyle(fontSize: 16, color: Colors.brown),
+                    style: const TextStyle(fontSize: 16, color: Colors.white),
                     textAlign: TextAlign.center,
                   ),
                 ),
@@ -240,7 +240,7 @@ class _CharacterDecidePageState extends State<CharacterDecidePage> {
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Text(
                     (displayCharacterData["items"] as List<String>).join(', '),
-                    style: const TextStyle(fontSize: 16, color: Colors.brown),
+                    style: const TextStyle(fontSize: 16, color: Colors.white),
                     textAlign: TextAlign.center,
                   ),
                 ),
