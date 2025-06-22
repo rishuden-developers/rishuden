@@ -2237,37 +2237,41 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
       if (currentEntry != null) {
         final newText = noteController.text.trim();
 
-        // ★★★ メモ保存ロジックを全面的に修正 ★★★
         final newCellNotes = Map<String, String>.from(cellNotes);
         final newWeeklyNotes = Map<String, String>.from(weeklyNotes);
 
         if (newText.isEmpty) {
-          // テキストが空なら両方のメモを削除
           newCellNotes.remove(oneTimeNoteKey);
           newWeeklyNotes.remove(weeklyNoteKey);
         } else {
           if (isWeekly) {
-            // 「毎週」がオンの場合
-            newWeeklyNotes[weeklyNoteKey] = newText; // 週次メモとして保存
-            newCellNotes.remove(oneTimeNoteKey); // その日のメモは削除
+            newWeeklyNotes[weeklyNoteKey] = newText;
+            newCellNotes.remove(oneTimeNoteKey);
           } else {
-            // 「毎週」がオフの場合
-            newCellNotes[oneTimeNoteKey] = newText; // その日のメモとして保存
-            newWeeklyNotes.remove(weeklyNoteKey); // 週次メモは削除
+            newCellNotes[oneTimeNoteKey] = newText;
+            newWeeklyNotes.remove(weeklyNoteKey);
           }
         }
 
-        // 更新されたマップでStateを更新
         _updateCellNotes(newCellNotes);
         _updateWeeklyNotes(newWeeklyNotes);
 
         if (currentEntry.courseId != null) {
+          final user = FirebaseAuth.instance.currentUser;
+          if (user != null) {
+            FirebaseFirestore.instance
+                .collection('course_enrollments')
+                .doc(currentEntry.courseId!)
+                .set({
+                  'enrolledUserIds': FieldValue.arrayUnion([user.uid]),
+                }, SetOptions(merge: true));
+          }
+
           _updateAttendancePolicies({
             ...attendancePolicies,
             currentEntry.courseId!: selectedPolicy.toString(),
           });
 
-          // 教員名を保存（空でも保存してクリアできるようにする）
           final teacherName = teacherNameController.text.trim();
           ref
               .read(timetableProvider.notifier)

@@ -12,7 +12,7 @@ import 'package:intl/intl.dart';
 class QuestCreationWidget extends ConsumerStatefulWidget {
   final void Function() onCancel;
   final void Function(
-    String selectedClass,
+    Map<String, dynamic> selectedClass,
     String taskType,
     DateTime deadline,
     String description,
@@ -287,7 +287,7 @@ class _QuestCreationWidgetState extends ConsumerState<QuestCreationWidget> {
                                   .read(timetableProvider.notifier)
                                   .updateQuestDescription(tempDescription);
                               widget.onCreate(
-                                selectedClass!['subjectName'],
+                                selectedClass!,
                                 tempTaskType!,
                                 tempDeadline!,
                                 tempDescription,

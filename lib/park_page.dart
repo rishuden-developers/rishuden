@@ -165,8 +165,40 @@ class _ParkPageState extends ConsumerState<ParkPage> {
     });
   }
 
+  void _createQuest(
+    Map<String, dynamic> selectedClass,
+    String taskType,
+    DateTime deadline,
+    String description,
+  ) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    try {
+      await FirebaseFirestore.instance.collection('quests').add({
+        'name': selectedClass['subjectName'],
+        'courseId': selectedClass['courseId'], // courseIdを保存
+        'taskType': taskType,
+        'deadline': Timestamp.fromDate(deadline),
+        'description': description,
+        'createdAt': FieldValue.serverTimestamp(),
+        'createdBy': user.uid,
+        'completedUserIds': [], // 初期値
+      });
+
+      // クエスト作成後にリストを再読み込み
+      await _loadQuestsFromFirestore();
+    } catch (e) {
+      print('Error creating quest: $e');
+      // エラーハンドリング
+    }
+  }
+
   void _submitTask(String questId, Map<String, dynamic> taskData) async {
     if (_crackingTasks.contains(questId)) return;
+
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return; // ユーザーがいない場合は何もしない
 
     if (!mounted) return;
     setState(() {
@@ -178,6 +210,14 @@ class _ParkPageState extends ConsumerState<ParkPage> {
     await Future.delayed(const Duration(milliseconds: 2500));
 
     if (!mounted) return;
+
+    // ★★★ ここからが追加箇所 ★★★
+    // Firestoreのクエストドキュメントに討伐したユーザーIDを追加
+    await FirebaseFirestore.instance.collection('quests').doc(questId).set({
+      'completedUserIds': FieldValue.arrayUnion([user.uid]),
+    }, SetOptions(merge: true));
+    // ★★★ ここまでが追加箇所 ★★★
+
     setState(() {
       _fadingOutTaskIndex = questId;
     });
@@ -185,7 +225,9 @@ class _ParkPageState extends ConsumerState<ParkPage> {
     await Future.delayed(const Duration(milliseconds: 500));
 
     if (!mounted) return;
-    await FirebaseFirestore.instance.collection('quests').doc(questId).delete();
+    // 討伐後、クエストをリストから削除するロジックは一旦コメントアウトし、
+    // 代わりにUIを更新して討伐済み状態を示すように変更する可能性があります。
+    // await FirebaseFirestore.instance.collection('quests').doc(questId).delete();
 
     const int rewardExp = 5;
     const int rewardTakoyaki = 2;
@@ -197,6 +239,7 @@ class _ParkPageState extends ConsumerState<ParkPage> {
       if (_fadingOutTaskIndex == questId) {
         _fadingOutTaskIndex = null;
       }
+      // UI上は即座にリストから削除するが、ドキュメントは残す
       _quests.removeWhere((quest) => quest['id'] == questId);
     });
 
@@ -254,50 +297,49 @@ class _ParkPageState extends ConsumerState<ParkPage> {
 
   // Firestoreからクエストデータを読み込む
   Future<void> _loadQuestsFromFirestore() async {
+    setState(() {
+      _isLoadingQuests = true;
+    });
     try {
-      // ユーザーの時間割データからcourseIdを取得
-      final timetableData = ref.read(timetableProvider);
-      final userCourseIds = <String>{};
-
-      // 出席方針が設定されている授業のcourseIdを収集
-      final attendancePolicies =
-          timetableData['attendancePolicies'] as Map<String, String>? ?? {};
-      userCourseIds.addAll(attendancePolicies.keys);
-
-      print('DEBUG: ユーザーのcourseId: $userCourseIds');
-
       final snapshot =
           await FirebaseFirestore.instance
               .collection('quests')
-              .orderBy('createdAt', descending: true)
+              .orderBy('deadline', descending: false)
               .get();
 
-      if (mounted) {
+      if (!mounted) return;
+
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
         setState(() {
-          _quests =
-              snapshot.docs
-                  .map((doc) {
-                    final data = doc.data();
-                    data['id'] = doc.id;
-                    return data;
-                  })
-                  .where((quest) {
-                    // ユーザーが持っているcourseIdのクエストのみを表示
-                    final questCourseId = quest['courseId'] as String?;
-                    return questCourseId != null &&
-                        userCourseIds.contains(questCourseId);
-                  })
-                  .toList();
+          _quests = [];
           _isLoadingQuests = false;
         });
+        return;
       }
+
+      final quests =
+          snapshot.docs.map((doc) {
+            return {'id': doc.id, ...doc.data()};
+          }).toList();
+
+      // 自分が既に完了したクエストを除外
+      final filteredQuests =
+          quests.where((quest) {
+            final completedBy = quest['completedUserIds'] as List<dynamic>?;
+            return completedBy == null || !completedBy.contains(user.uid);
+          }).toList();
+
+      setState(() {
+        _quests = filteredQuests;
+        _isLoadingQuests = false;
+      });
     } catch (e) {
       print('Error loading quests: $e');
-      if (mounted) {
-        setState(() {
-          _isLoadingQuests = false;
-        });
-      }
+      if (!mounted) return;
+      setState(() {
+        _isLoadingQuests = false;
+      });
     }
   }
 
@@ -675,97 +717,11 @@ class _ParkPageState extends ConsumerState<ParkPage> {
               child: QuestCreationWidget(
                 onCancel: () => setState(() => isQuestCreationVisible = false),
                 onCreate: (selectedClass, taskType, deadline, description) {
-                  final user = FirebaseAuth.instance.currentUser;
-                  if (user == null) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: const Text(
-                          'クエストを作成するにはログインが必要です。',
-                          style: TextStyle(
-                            fontFamily: 'misaki',
-                            color: Colors.white,
-                          ),
-                        ),
-                        backgroundColor: Colors.black.withOpacity(0.85),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          side: const BorderSide(
-                            color: Colors.white,
-                            width: 2.5,
-                          ),
-                        ),
-                      ),
-                    );
-                    return;
-                  }
-
-                  // 選択された授業のcourseIdを取得
-                  final selectedClassData =
-                      ref.read(timetableProvider)['questSelectedClass'];
-                  final courseId = selectedClassData?['courseId'];
-
-                  final newQuest = {
-                    'subject': selectedClass,
-                    'name': taskType,
-                    'details': description,
-                    'deadline': Timestamp.fromDate(deadline),
-                    'isSubmitted': false,
-                    'defeatedCount': 0,
-                    'totalParticipants': 1,
-                    'reward': 10,
-                    'createdBy': widget.userName,
-                    'creatorId': user.uid,
-                    'courseId': courseId,
-                    'createdAt': FieldValue.serverTimestamp(),
-                  };
-                  FirebaseFirestore.instance
-                      .collection('quests')
-                      .add(newQuest)
-                      .then((_) async {
-                        setState(() => isQuestCreationVisible = false);
-                        await _refreshQuests(); // データを再読み込み
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              'クエスト「$selectedClass - $taskType」を作成しました！',
-                              style: const TextStyle(
-                                fontFamily: 'misaki',
-                                color: Colors.white,
-                              ),
-                            ),
-                            backgroundColor: Colors.black.withOpacity(0.85),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              side: const BorderSide(
-                                color: Colors.white,
-                                width: 2.5,
-                              ),
-                            ),
-                          ),
-                        );
-                      })
-                      .catchError((error) {
-                        setState(() => isQuestCreationVisible = false);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: const Text(
-                              'エラー: クエストの作成に失敗しました。',
-                              style: TextStyle(
-                                fontFamily: 'misaki',
-                                color: Colors.white,
-                              ),
-                            ),
-                            backgroundColor: Colors.black.withOpacity(0.85),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              side: const BorderSide(
-                                color: Colors.white,
-                                width: 2.5,
-                              ),
-                            ),
-                          ),
-                        );
-                      });
+                  // ★★★ _createQuestを呼び出すように変更 ★★★
+                  _createQuest(selectedClass, taskType, deadline, description);
+                  setState(() {
+                    isQuestCreationVisible = false;
+                  });
                 },
               ),
             ),
@@ -780,6 +736,14 @@ class _ParkPageState extends ConsumerState<ParkPage> {
     final questId = taskData['id'] as String;
     final isCracking = _crackingTasks.contains(questId);
     final isFadingOut = _fadingOutTaskIndex == questId;
+
+    final deadline = taskData['deadline'] as Timestamp?;
+    final deadlineText =
+        deadline != null
+            ? DateFormat('MM/dd HH:mm').format(deadline.toDate())
+            : '期限なし';
+    final questName = taskData['name'] as String? ?? '名称未設定';
+    final description = taskData['description'] as String? ?? '';
 
     return AnimatedOpacity(
       opacity: isFadingOut ? 0.0 : 1.0,
@@ -807,11 +771,10 @@ class _ParkPageState extends ConsumerState<ParkPage> {
                 mainAxisAlignment: MainAxisAlignment.start,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Countdown Text - 各掲示板で個別に管理
                   _buildCountdownText(taskData),
                   const SizedBox(height: 4),
                   Text(
-                    taskData['subject'],
+                    questName,
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: screenHeight * 0.025,
@@ -842,7 +805,7 @@ class _ParkPageState extends ConsumerState<ParkPage> {
                         ),
                       ),
                       child: Text(
-                        "課題: ${taskData['name']}\n詳細: ${taskData['details']}\n期限: ${DateFormat('MM/dd HH:mm', 'ja').format((taskData['deadline'] as Timestamp).toDate())}",
+                        "課題: $questName\n詳細: $description\n期限: $deadlineText",
                         style: TextStyle(
                           fontSize: screenHeight * 0.020,
                           color: Colors.grey[100]!.withOpacity(0.95),
@@ -952,6 +915,37 @@ class _ParkPageState extends ConsumerState<ParkPage> {
                 ),
               ),
             ),
+          // ★★★ 討伐人数表示を追加 ★★★
+          Positioned(
+            top: screenHeight * 0.363,
+            right: screenWidth * 0.08,
+            child: FutureBuilder<Map<String, int>>(
+              future: _getSubjugationInfo(questId),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const SizedBox(
+                    width: 12,
+                    height: 12,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  );
+                }
+                if (!snapshot.hasData || snapshot.hasError) {
+                  return const SizedBox.shrink(); // エラー時は何も表示しない
+                }
+                final counts = snapshot.data!;
+                return Row(
+                  children: [
+                    Icon(Icons.people, color: Colors.grey[700], size: 16),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${counts['completed']} / ${counts['total']}',
+                      style: TextStyle(fontSize: 12, color: Colors.grey[800]),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
         ],
       ),
     );
@@ -1131,6 +1125,44 @@ class _ParkPageState extends ConsumerState<ParkPage> {
       print('Error saving EXP and level to Firebase: $e');
     }
   }
+
+  // ★★★ このメソッドを新しく追加 ★★★
+  Future<Map<String, int>> _getSubjugationInfo(String? questId) async {
+    if (questId == null) {
+      return {'completed': 0, 'total': 0};
+    }
+
+    try {
+      final questDoc =
+          await FirebaseFirestore.instance
+              .collection('quests')
+              .doc(questId)
+              .get();
+      final questData = questDoc.data();
+      final completedUserIds =
+          (questData?['completedUserIds'] as List?)?.length ?? 0;
+      final courseId = questData?['courseId'] as String?;
+
+      if (courseId == null) {
+        return {'completed': completedUserIds, 'total': 0};
+      }
+
+      final enrollmentDoc =
+          await FirebaseFirestore.instance
+              .collection('course_enrollments')
+              .doc(courseId)
+              .get();
+      final totalUserIds =
+          (enrollmentDoc.data()?['enrolledUserIds'] as List?)?.length ?? 0;
+
+      return {'completed': completedUserIds, 'total': totalUserIds};
+    } catch (e) {
+      print('Error getting subjugation info: $e');
+      return {'completed': 0, 'total': 0};
+    }
+  }
+
+  // ★★★ ここまで ★★★
 }
 
 class _CountdownWidget extends StatefulWidget {
