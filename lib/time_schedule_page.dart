@@ -23,6 +23,7 @@ import 'course_pattern.dart';
 import 'providers/timetable_provider.dart';
 import 'providers/current_page_provider.dart';
 import 'providers/global_course_mapping_provider.dart';
+import 'providers/global_review_mapping_provider.dart';
 import 'level_gauge.dart';
 import 'task_progress_gauge.dart';
 
@@ -127,6 +128,15 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
   void _updateLateCount(Map<String, int> count) {
     ref.read(timetableProvider.notifier).updateLateCount(count);
   }
+
+  // 教員名を更新
+  void _updateTeacherNames(Map<String, String> teacherNames) {
+    ref.read(timetableProvider.notifier).updateTeacherNames(teacherNames);
+  }
+
+  // 教員名を取得
+  Map<String, String> get teacherNames =>
+      ref.watch(timetableProvider)['teacherNames'] ?? {};
 
   // 時間割データを読み込み
   void _loadTimetableData() {
@@ -592,6 +602,11 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
       final double top = visualRowIndex * rowHeight;
       final double height = rowHeight;
 
+      // ★★★ デバッグ用ログを追加 ★★★
+      print(
+        'DEBUG: Building cell - Day: $dayIndex, Period: $periodIndex, Subject: ${entry.subjectName}, CourseID: ${entry.courseId}, Teacher: ${teacherNames[entry.courseId]}',
+      );
+
       // ★★★ uniqueKeyをcourseIdベースに変更 ★★★
       final String uniqueKey;
       if (entry.courseId != null) {
@@ -709,6 +724,21 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
+                // 教員名を表示
+                if (entry.courseId != null &&
+                    teacherNames[entry.courseId] != null) ...[
+                  const SizedBox(height: 1),
+                  Text(
+                    teacherNames[entry.courseId]!,
+                    style: TextStyle(
+                      fontSize: 8,
+                      color: Colors.white.withOpacity(0.6),
+                      fontStyle: FontStyle.italic,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
                 // ★★★ ここからが修正箇所 ★★★
                 if (hasCount) ...[
                   const SizedBox(height: 2),
@@ -1686,6 +1716,11 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
     bool isWeekly = isInitiallyWeekly;
     AttendancePolicy selectedPolicy = initialPolicy;
 
+    // 教員名コントローラーを追加
+    final teacherNameController = TextEditingController(
+      text: entry?.courseId != null ? teacherNames[entry!.courseId] ?? '' : '',
+    );
+
     bool? noteWasSaved = await showDialog<bool>(
       context: context,
       builder: (BuildContext dialogContext) {
@@ -1695,7 +1730,11 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
             final bool hasChanged =
                 noteController.text != initialText ||
                 isWeekly != isInitiallyWeekly ||
-                selectedPolicy != initialPolicy;
+                selectedPolicy != initialPolicy ||
+                teacherNameController.text.trim() !=
+                    (entry?.courseId != null
+                        ? teacherNames[entry!.courseId] ?? ''
+                        : '');
 
             return AlertDialog(
               backgroundColor: const Color.fromARGB(255, 22, 22, 22),
@@ -1769,6 +1808,42 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                       controlAffinity: ListTileControlAffinity.leading,
                       contentPadding: EdgeInsets.zero,
                     ),
+                    const Divider(color: Color.fromARGB(255, 78, 78, 78)),
+                    // 教員名入力フィールドを追加
+                    Padding(
+                      padding: const EdgeInsets.only(
+                        top: 8.0,
+                        bottom: 8.0,
+                        left: 4.0,
+                      ),
+                      child: Text(
+                        "教員名:",
+                        style: TextStyle(
+                          fontFamily: 'misaki',
+                          fontSize: 13,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                    TextField(
+                      controller: teacherNameController,
+                      style: const TextStyle(fontSize: 14, color: Colors.white),
+                      decoration: InputDecoration(
+                        hintText: '例: 田中太郎',
+                        hintStyle: TextStyle(color: Colors.grey[600]),
+                        enabledBorder: OutlineInputBorder(
+                          borderSide: BorderSide(color: Colors.grey[700]!),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderSide: const BorderSide(
+                            color: Colors.amberAccent,
+                          ),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
                     const Divider(color: Color.fromARGB(255, 78, 78, 78)),
                     Padding(
                       padding: const EdgeInsets.only(
@@ -1879,6 +1954,12 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
             ...attendancePolicies,
             currentEntry.courseId!: selectedPolicy.toString(),
           });
+
+          // 教員名を保存（空でも保存してクリアできるようにする）
+          final teacherName = teacherNameController.text.trim();
+          ref
+              .read(timetableProvider.notifier)
+              .setTeacherName(currentEntry.courseId!, teacherName);
         }
       }
     }
@@ -2420,6 +2501,179 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
       default:
         return '未設定';
     }
+  }
+
+  // メモダイアログを表示
+  void _showMemoDialog(String courseId, String subjectName) {
+    final oneTimeNoteKey =
+        "${courseId}_${DateFormat('yyyyMMdd').format(_displayedMonday)}";
+    final weeklyNoteKey = "${courseId}_weekly";
+    final memoController = TextEditingController(
+      text: cellNotes[oneTimeNoteKey] ?? weeklyNotes[weeklyNoteKey] ?? '',
+    );
+    final attendancePolicy = attendancePolicies[courseId] ?? 'flexible';
+    final teacherNameController = TextEditingController(
+      text: teacherNames[courseId] ?? '',
+    );
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: Text('$subjectName のメモ'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: memoController,
+                      decoration: InputDecoration(
+                        labelText: 'メモ',
+                        border: OutlineInputBorder(),
+                      ),
+                      maxLines: 3,
+                    ),
+                    SizedBox(height: 16),
+                    DropdownButtonFormField<String>(
+                      value: attendancePolicy,
+                      decoration: InputDecoration(
+                        labelText: '出席ポリシー',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: [
+                        DropdownMenuItem(value: 'flexible', child: Text('柔軟')),
+                        DropdownMenuItem(value: 'mandatory', child: Text('必須')),
+                      ],
+                      onChanged: (value) {
+                        setState(() {
+                          // StatefulBuilder内での状態更新
+                        });
+                      },
+                    ),
+                    SizedBox(height: 16),
+                    TextField(
+                      controller: teacherNameController,
+                      decoration: InputDecoration(
+                        labelText: '教員名',
+                        border: OutlineInputBorder(),
+                        hintText: '例: 田中太郎',
+                      ),
+                    ),
+                    SizedBox(height: 16),
+                    // 出席ボタン
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        ElevatedButton(
+                          onPressed: () {
+                            final uniqueKey =
+                                "${courseId}_${DateFormat('yyyyMMdd').format(_displayedMonday)}";
+                            _setAttendanceStatus(
+                              uniqueKey,
+                              courseId,
+                              AttendanceStatus.present,
+                            );
+                            Navigator.of(context).pop();
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.green,
+                            foregroundColor: Colors.white,
+                          ),
+                          child: Text('出席'),
+                        ),
+                        ElevatedButton(
+                          onPressed: () {
+                            final uniqueKey =
+                                "${courseId}_${DateFormat('yyyyMMdd').format(_displayedMonday)}";
+                            _setAttendanceStatus(
+                              uniqueKey,
+                              courseId,
+                              AttendanceStatus.absent,
+                            );
+                            Navigator.of(context).pop();
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red,
+                            foregroundColor: Colors.white,
+                          ),
+                          child: Text('欠席'),
+                        ),
+                        ElevatedButton(
+                          onPressed: () {
+                            final uniqueKey =
+                                "${courseId}_${DateFormat('yyyyMMdd').format(_displayedMonday)}";
+                            _setAttendanceStatus(
+                              uniqueKey,
+                              courseId,
+                              AttendanceStatus.late,
+                            );
+                            Navigator.of(context).pop();
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.orange,
+                            foregroundColor: Colors.white,
+                          ),
+                          child: Text('遅刻'),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 8),
+                    // 出席状況表示
+                    Text(
+                      '出席: ${absenceCount[courseId] ?? 0} | 欠席: ${absenceCount[courseId] ?? 0} | 遅刻: ${lateCount[courseId] ?? 0}',
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: Text('キャンセル'),
+                ),
+                TextButton(
+                  onPressed: () {
+                    // メモを保存
+                    final newText = memoController.text.trim();
+                    final newCellNotes = Map<String, String>.from(cellNotes);
+                    final oneTimeNoteKey =
+                        "${courseId}_${DateFormat('yyyyMMdd').format(_displayedMonday)}";
+
+                    if (newText.isEmpty) {
+                      newCellNotes.remove(oneTimeNoteKey);
+                    } else {
+                      newCellNotes[oneTimeNoteKey] = newText;
+                    }
+                    _updateCellNotes(newCellNotes);
+
+                    // 出席ポリシーを保存
+                    final selectedPolicy = attendancePolicy;
+                    final newPolicies = Map<String, String>.from(
+                      attendancePolicies,
+                    );
+                    newPolicies[courseId] = selectedPolicy;
+                    _updateAttendancePolicies(newPolicies);
+
+                    // 教員名を保存
+                    final teacherName = teacherNameController.text.trim();
+                    if (teacherName.isNotEmpty) {
+                      ref
+                          .read(timetableProvider.notifier)
+                          .setTeacherName(courseId, teacherName);
+                    }
+
+                    Navigator.of(context).pop();
+                  },
+                  child: Text('保存'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
   }
 }
 

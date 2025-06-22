@@ -4,6 +4,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 // グローバルな授業名 → courseId のマッピングを管理するProvider
 class GlobalCourseMappingNotifier extends StateNotifier<Map<String, String>> {
+  int _idCounter = 0; // ★★★ 一意なIDを生成するためのカウンター ★★★
+
   GlobalCourseMappingNotifier() : super({}) {
     // 初期化時にFirebaseからデータを読み込み
     _initializeFromFirebase();
@@ -72,9 +74,14 @@ class GlobalCourseMappingNotifier extends StateNotifier<Map<String, String>> {
       return existingCourseId;
     }
 
-    // 新しいcourseIdを生成
-    final newCourseId = 'course_${DateTime.now().millisecondsSinceEpoch}';
-    addCourseMapping(normalizedName, newCourseId);
+    // ★★★ 新しいcourseIdを生成（タイムスタンプ + カウンター） ★★★
+    final newCourseId =
+        'course_${DateTime.now().millisecondsSinceEpoch}_${_idCounter++}';
+
+    // 新しいマッピングを追加
+    final newMapping = Map<String, String>.from(state);
+    newMapping[normalizedName] = newCourseId;
+    updateGlobalMapping(newMapping);
     print('DEBUG: 新しい授業 "$subjectName" -> courseId: $newCourseId');
 
     return newCourseId;

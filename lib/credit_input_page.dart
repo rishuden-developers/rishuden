@@ -1,5 +1,8 @@
 // credit_input_page.dart
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'credit_explore_page.dart';
 import 'credit_result_page.dart';
 import 'common_bottom_navigation.dart'; // 共通フッターウィジェット
@@ -8,22 +11,24 @@ import 'time_schedule_page.dart';
 import 'ranking_page.dart';
 import 'item_page.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart'; // ★レート表示に利用するパッケージをインポート
+import 'providers/global_review_mapping_provider.dart';
+import 'providers/timetable_provider.dart';
 
 // credit_review_page.dartからEnumをインポート（同じ定義を持つか、共通ファイルに移動）
 import 'credit_review_page.dart'
     show LectureFormat, AttendanceStrictness, ExamType;
 
-class CreditInputPage extends StatefulWidget {
+class CreditInputPage extends ConsumerStatefulWidget {
   final String? lectureName;
   final String? teacherName;
 
   const CreditInputPage({super.key, this.lectureName, this.teacherName});
 
   @override
-  State<CreditInputPage> createState() => _CreditInputPageState();
+  ConsumerState<CreditInputPage> createState() => _CreditInputPageState();
 }
 
-class _CreditInputPageState extends State<CreditInputPage> {
+class _CreditInputPageState extends ConsumerState<CreditInputPage> {
   // フォームのキーと選択された講義・教師名
   final _formKey = GlobalKey<FormState>();
   String _selectedLectureName = '';
@@ -40,6 +45,9 @@ class _CreditInputPageState extends State<CreditInputPage> {
   final TextEditingController _commentController = TextEditingController();
   final TextEditingController _tagsController =
       TextEditingController(); // タグ入力用
+
+  // 動的な講義リスト（時間割から取得）
+  List<Map<String, String>> _dynamicLectures = [];
 
   // ダミーの講義リスト（検索・選択機能がない場合は、外部から渡すか固定値）
   List<Map<String, String>> _dummyLectures = [
@@ -60,46 +68,119 @@ class _CreditInputPageState extends State<CreditInputPage> {
       _selectedLectureName = widget.lectureName!;
       _selectedTeacherName = widget.teacherName!;
     }
+    _loadLecturesFromTimetable();
   }
 
-  void _submitReview() {
-    if (_formKey.currentState!.validate()) {
-      // レビューデータを収集
-      final reviewData = {
-        'lectureName': _selectedLectureName,
-        'teacherName': _selectedTeacherName,
-        'overallSatisfaction': _overallSatisfaction,
-        'easiness': _easiness,
-        'lectureFormat': _selectedFormat?.toString().split('.').last,
-        'attendanceStrictness': _selectedAttendance?.toString().split('.').last,
-        'examType': _selectedExamType?.toString().split('.').last,
-        'teacherFeature': _teacherFeatureController.text,
-        'comment': _commentController.text,
-        'tags':
-            _tagsController.text
-                .split(',')
-                .map((e) => e.trim())
-                .where((e) => e.isNotEmpty)
-                .toList(),
-      };
-      print('Submitted Review: $reviewData');
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // 依存関係が変更された時に最新の教員一覧を取得
+    _loadLecturesFromTimetable();
+  }
 
-      // 実際にはここでAPIにレビューを送信したり、ローカルDBに保存したりする
-      // レビュー投稿後、前のページに戻るか、結果ページに遷移する
-      Navigator.pop(context); // 前のページ（CreditReviewPage）に戻る
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text(
-            'レビューが投稿されました！',
-            style: TextStyle(fontFamily: 'misaki', color: Colors.white),
+  // 時間割から講義と教員名を取得
+  void _loadLecturesFromTimetable() {
+    try {
+      // TimetableProviderから教員名付き講義一覧を取得
+      final lecturesWithTeachers =
+          ref.read(timetableProvider.notifier).getLecturesWithTeachers();
+
+      // ダミー講義リストも含める
+      final allLectures = <Map<String, String>>[];
+      allLectures.addAll(_dummyLectures);
+      allLectures.addAll(lecturesWithTeachers);
+
+      setState(() {
+        _dynamicLectures = allLectures;
+      });
+
+      print('DEBUG: 時間割から教員名付き講義を読み込みました: ${_dynamicLectures.length}件');
+      print('DEBUG: 教員名付き講義一覧: $_dynamicLectures');
+    } catch (e) {
+      print('Error loading lectures from timetable: $e');
+      setState(() {
+        _dynamicLectures = _dummyLectures;
+      });
+    }
+  }
+
+  Future<void> _submitReview() async {
+    if (_formKey.currentState!.validate()) {
+      try {
+        // グローバルレビューマッピングからreviewIdを取得
+        final reviewId = ref
+            .read(globalReviewMappingProvider.notifier)
+            .getOrCreateReviewId(_selectedLectureName, _selectedTeacherName);
+
+        print(
+          'DEBUG: レビュー投稿 - 授業: $_selectedLectureName, 教員: $_selectedTeacherName, reviewId: $reviewId',
+        );
+
+        // 現在のユーザーを取得
+        final user = FirebaseAuth.instance.currentUser;
+        if (user == null) {
+          throw Exception('ユーザーが認証されていません');
+        }
+
+        // レビューデータを収集
+        final reviewData = {
+          'lectureName': _selectedLectureName,
+          'teacherName': _selectedTeacherName,
+          'reviewId': reviewId,
+          'overallSatisfaction': _overallSatisfaction,
+          'easiness': _easiness,
+          'lectureFormat': _selectedFormat?.toString().split('.').last,
+          'attendanceStrictness':
+              _selectedAttendance?.toString().split('.').last,
+          'examType': _selectedExamType?.toString().split('.').last,
+          'teacherFeature': _teacherFeatureController.text,
+          'comment': _commentController.text,
+          'tags':
+              _tagsController.text
+                  .split(',')
+                  .map((e) => e.trim())
+                  .where((e) => e.isNotEmpty)
+                  .toList(),
+          'userId': user.uid,
+          'createdAt': FieldValue.serverTimestamp(),
+        };
+
+        // Firestoreにレビューを保存
+        await FirebaseFirestore.instance.collection('reviews').add(reviewData);
+
+        print('DEBUG: レビューが正常に保存されました');
+
+        // レビュー投稿後、前のページに戻る
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text(
+              'レビューが投稿されました！',
+              style: TextStyle(fontFamily: 'misaki', color: Colors.white),
+            ),
+            backgroundColor: Colors.black.withOpacity(0.85),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: const BorderSide(color: Colors.white, width: 2.5),
+            ),
           ),
-          backgroundColor: Colors.black.withOpacity(0.85),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-            side: const BorderSide(color: Colors.white, width: 2.5),
+        );
+      } catch (e) {
+        print('Error submitting review: $e');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'レビューの投稿に失敗しました: $e',
+              style: TextStyle(fontFamily: 'misaki', color: Colors.white),
+            ),
+            backgroundColor: Colors.red.withOpacity(0.85),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: const BorderSide(color: Colors.white, width: 2.5),
+            ),
           ),
-        ),
-      );
+        );
+      }
     }
   }
 
@@ -369,14 +450,14 @@ class _CreditInputPageState extends State<CreditInputPage> {
                   _selectedLectureName = newValue!;
                   // 選択された講義に対応する教員名も自動設定（仮のロジック）
                   _selectedTeacherName =
-                      _dummyLectures.firstWhere(
+                      _dynamicLectures.firstWhere(
                         (lec) => lec['name'] == newValue,
                       )['teacher'] ??
                       '';
                 });
               },
               items:
-                  _dummyLectures.map<DropdownMenuItem<String>>((
+                  _dynamicLectures.map<DropdownMenuItem<String>>((
                     Map<String, String> lecture,
                   ) {
                     return DropdownMenuItem<String>(

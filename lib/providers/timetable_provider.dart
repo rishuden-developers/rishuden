@@ -12,6 +12,7 @@ class TimetableNotifier extends StateNotifier<Map<String, dynamic>> {
         'attendanceStatus': <String, String>{},
         'absenceCount': <String, int>{},
         'lateCount': <String, int>{},
+        'teacherNames': <String, String>{},
         'questSelectedClass': null,
         'questTaskType': null,
         'questDeadline': null,
@@ -61,8 +62,18 @@ class TimetableNotifier extends StateNotifier<Map<String, dynamic>> {
   }
 
   // 遅刻回数を更新
-  void updateLateCount(Map<String, int> lateCount) {
-    state = {...state, 'lateCount': lateCount};
+  void updateLateCount(Map<String, int> count) {
+    final currentData = Map<String, dynamic>.from(state);
+    currentData['lateCount'] = count;
+    state = currentData;
+    _saveToFirestore();
+  }
+
+  // 教員名を更新
+  void updateTeacherNames(Map<String, String> teacherNames) {
+    final currentData = Map<String, dynamic>.from(state);
+    currentData['teacherNames'] = teacherNames;
+    state = currentData;
     _saveToFirestore();
   }
 
@@ -196,6 +207,9 @@ class TimetableNotifier extends StateNotifier<Map<String, dynamic>> {
             'attendanceStatus': attendanceStatus, // ★★★ 新しい構造を使用 ★★★
             'absenceCount': Map<String, int>.from(data['absenceCount'] ?? {}),
             'lateCount': Map<String, int>.from(data['lateCount'] ?? {}),
+            'teacherNames': Map<String, String>.from(
+              data['teacherNames'] ?? {},
+            ),
             'questSelectedClass': data['questSelectedClass'],
             'questTaskType': data['questTaskType'],
             'questDeadline': data['questDeadline'],
@@ -230,6 +244,7 @@ class TimetableNotifier extends StateNotifier<Map<String, dynamic>> {
               'attendanceStatus': state['attendanceStatus'],
               'absenceCount': state['absenceCount'],
               'lateCount': state['lateCount'],
+              'teacherNames': state['teacherNames'],
               'questSelectedClass': state['questSelectedClass'],
               'questTaskType': state['questTaskType'],
               'questDeadline': state['questDeadline'],
@@ -269,6 +284,38 @@ class TimetableNotifier extends StateNotifier<Map<String, dynamic>> {
     final attendanceStatus =
         state['attendanceStatus'] as Map<String, Map<String, String>>;
     return attendanceStatus[courseId]?[date];
+  }
+
+  // 特定のcourseIdの教員名を取得
+  String? getTeacherName(String courseId) {
+    final teacherNames = state['teacherNames'] as Map<String, String>?;
+    return teacherNames?[courseId];
+  }
+
+  // 特定のcourseIdの教員名を設定
+  void setTeacherName(String courseId, String teacherName) {
+    final currentData = Map<String, dynamic>.from(state);
+    final teacherNames = Map<String, String>.from(
+      currentData['teacherNames'] ?? {},
+    );
+    teacherNames[courseId] = teacherName;
+    currentData['teacherNames'] = teacherNames;
+    state = currentData;
+    _saveToFirestore();
+  }
+
+  // 教員名が設定されている講義の一覧を取得
+  List<Map<String, String>> getLecturesWithTeachers() {
+    final teacherNames = state['teacherNames'] as Map<String, String>? ?? {};
+
+    final lectures = <Map<String, String>>[];
+    teacherNames.forEach((courseId, teacherName) {
+      if (teacherName.isNotEmpty) {
+        lectures.add({'name': courseId, 'teacher': teacherName});
+      }
+    });
+
+    return lectures;
   }
 }
 

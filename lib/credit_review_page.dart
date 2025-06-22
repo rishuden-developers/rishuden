@@ -1,6 +1,9 @@
 // credit_review_page.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart'; // ★レート表示に利用するパッケージをインポート
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'common_bottom_navigation.dart'; // 共通フッターウィジェット
 import 'park_page.dart';
 import 'time_schedule_page.dart';
@@ -8,6 +11,8 @@ import 'ranking_page.dart';
 import 'item_page.dart';
 import 'credit_input_page.dart'; // レビュー投稿画面への遷移用
 import 'credit_explore_page.dart'; // ボトムナビゲーション用
+import 'providers/global_review_mapping_provider.dart';
+import 'package:intl/intl.dart';
 
 // ★★★★ 補足: flutter_rating_bar パッケージの追加 ★★★★
 // pubspec.yaml ファイルの dependencies: の下に追加してください。
@@ -59,7 +64,7 @@ class LectureReview {
   });
 }
 
-class CreditReviewPage extends StatefulWidget {
+class CreditReviewPage extends ConsumerStatefulWidget {
   final String lectureName;
   final String teacherName;
   final String? initialDescription; // 講義の概要
@@ -76,13 +81,14 @@ class CreditReviewPage extends StatefulWidget {
   });
 
   @override
-  State<CreditReviewPage> createState() => _CreditReviewPageState();
+  ConsumerState<CreditReviewPage> createState() => _CreditReviewPageState();
 }
 
-class _CreditReviewPageState extends State<CreditReviewPage> {
-  // ダミーのレビューデータ
+class _CreditReviewPageState extends ConsumerState<CreditReviewPage> {
+  // 実際のレビューデータ
   List<LectureReview> _allReviews = [];
   List<LectureReview> _filteredReviews = [];
+  bool _isLoading = true;
 
   // フィルター用
   LectureFormat? _selectedFormatFilter;
@@ -92,83 +98,81 @@ class _CreditReviewPageState extends State<CreditReviewPage> {
   @override
   void initState() {
     super.initState();
-    _allReviews = _generateDummyReviewsForLecture(
-      widget.lectureName,
-      widget.teacherName,
-    );
-    _applyFilters();
+    _loadReviewsFromFirebase();
   }
 
-  List<LectureReview> _generateDummyReviewsForLecture(
-    String lectureName,
-    String teacherName,
-  ) {
-    // 実際のアプリケーションでは、ここでlectureNameとteacherNameに基づいてデータベースからレビューを取得します
-    return [
+  // Firebaseからレビューデータを読み込み
+  Future<void> _loadReviewsFromFirebase() async {
+    try {
+      setState(() {
+        _isLoading = true;
+      });
+
+      // グローバルレビューマッピングからreviewIdを取得
+      final reviewId = ref
+          .read(globalReviewMappingProvider.notifier)
+          .getOrCreateReviewId(widget.lectureName, widget.teacherName);
+
+      print(
+        'DEBUG: レビュー読み込み - 授業: ${widget.lectureName}, 教員: ${widget.teacherName}, reviewId: $reviewId',
+      );
+
+      // Firestoreからレビューデータを取得
+      final reviewsSnapshot =
+          await FirebaseFirestore.instance
+              .collection('reviews')
+              .where('reviewId', isEqualTo: reviewId)
+              .orderBy('createdAt', descending: true)
+              .get();
+
+      final reviews = <LectureReview>[];
+      for (final doc in reviewsSnapshot.docs) {
+        final data = doc.data();
+        reviews.add(
           LectureReview(
-            lectureName: lectureName,
-            teacherName: teacherName,
-            overallSatisfaction: 5.0,
-            easiness: 4.5,
-            lectureFormat: LectureFormat.faceToFace,
-            attendanceStrictness: AttendanceStrictness.noAttendance,
-            examType: ExamType.report,
-            teacherFeature: '非常に丁寧',
-            comment:
-                'この講義は最高でした！先生の説明も分かりやすく、内容も興味深かったです。レポートは大変でしたが、得るものが多かったです。',
-            tags: ['レポート多め', 'オンライン完結', 'テストなし'],
-            reviewId: 'rev001',
-            reviewDate: '2023/04/15',
+            lectureName: data['lectureName'] ?? '',
+            teacherName: data['teacherName'] ?? '',
+            overallSatisfaction:
+                (data['overallSatisfaction'] ?? 0.0).toDouble(),
+            easiness: (data['easiness'] ?? 0.0).toDouble(),
+            lectureFormat: LectureFormat.values.firstWhere(
+              (e) => e.toString() == data['lectureFormat'],
+              orElse: () => LectureFormat.other,
+            ),
+            attendanceStrictness: AttendanceStrictness.values.firstWhere(
+              (e) => e.toString() == data['attendanceStrictness'],
+              orElse: () => AttendanceStrictness.flexible,
+            ),
+            examType: ExamType.values.firstWhere(
+              (e) => e.toString() == data['examType'],
+              orElse: () => ExamType.other,
+            ),
+            teacherFeature: data['teacherFeature'] ?? '',
+            comment: data['comment'] ?? '',
+            tags: List<String>.from(data['tags'] ?? []),
+            reviewId: data['reviewId'] ?? '',
+            reviewDate:
+                data['createdAt'] != null
+                    ? DateFormat(
+                      'yyyy/MM/dd',
+                    ).format((data['createdAt'] as Timestamp).toDate())
+                    : '',
           ),
-          LectureReview(
-            lectureName: lectureName,
-            teacherName: teacherName,
-            overallSatisfaction: 4.0,
-            easiness: 5.0,
-            lectureFormat: LectureFormat.zoom,
-            attendanceStrictness: AttendanceStrictness.flexible,
-            examType: ExamType.none,
-            teacherFeature: '面白い',
-            comment: '楽単です！出席も緩く、テストもありませんでした。気軽に単位を取りたい人におすすめです。',
-            tags: ['楽単', 'オンライン完結', 'テストなし'],
-            reviewId: 'rev002',
-            reviewDate: '2023/05/20',
-          ),
-          LectureReview(
-            lectureName: lectureName,
-            teacherName: teacherName,
-            overallSatisfaction: 3.5,
-            easiness: 3.0,
-            lectureFormat: LectureFormat.onDemand,
-            attendanceStrictness: AttendanceStrictness.everyTimeRollCall,
-            examType: ExamType.written,
-            teacherFeature: '普通',
-            comment: '内容は普通。毎回出席確認があり、テストもあるので、真面目にやらないと単位は厳しいかも。',
-            tags: ['出席必須', 'テストあり'],
-            reviewId: 'rev003',
-            reviewDate: '2023/06/01',
-          ),
-          LectureReview(
-            lectureName: lectureName,
-            teacherName: teacherName,
-            overallSatisfaction: 4.2,
-            easiness: 4.8,
-            lectureFormat: LectureFormat.faceToFace,
-            attendanceStrictness: AttendanceStrictness.noAttendance,
-            examType: ExamType.report,
-            teacherFeature: 'サポート充実',
-            comment: '質問への対応がとても丁寧で助かりました。レポートは大変ですが、個別のフィードバックが充実しています。',
-            tags: ['レポート多め', 'サポート充実'],
-            reviewId: 'rev004',
-            reviewDate: '2023/06/10',
-          ),
-        ]
-        .where(
-          (review) =>
-              review.lectureName == lectureName &&
-              review.teacherName == teacherName,
-        )
-        .toList();
+        );
+      }
+
+      setState(() {
+        _allReviews = reviews;
+        _isLoading = false;
+      });
+
+      _applyFilters();
+    } catch (e) {
+      print('Error loading reviews: $e');
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   void _applyFilters() {
@@ -213,9 +217,9 @@ class _CreditReviewPageState extends State<CreditReviewPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          widget.lectureName,
-          style: const TextStyle(
+        title: const Text(
+          '講義レビュー',
+          style: TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
             fontFamily: 'NotoSansJP',
@@ -238,238 +242,265 @@ class _CreditReviewPageState extends State<CreditReviewPage> {
           ),
         ),
         child: SafeArea(
-          child: LayoutBuilder(
-            builder:
-                (context, constraints) => SingleChildScrollView(
-                  padding: const EdgeInsets.all(16.0),
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      minHeight:
-                          constraints.maxHeight - 32, // Adjust for padding
-                    ),
-                    // ↓ IntrinsicHeight を削除し、Columnを直接childに
+          child:
+              _isLoading
+                  ? const Center(
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        // 講義名と教員名
-                        _buildLectureInfoCard(),
-                        const SizedBox(height: 20),
-
-                        // 全体評価と楽単度
-                        _buildOverallRatingsCard(),
-                        const SizedBox(height: 20),
-
-                        // 新しいレビューを投稿するボタン
-                        _buildPostReviewButton(context),
-                        const SizedBox(height: 30),
-
-                        // フィルターオプションのタイトル
-                        _buildSectionTitle('レビューを絞り込む', Icons.filter_list),
-                        const SizedBox(height: 10),
-                        // フィルタードロップダウン
-                        _buildFilterDropdown<LectureFormat>(
-                          '形式で絞り込む',
-                          _selectedFormatFilter,
-                          LectureFormat.values,
-                          (newValue) {
-                            setState(() {
-                              _selectedFormatFilter = newValue;
-                              _applyFilters();
-                            });
-                          },
-                        ),
-                        const SizedBox(height: 10),
-                        _buildFilterDropdown<AttendanceStrictness>(
-                          '出席厳しさで絞り込む',
-                          _selectedAttendanceFilter,
-                          AttendanceStrictness.values,
-                          (newValue) {
-                            setState(() {
-                              _selectedAttendanceFilter = newValue;
-                              _applyFilters();
-                            });
-                          },
-                        ),
-                        const SizedBox(height: 10),
-                        _buildFilterDropdown<ExamType>(
-                          '試験形式で絞り込む',
-                          _selectedExamFilter,
-                          ExamType.values,
-                          (newValue) {
-                            setState(() {
-                              _selectedExamFilter = newValue;
-                              _applyFilters();
-                            });
-                          },
-                        ),
-                        const SizedBox(height: 20),
-                        // フィルターリセットボタン
-                        if (_selectedFormatFilter != null ||
-                            _selectedAttendanceFilter != null ||
-                            _selectedExamFilter != null)
-                          ElevatedButton.icon(
-                            onPressed: () {
-                              setState(() {
-                                _selectedFormatFilter = null;
-                                _selectedAttendanceFilter = null;
-                                _selectedExamFilter = null;
-                                _applyFilters();
-                              });
-                            },
-                            icon: const Icon(
-                              Icons.clear_all,
-                              color: Colors.indigo,
-                            ),
-                            label: const Text(
-                              'フィルターをリセット',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.indigo,
-                                fontFamily: 'NotoSansJP',
-                              ),
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.white,
-                              foregroundColor: Colors.indigo,
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                side: BorderSide(
-                                  color: Colors.indigo[200]!,
-                                  width: 1,
-                                ),
-                              ),
-                              elevation: 2,
-                            ),
+                        CircularProgressIndicator(
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Colors.white,
                           ),
-                        const SizedBox(height: 20),
-
-                        // レビュー表示
-                        _buildSectionTitle('全てのレビュー', Icons.rate_review),
-                        const SizedBox(height: 10),
-                        _filteredReviews.isEmpty
-                            ? const Center(
-                              child: Text(
-                                '該当するレビューがありません。',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  color: Colors.white70,
-                                ),
-                              ),
-                            )
-                            : ListView.builder(
-                              shrinkWrap: true,
-                              physics: const NeverScrollableScrollPhysics(),
-                              itemCount: _filteredReviews.length,
-                              itemBuilder: (context, index) {
-                                final review = _filteredReviews[index];
-                                return Card(
-                                  margin: const EdgeInsets.symmetric(
-                                    vertical: 8.0,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(15),
-                                  ),
-                                  elevation: 5,
-                                  color: Colors.white,
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(16.0),
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.spaceBetween,
-                                          children: [
-                                            RatingBarIndicator(
-                                              rating:
-                                                  review.overallSatisfaction,
-                                              itemBuilder:
-                                                  (context, index) =>
-                                                      const Icon(
-                                                        Icons.star,
-                                                        color: Colors.amber,
-                                                      ),
-                                              itemCount: 5,
-                                              itemSize: 20.0,
-                                              direction: Axis.horizontal,
-                                            ),
-                                            Text(
-                                              review.reviewDate,
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                color: Colors.grey[600],
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                        const SizedBox(height: 8),
-                                        Text(
-                                          '形式: ${_formatEnum(review.lectureFormat)}',
-                                          style: const TextStyle(
-                                            color: Colors.black87,
-                                          ),
-                                        ),
-                                        Text(
-                                          '出席: ${_formatEnum(review.attendanceStrictness)}',
-                                          style: const TextStyle(
-                                            color: Colors.black87,
-                                          ),
-                                        ),
-                                        Text(
-                                          '試験: ${_formatEnum(review.examType)}',
-                                          style: const TextStyle(
-                                            color: Colors.black87,
-                                          ),
-                                        ),
-                                        Text(
-                                          '教員特徴: ${review.teacherFeature}',
-                                          style: const TextStyle(
-                                            color: Colors.black87,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 8),
-                                        Text(
-                                          'コメント: ${review.comment}',
-                                          style: const TextStyle(
-                                            color: Colors.black87,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 8),
-                                        Wrap(
-                                          spacing: 6.0,
-                                          children:
-                                              review.tags
-                                                  .map(
-                                                    (tag) => Chip(
-                                                      label: Text(
-                                                        tag,
-                                                        style: TextStyle(
-                                                          fontSize: 12,
-                                                          color:
-                                                              Colors.brown[700],
-                                                        ),
-                                                      ),
-                                                      backgroundColor:
-                                                          Colors
-                                                              .orangeAccent[50],
-                                                    ),
-                                                  )
-                                                  .toList(),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
+                        ),
+                        SizedBox(height: 16),
+                        Text(
+                          'レビューを読み込み中...',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontFamily: 'NotoSansJP',
+                          ),
+                        ),
                       ],
                     ),
+                  )
+                  : LayoutBuilder(
+                    builder:
+                        (context, constraints) => SingleChildScrollView(
+                          padding: const EdgeInsets.all(16.0),
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(
+                              minHeight: constraints.maxHeight - 32,
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                _buildLectureInfoCard(),
+                                const SizedBox(height: 20),
+                                _buildOverallRatingsCard(),
+                                const SizedBox(height: 20),
+                                _buildPostReviewButton(context),
+                                const SizedBox(height: 30),
+                                _buildSectionTitle(
+                                  'レビューを絞り込む',
+                                  Icons.filter_list,
+                                ),
+                                const SizedBox(height: 10),
+                                _buildFilterDropdown<LectureFormat>(
+                                  '形式で絞り込む',
+                                  _selectedFormatFilter,
+                                  LectureFormat.values,
+                                  (newValue) {
+                                    setState(() {
+                                      _selectedFormatFilter = newValue;
+                                      _applyFilters();
+                                    });
+                                  },
+                                ),
+                                const SizedBox(height: 10),
+                                _buildFilterDropdown<AttendanceStrictness>(
+                                  '出席厳しさで絞り込む',
+                                  _selectedAttendanceFilter,
+                                  AttendanceStrictness.values,
+                                  (newValue) {
+                                    setState(() {
+                                      _selectedAttendanceFilter = newValue;
+                                      _applyFilters();
+                                    });
+                                  },
+                                ),
+                                const SizedBox(height: 10),
+                                _buildFilterDropdown<ExamType>(
+                                  '試験形式で絞り込む',
+                                  _selectedExamFilter,
+                                  ExamType.values,
+                                  (newValue) {
+                                    setState(() {
+                                      _selectedExamFilter = newValue;
+                                      _applyFilters();
+                                    });
+                                  },
+                                ),
+                                const SizedBox(height: 20),
+                                if (_selectedFormatFilter != null ||
+                                    _selectedAttendanceFilter != null ||
+                                    _selectedExamFilter != null)
+                                  ElevatedButton.icon(
+                                    onPressed: () {
+                                      setState(() {
+                                        _selectedFormatFilter = null;
+                                        _selectedAttendanceFilter = null;
+                                        _selectedExamFilter = null;
+                                        _applyFilters();
+                                      });
+                                    },
+                                    icon: const Icon(
+                                      Icons.clear_all,
+                                      color: Colors.indigo,
+                                    ),
+                                    label: const Text(
+                                      'フィルターをリセット',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.indigo,
+                                        fontFamily: 'NotoSansJP',
+                                      ),
+                                    ),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.white,
+                                      foregroundColor: Colors.indigo,
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 12,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                        side: BorderSide(
+                                          color: Colors.indigo[200]!,
+                                          width: 1,
+                                        ),
+                                      ),
+                                      elevation: 2,
+                                    ),
+                                  ),
+                                const SizedBox(height: 20),
+                                _buildSectionTitle(
+                                  '全てのレビュー',
+                                  Icons.rate_review,
+                                ),
+                                const SizedBox(height: 10),
+                                _filteredReviews.isEmpty
+                                    ? const Center(
+                                      child: Text(
+                                        '該当するレビューがありません。',
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          color: Colors.white70,
+                                        ),
+                                      ),
+                                    )
+                                    : ListView.builder(
+                                      shrinkWrap: true,
+                                      physics:
+                                          const NeverScrollableScrollPhysics(),
+                                      itemCount: _filteredReviews.length,
+                                      itemBuilder: (context, index) {
+                                        final review = _filteredReviews[index];
+                                        return Card(
+                                          margin: const EdgeInsets.symmetric(
+                                            vertical: 8.0,
+                                          ),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              15,
+                                            ),
+                                          ),
+                                          elevation: 5,
+                                          color: Colors.white,
+                                          child: Padding(
+                                            padding: const EdgeInsets.all(16.0),
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Row(
+                                                  mainAxisAlignment:
+                                                      MainAxisAlignment
+                                                          .spaceBetween,
+                                                  children: [
+                                                    RatingBarIndicator(
+                                                      rating:
+                                                          review
+                                                              .overallSatisfaction,
+                                                      itemBuilder:
+                                                          (
+                                                            context,
+                                                            index,
+                                                          ) => const Icon(
+                                                            Icons.star,
+                                                            color: Colors.amber,
+                                                          ),
+                                                      itemCount: 5,
+                                                      itemSize: 20.0,
+                                                      direction:
+                                                          Axis.horizontal,
+                                                    ),
+                                                    Text(
+                                                      review.reviewDate,
+                                                      style: TextStyle(
+                                                        fontSize: 12,
+                                                        color: Colors.grey[600],
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                                const SizedBox(height: 8),
+                                                Text(
+                                                  '形式: ${_formatEnum(review.lectureFormat)}',
+                                                  style: const TextStyle(
+                                                    color: Colors.black87,
+                                                  ),
+                                                ),
+                                                Text(
+                                                  '出席: ${_formatEnum(review.attendanceStrictness)}',
+                                                  style: const TextStyle(
+                                                    color: Colors.black87,
+                                                  ),
+                                                ),
+                                                Text(
+                                                  '試験: ${_formatEnum(review.examType)}',
+                                                  style: const TextStyle(
+                                                    color: Colors.black87,
+                                                  ),
+                                                ),
+                                                Text(
+                                                  '教員特徴: ${review.teacherFeature}',
+                                                  style: const TextStyle(
+                                                    color: Colors.black87,
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 8),
+                                                Text(
+                                                  'コメント: ${review.comment}',
+                                                  style: const TextStyle(
+                                                    color: Colors.black87,
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 8),
+                                                Wrap(
+                                                  spacing: 6.0,
+                                                  children:
+                                                      review.tags
+                                                          .map(
+                                                            (tag) => Chip(
+                                                              label: Text(
+                                                                tag,
+                                                                style: TextStyle(
+                                                                  fontSize: 12,
+                                                                  color:
+                                                                      Colors
+                                                                          .brown[700],
+                                                                ),
+                                                              ),
+                                                              backgroundColor:
+                                                                  Colors
+                                                                      .orangeAccent[50],
+                                                            ),
+                                                          )
+                                                          .toList(),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                              ],
+                            ),
+                          ),
+                        ),
                   ),
-                ),
-          ),
         ),
       ),
     );
