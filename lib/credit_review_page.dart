@@ -13,6 +13,7 @@ import 'credit_input_page.dart'; // レビュー投稿画面への遷移用
 import 'credit_explore_page.dart'; // ボトムナビゲーション用
 import 'providers/global_review_mapping_provider.dart';
 import 'package:intl/intl.dart';
+import 'dart:async';
 
 // ★★★★ 補足: flutter_rating_bar パッケージの追加 ★★★★
 // pubspec.yaml ファイルの dependencies: の下に追加してください。
@@ -89,6 +90,7 @@ class _CreditReviewPageState extends ConsumerState<CreditReviewPage> {
   List<LectureReview> _allReviews = [];
   List<LectureReview> _filteredReviews = [];
   bool _isLoading = true;
+  StreamSubscription? _reviewsSubscription; // ★ Streamを監視するためのSubscription
 
   // フィルター用
   LectureFormat? _selectedFormatFilter;
@@ -98,16 +100,22 @@ class _CreditReviewPageState extends ConsumerState<CreditReviewPage> {
   @override
   void initState() {
     super.initState();
-    _loadReviewsFromFirebase();
+    // initStateではrefが使えないため、WidgetsBinding.instance.addPostFrameCallbackを使用
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _subscribeToReviews();
+    });
   }
 
-  // Firebaseからレビューデータを読み込み
-  Future<void> _loadReviewsFromFirebase() async {
-    try {
-      setState(() {
-        _isLoading = true;
-      });
+  @override
+  void dispose() {
+    _reviewsSubscription?.cancel(); // ★ ページが破棄されるときにStreamの監視をキャンセル
+    super.dispose();
+  }
 
+  // Firebaseのレビュー変更を監視
+  void _subscribeToReviews() {
+    setState(() => _isLoading = true);
+    try {
       // グローバルレビューマッピングからreviewIdを取得
       final reviewId = ref
           .read(globalReviewMappingProvider.notifier)
@@ -117,58 +125,68 @@ class _CreditReviewPageState extends ConsumerState<CreditReviewPage> {
         'DEBUG: レビュー読み込み - 授業: ${widget.lectureName}, 教員: ${widget.teacherName}, reviewId: $reviewId',
       );
 
-      // Firestoreからレビューデータを取得
-      final reviewsSnapshot =
-          await FirebaseFirestore.instance
+      // ★ FirestoreのStreamを監視
+      final reviewsStream =
+          FirebaseFirestore.instance
               .collection('reviews')
               .where('reviewId', isEqualTo: reviewId)
               .orderBy('createdAt', descending: true)
-              .get();
+              .snapshots();
 
-      final reviews = <LectureReview>[];
-      for (final doc in reviewsSnapshot.docs) {
-        final data = doc.data();
-        reviews.add(
-          LectureReview(
-            lectureName: data['lectureName'] ?? '',
-            teacherName: data['teacherName'] ?? '',
-            overallSatisfaction:
-                (data['overallSatisfaction'] ?? 0.0).toDouble(),
-            easiness: (data['easiness'] ?? 0.0).toDouble(),
-            lectureFormat: LectureFormat.values.firstWhere(
-              (e) => e.toString() == data['lectureFormat'],
-              orElse: () => LectureFormat.other,
-            ),
-            attendanceStrictness: AttendanceStrictness.values.firstWhere(
-              (e) => e.toString() == data['attendanceStrictness'],
-              orElse: () => AttendanceStrictness.flexible,
-            ),
-            examType: ExamType.values.firstWhere(
-              (e) => e.toString() == data['examType'],
-              orElse: () => ExamType.other,
-            ),
-            teacherFeature: data['teacherFeature'] ?? '',
-            comment: data['comment'] ?? '',
-            tags: List<String>.from(data['tags'] ?? []),
-            reviewId: data['reviewId'] ?? '',
-            reviewDate:
-                data['createdAt'] != null
-                    ? DateFormat(
-                      'yyyy/MM/dd',
-                    ).format((data['createdAt'] as Timestamp).toDate())
-                    : '',
-          ),
-        );
-      }
+      _reviewsSubscription = reviewsStream.listen(
+        (snapshot) {
+          final reviews = <LectureReview>[];
+          for (final doc in snapshot.docs) {
+            final data = doc.data();
+            reviews.add(
+              LectureReview(
+                lectureName: data['lectureName'] ?? '',
+                teacherName: data['teacherName'] ?? '',
+                overallSatisfaction:
+                    (data['overallSatisfaction'] ?? 0.0).toDouble(),
+                easiness: (data['easiness'] ?? 0.0).toDouble(),
+                lectureFormat: LectureFormat.values.firstWhere(
+                  (e) => e.toString() == data['lectureFormat'],
+                  orElse: () => LectureFormat.other,
+                ),
+                attendanceStrictness: AttendanceStrictness.values.firstWhere(
+                  (e) => e.toString() == data['attendanceStrictness'],
+                  orElse: () => AttendanceStrictness.flexible,
+                ),
+                examType: ExamType.values.firstWhere(
+                  (e) => e.toString() == data['examType'],
+                  orElse: () => ExamType.other,
+                ),
+                teacherFeature: data['teacherFeature'] ?? '',
+                comment: data['comment'] ?? '',
+                tags: List<String>.from(data['tags'] ?? []),
+                reviewId: data['reviewId'] ?? '',
+                reviewDate:
+                    data['createdAt'] != null
+                        ? DateFormat(
+                          'yyyy/MM/dd',
+                        ).format((data['createdAt'] as Timestamp).toDate())
+                        : '',
+              ),
+            );
+          }
 
-      setState(() {
-        _allReviews = reviews;
-        _isLoading = false;
-      });
-
-      _applyFilters();
+          if (!mounted) return;
+          setState(() {
+            _allReviews = reviews;
+            _isLoading = false;
+          });
+          _applyFilters();
+        },
+        onError: (error) {
+          print('Error listening to reviews: $error');
+          if (!mounted) return;
+          setState(() => _isLoading = false);
+        },
+      );
     } catch (e) {
       print('Error loading reviews: $e');
+      if (!mounted) return;
       setState(() {
         _isLoading = false;
       });
@@ -209,7 +227,7 @@ class _CreditReviewPageState extends ConsumerState<CreditReviewPage> {
   }
 
   String _formatEnum(dynamic enumValue) {
-    if (enumValue == null) return '';
+    if (enumValue == null) return '未指定';
     return enumValue.toString().split('.').last;
   }
 
@@ -635,7 +653,7 @@ class _CreditReviewPageState extends ConsumerState<CreditReviewPage> {
           ),
         );
       },
-      icon: const Icon(Icons.rate_review, color: Colors.white),
+      icon: const Icon(Icons.edit, color: Colors.white),
       label: const Text(
         'この講義のレビューを投稿する',
         style: TextStyle(

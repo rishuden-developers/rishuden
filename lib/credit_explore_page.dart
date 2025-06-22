@@ -6,6 +6,7 @@ import 'park_page.dart';
 import 'time_schedule_page.dart';
 import 'ranking_page.dart';
 import 'item_page.dart';
+import 'my_reviews_page.dart'; // ★ 作成したページをインポート
 
 class CreditExplorePage extends StatefulWidget {
   const CreditExplorePage({super.key});
@@ -132,32 +133,7 @@ class _CreditExplorePageState extends State<CreditExplorePage> {
                         const SizedBox(height: 30),
 
                         // 検索ボタン
-                        ElevatedButton.icon(
-                          onPressed: _performSearch,
-                          icon: const Icon(Icons.search, color: Colors.white),
-                          label: const Text(
-                            '検索',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                              fontFamily: 'NotoSansJP',
-                            ),
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.blueAccent[700],
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              side: BorderSide(
-                                color: Colors.blueAccent[100]!,
-                                width: 1.5,
-                              ),
-                            ),
-                            elevation: 4,
-                          ),
-                        ),
+                        _buildSearchButton(),
                         const SizedBox(height: 40),
 
                         // ランキング表示へのボタン (既存のものを維持)
@@ -174,6 +150,12 @@ class _CreditExplorePageState extends State<CreditExplorePage> {
                           '学部別注目授業',
                           'faculty_specific',
                         ),
+
+                        const SizedBox(height: 20), // ★ スペースを追加
+                        // ★ レビュー管理ページへのボタン
+                        _buildSectionTitle('レビューを管理', Icons.edit),
+                        const SizedBox(height: 10),
+                        _buildMyReviewsButton(context),
 
                         const Spacer(), // 下部のナビゲーションバーのためのスペース
                       ],
@@ -331,6 +313,69 @@ class _CreditExplorePageState extends State<CreditExplorePage> {
           ),
         ),
         child: Text(label),
+      ),
+    );
+  }
+
+  // ★ レビュー管理ページへのボタンを構築するウィジェット
+  Widget _buildMyReviewsButton(BuildContext context) {
+    return Card(
+      elevation: 4.0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: ListTile(
+        leading: Icon(Icons.rate_review, color: Colors.indigo[700]),
+        title: const Text(
+          '自分の授業をレビューする',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontFamily: 'NotoSansJP',
+          ),
+        ),
+        trailing: const Icon(Icons.arrow_forward_ios),
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const MyReviewsPage()),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildSearchButton() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      child: ElevatedButton.icon(
+        icon: const Icon(Icons.search, color: Colors.white),
+        label: const Text(
+          'この条件で検索',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.orange[700],
+          minimumSize: const Size(double.infinity, 50),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+        onPressed: () {
+          // ★★★ CreditResultPageに遷移 ★★★
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder:
+                  (context) => CreditResultPage(
+                    searchQuery: _searchController.text,
+                    filterFaculty: _selectedFaculty,
+                    // TODO: 他のフィルターも渡す
+                  ),
+            ),
+          );
+        },
       ),
     );
   }
