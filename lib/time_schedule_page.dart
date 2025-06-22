@@ -90,6 +90,15 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
   static Map<String, String> _globalSubjectToCourseId = {};
   static int _globalCourseIdCounter = 0;
 
+  // ★★★ courseIdをTimetableProviderから取得するメソッドを追加 ★★★
+  Map<String, String> get courseIds =>
+      ref.watch(timetableProvider)['courseIds'] ?? {};
+
+  // ★★★ courseIdをTimetableProviderに保存するメソッドを追加 ★★★
+  void _updateCourseIds(Map<String, String> courseIds) {
+    ref.read(timetableProvider.notifier).updateCourseIds(courseIds);
+  }
+
   // データの取得メソッド（UIは変更しない）
   Map<String, String> get cellNotes =>
       ref.watch(timetableProvider)['cellNotes'] ?? {};
@@ -142,6 +151,29 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
   void _loadTimetableData() {
     print('Loading timetable data from Firebase...');
     ref.read(timetableProvider.notifier).loadFromFirestore();
+
+    // ★★★ 保存されたcourseIdを読み込んで復元 ★★★
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final savedCourseIds = courseIds;
+      if (savedCourseIds.isNotEmpty) {
+        // _globalSubjectToCourseIdに復元
+        _globalSubjectToCourseId.clear();
+        _globalSubjectToCourseId.addAll(savedCourseIds);
+
+        // globalCourseMappingProviderにも復元（正規化された授業名で）
+        final globalMappingNotifier = ref.read(
+          globalCourseMappingProvider.notifier,
+        );
+        for (var entry in savedCourseIds.entries) {
+          final normalizedName = globalMappingNotifier.normalizeSubjectName(
+            entry.key,
+          );
+          globalMappingNotifier.addCourseMapping(normalizedName, entry.value);
+        }
+
+        print('DEBUG: 保存されたcourseIdを復元しました: $_globalSubjectToCourseId');
+      }
+    });
   }
 
   @override
@@ -218,13 +250,27 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
       weekStart,
     );
 
-    // ★★★ グローバルマッピングを使用してcourseIdを決定 ★★★
+    // ★★★ 保存されたcourseIdを優先的に使用 ★★★
+    Map<String, String> courseIdMap = {};
+    final savedCourseIds = courseIds;
+
     for (var entry in timeTableEntries) {
-      // グローバルマッピングからcourseIdを取得または生成
-      final courseId = ref
-          .read(globalCourseMappingProvider.notifier)
-          .getOrCreateCourseId(entry.subjectName);
+      String courseId;
+
+      // 保存されたcourseIdがある場合はそれを使用
+      if (savedCourseIds.containsKey(entry.subjectName)) {
+        courseId = savedCourseIds[entry.subjectName]!;
+        print('DEBUG: 保存されたcourseIdを使用: ${entry.subjectName} -> $courseId');
+      } else {
+        // 保存されていない場合は新しく生成
+        courseId = ref
+            .read(globalCourseMappingProvider.notifier)
+            .getOrCreateCourseId(entry.subjectName);
+        print('DEBUG: 新しいcourseIdを生成: ${entry.subjectName} -> $courseId');
+      }
+
       entry.courseId = courseId;
+      courseIdMap[entry.subjectName] = courseId;
 
       // ★★★ 新しい授業にデフォルトの出席方針を設定 ★★★
       final currentPolicies = Map<String, String>.from(attendancePolicies);
@@ -238,6 +284,9 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
 
       print('DEBUG: ${entry.subjectName} -> courseId: ${entry.courseId}');
     }
+
+    // ★★★ courseIdをTimetableProviderに保存 ★★★
+    _updateCourseIds(courseIdMap);
 
     // ★★★ 乱数で色を生成 ★★★
     _courseColors.clear();

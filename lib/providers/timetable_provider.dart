@@ -13,6 +13,7 @@ class TimetableNotifier extends StateNotifier<Map<String, dynamic>> {
         'absenceCount': <String, int>{},
         'lateCount': <String, int>{},
         'teacherNames': <String, String>{},
+        'courseIds': <String, String>{},
         'questSelectedClass': null,
         'questTaskType': null,
         'questDeadline': null,
@@ -210,6 +211,7 @@ class TimetableNotifier extends StateNotifier<Map<String, dynamic>> {
             'teacherNames': Map<String, String>.from(
               data['teacherNames'] ?? {},
             ),
+            'courseIds': Map<String, String>.from(data['courseIds'] ?? {}),
             'questSelectedClass': data['questSelectedClass'],
             'questTaskType': data['questTaskType'],
             'questDeadline': data['questDeadline'],
@@ -245,6 +247,7 @@ class TimetableNotifier extends StateNotifier<Map<String, dynamic>> {
               'absenceCount': state['absenceCount'],
               'lateCount': state['lateCount'],
               'teacherNames': state['teacherNames'],
+              'courseIds': state['courseIds'],
               'questSelectedClass': state['questSelectedClass'],
               'questTaskType': state['questTaskType'],
               'questDeadline': state['questDeadline'],
@@ -316,6 +319,29 @@ class TimetableNotifier extends StateNotifier<Map<String, dynamic>> {
     });
 
     return lectures;
+  }
+
+  // ★★★ courseIdを更新するメソッドを追加 ★★★
+  void updateCourseIds(Map<String, String> courseIds) {
+    state = {...state, 'courseIds': courseIds};
+    _saveToFirestore();
+  }
+
+  // ★★★ 特定のセルのcourseIdを設定するメソッドを追加 ★★★
+  void setCourseId(String cellKey, String courseId) {
+    final courseIds = Map<String, String>.from(state['courseIds']);
+    if (courseId.isEmpty) {
+      courseIds.remove(cellKey);
+    } else {
+      courseIds[cellKey] = courseId;
+    }
+    updateCourseIds(courseIds);
+  }
+
+  // ★★★ 特定のセルのcourseIdを取得するメソッドを追加 ★★★
+  String? getCourseId(String cellKey) {
+    final courseIds = state['courseIds'] as Map<String, String>?;
+    return courseIds?[cellKey];
   }
 }
 
