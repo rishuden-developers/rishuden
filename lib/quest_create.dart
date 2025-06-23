@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'timetable_entry.dart';
 import 'timetable.dart';
@@ -164,29 +165,51 @@ class _QuestCreationWidgetState extends ConsumerState<QuestCreationWidget> {
   }
 
   Future<void> _pickDateTime() async {
-    final date = await showDatePicker(
-      context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime.now(),
-      lastDate: DateTime(2100),
-    );
-    if (date == null) return;
+    DateTime selectedDateTime = _selectedDeadline ?? DateTime.now();
 
-    final time = await showTimePicker(
+    await showModalBottomSheet(
       context: context,
-      initialTime: TimeOfDay.now(),
+      isScrollControlled: true,
+      builder: (BuildContext context) {
+        return Container(
+          height: 300,
+          child: Column(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: const Text('キャンセル'),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        setState(() {
+                          _selectedDeadline = selectedDateTime;
+                        });
+                        Navigator.of(context).pop();
+                      },
+                      child: const Text('完了'),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: CupertinoDatePicker(
+                  mode: CupertinoDatePickerMode.dateAndTime,
+                  initialDateTime: selectedDateTime,
+                  onDateTimeChanged: (DateTime newDateTime) {
+                    selectedDateTime = newDateTime;
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
-    if (time == null) return;
-
-    setState(() {
-      _selectedDeadline = DateTime(
-        date.year,
-        date.month,
-        date.day,
-        time.hour,
-        time.minute,
-      );
-    });
   }
 
   void _showTaskDetailsDialog() {
@@ -208,32 +231,51 @@ class _QuestCreationWidgetState extends ConsumerState<QuestCreationWidget> {
           (context) => StatefulBuilder(
             builder: (context, setDialogState) {
               Future<void> pickDateTime() async {
-                final date = await showDatePicker(
-                  context: context,
-                  initialDate: tempDeadline ?? DateTime.now(),
-                  firstDate: DateTime.now(),
-                  lastDate: DateTime(2100),
-                );
-                if (date == null) return;
+                DateTime selectedDateTime = tempDeadline ?? DateTime.now();
 
-                final time = await showTimePicker(
+                await showModalBottomSheet(
                   context: context,
-                  initialTime:
-                      tempDeadline != null
-                          ? TimeOfDay.fromDateTime(tempDeadline!)
-                          : TimeOfDay.now(),
+                  isScrollControlled: true,
+                  builder: (BuildContext context) {
+                    return Container(
+                      height: 300,
+                      child: Column(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                TextButton(
+                                  onPressed: () => Navigator.of(context).pop(),
+                                  child: const Text('キャンセル'),
+                                ),
+                                TextButton(
+                                  onPressed: () {
+                                    setDialogState(() {
+                                      tempDeadline = selectedDateTime;
+                                    });
+                                    Navigator.of(context).pop();
+                                  },
+                                  child: const Text('完了'),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Expanded(
+                            child: CupertinoDatePicker(
+                              mode: CupertinoDatePickerMode.dateAndTime,
+                              initialDateTime: selectedDateTime,
+                              onDateTimeChanged: (DateTime newDateTime) {
+                                selectedDateTime = newDateTime;
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
                 );
-                if (time == null) return;
-
-                setDialogState(() {
-                  tempDeadline = DateTime(
-                    date.year,
-                    date.month,
-                    date.day,
-                    time.hour,
-                    time.minute,
-                  );
-                });
               }
 
               return AlertDialog(
