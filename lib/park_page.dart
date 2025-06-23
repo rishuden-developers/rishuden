@@ -862,6 +862,14 @@ class _ParkPageState extends ConsumerState<ParkPage> {
     final isFadingOut = _fadingOutTaskIndex == questId;
 
     final deadline = taskData['deadline'] as Timestamp?;
+    final bool isExpired =
+        deadline != null && deadline.toDate().isBefore(DateTime.now());
+    final textColor =
+        isExpired ? Colors.red : Colors.lightBlue[100]!.withOpacity(0.95);
+    final detailTextColor =
+        isExpired
+            ? Colors.red.withOpacity(0.8)
+            : Colors.grey[100]!.withOpacity(0.95);
     final deadlineText =
         deadline != null
             ? DateFormat('MM/dd HH:mm').format(deadline.toDate())
@@ -908,11 +916,14 @@ class _ParkPageState extends ConsumerState<ParkPage> {
                     style: TextStyle(
                       fontSize: screenHeight * 0.025,
                       fontWeight: FontWeight.bold,
-                      color: Colors.lightBlue[100]!.withOpacity(0.95),
+                      color: textColor,
                       fontFamily: 'misaki',
-                      shadows: const [
+                      shadows: [
                         BoxShadow(
-                          color: Colors.black54,
+                          color:
+                              isExpired
+                                  ? Colors.red.withOpacity(0.5)
+                                  : Colors.black54,
                           blurRadius: 2,
                           offset: Offset(1, 1),
                         ),
@@ -937,7 +948,7 @@ class _ParkPageState extends ConsumerState<ParkPage> {
                         "課題: $taskType\n詳細: $description\n期限: $deadlineText",
                         style: TextStyle(
                           fontSize: screenHeight * 0.020,
-                          color: Colors.grey[100]!.withOpacity(0.95),
+                          color: detailTextColor,
                           height: 1.4,
                         ),
                       ),
@@ -1588,6 +1599,27 @@ class _CountdownWidgetState extends State<_CountdownWidget>
   @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
+
+    if (_remaining.isNegative || _remaining.inSeconds == 0) {
+      return Text(
+        "討伐失敗",
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          fontSize: screenHeight * 0.035,
+          fontWeight: FontWeight.bold,
+          color: Colors.red,
+          fontFamily: 'display_free_tfb',
+          shadows: [
+            Shadow(
+              color: Colors.red.withOpacity(0.8),
+              blurRadius: 8,
+              offset: const Offset(0, 0),
+            ),
+          ],
+        ),
+      );
+    }
+
     final days = _remaining.inDays;
     final hours = _remaining.inHours % 24;
     final minutes = _remaining.inMinutes % 60;
