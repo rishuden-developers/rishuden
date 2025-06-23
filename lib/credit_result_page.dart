@@ -10,12 +10,15 @@ import 'ranking_page.dart';
 import 'item_page.dart';
 import 'credit_explore_page.dart'; // ボトムナビゲーション用
 import 'package:flutter_rating_bar/flutter_rating_bar.dart'; // ★レート表示に利用するパッケージをインポート
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:rishuden/providers/global_course_mapping_provider.dart';
+import 'package:rishuden/providers/global_review_mapping_provider.dart';
 
 // 検索結果の各講義を表すデータモデル
 class LectureSearchResult {
   final String lectureName;
   final String teacherName;
-  final String reviewId;
+  final String? reviewId;
   double avgSatisfaction;
   double avgEasiness;
   int reviewCount;
@@ -23,14 +26,14 @@ class LectureSearchResult {
   LectureSearchResult({
     required this.lectureName,
     required this.teacherName,
-    required this.reviewId,
+    this.reviewId,
     this.avgSatisfaction = 0.0,
     this.avgEasiness = 0.0,
     this.reviewCount = 0,
   });
 }
 
-class CreditResultPage extends StatefulWidget {
+class CreditResultPage extends ConsumerStatefulWidget {
   final String? searchQuery; // 検索クエリがあれば受け取る
   final String? filterFaculty; // 学部フィルター
   final String? filterTag; // タグフィルター
@@ -50,118 +53,22 @@ class CreditResultPage extends StatefulWidget {
   });
 
   @override
-  State<CreditResultPage> createState() => _CreditResultPageState();
+  ConsumerState<CreditResultPage> createState() => _CreditResultPageState();
 }
 
-class _CreditResultPageState extends State<CreditResultPage> {
-  List<LectureSearchResult> _results = [];
-  bool _isLoading = true;
+class _CreditResultPageState extends ConsumerState<CreditResultPage> {
   StreamSubscription? _reviewsSubscription;
 
   @override
   void initState() {
     super.initState();
-    _performSearch();
+    // _performSearch() is no longer needed here.
   }
 
   @override
   void dispose() {
     _reviewsSubscription?.cancel();
     super.dispose();
-  }
-
-  Future<void> _performSearch() async {
-    setState(() => _isLoading = true);
-
-    // ★★★ Firestoreから講義情報を取得する（実際のクエリは要件に合わせて調整） ★★★
-    // ここでは、ダミーとして全てのレビューを持つ講義を取得します
-    final reviewMappingSnapshot =
-        await FirebaseFirestore.instance
-            .collection('global')
-            .doc('review_mapping')
-            .get();
-
-    if (!reviewMappingSnapshot.exists) {
-      setState(() => _isLoading = false);
-      return;
-    }
-
-    final mapping = Map<String, String>.from(
-      reviewMappingSnapshot.data()!['mapping'],
-    );
-    List<LectureSearchResult> initialResults = [];
-
-    mapping.forEach((key, reviewId) {
-      final parts = key.split('_');
-      final lectureName = parts.first;
-      final teacherName = parts.length > 1 ? parts.last : '教員未設定';
-      initialResults.add(
-        LectureSearchResult(
-          lectureName: lectureName,
-          teacherName: teacherName,
-          reviewId: reviewId,
-        ),
-      );
-    });
-
-    // ★★★ 検索条件で絞り込む（実際のロジック） ★★★
-    if (widget.searchQuery != null && widget.searchQuery!.isNotEmpty) {
-      initialResults =
-          initialResults
-              .where((r) => r.lectureName.contains(widget.searchQuery!))
-              .toList();
-    }
-
-    setState(() {
-      _results = initialResults;
-    });
-
-    _subscribeToReviews();
-  }
-
-  void _subscribeToReviews() {
-    // 全てのレビューを監視（効率は悪いがデモとして）
-    _reviewsSubscription = FirebaseFirestore.instance
-        .collection('reviews')
-        .snapshots()
-        .listen((snapshot) {
-          // レビューIDごとに集計
-          final Map<String, List<Map<String, dynamic>>> reviewsByReviewId = {};
-          for (var doc in snapshot.docs) {
-            final data = doc.data();
-            final reviewId = data['reviewId'] as String?;
-            if (reviewId != null) {
-              reviewsByReviewId.putIfAbsent(reviewId, () => []).add(data);
-            }
-          }
-
-          // 各講義の評価を再計算
-          final updatedResults = List<LectureSearchResult>.from(_results);
-          for (var result in updatedResults) {
-            final reviews = reviewsByReviewId[result.reviewId] ?? [];
-            if (reviews.isNotEmpty) {
-              result.reviewCount = reviews.length;
-              result.avgSatisfaction =
-                  reviews
-                      .map((r) => (r['overallSatisfaction'] as num).toDouble())
-                      .reduce((a, b) => a + b) /
-                  reviews.length;
-              // TODO: `easiness`も同様に計算
-              // result.avgEasiness = ...
-            } else {
-              result.reviewCount = 0;
-              result.avgSatisfaction = 0.0;
-              result.avgEasiness = 0.0;
-            }
-          }
-
-          if (mounted) {
-            setState(() {
-              _results = updatedResults;
-              _isLoading = false; // ★ データの更新が終わったらローディングを解除
-            });
-          }
-        });
   }
 
   String _getPageTitle() {
@@ -182,6 +89,11 @@ class _CreditResultPageState extends State<CreditResultPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Providersからマスターデータを読み込む
+    final allCourses = ref.watch(globalCourseMappingProvider);
+    // teacherNamesはリビルドのたびに読み込む必要があるかもしれない
+    // final teacherNames = ref.watch(timetableProvider.select((t) => t['teacherNames']));
+
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -208,26 +120,139 @@ class _CreditResultPageState extends State<CreditResultPage> {
             colors: [Colors.indigo[800]!, Colors.indigo[600]!],
           ),
         ),
-        child:
-            _isLoading
-                ? const Center(
-                  child: CircularProgressIndicator(color: Colors.white),
-                )
-                : _results.isEmpty
-                ? const Center(
-                  child: Text(
-                    '該当する講義が見つかりませんでした。',
-                    style: TextStyle(color: Colors.white70, fontSize: 16),
-                  ),
-                )
-                : ListView.builder(
-                  padding: const EdgeInsets.all(8.0),
-                  itemCount: _results.length,
-                  itemBuilder: (context, index) {
-                    final result = _results[index];
-                    return _buildResultCard(result);
-                  },
+        child: StreamBuilder<QuerySnapshot>(
+          stream: FirebaseFirestore.instance.collection('reviews').snapshots(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting &&
+                allCourses.isEmpty) {
+              return const Center(
+                child: CircularProgressIndicator(color: Colors.white),
+              );
+            }
+            if (snapshot.hasError) {
+              return const Center(
+                child: Text(
+                  'エラーが発生しました',
+                  style: TextStyle(color: Colors.white70),
                 ),
+              );
+            }
+
+            // 1. 全ての講義をベースにリストを作成
+            Map<String, LectureSearchResult> resultsMap = {};
+            final reviewMapping = ref.watch(globalReviewMappingProvider);
+
+            allCourses.forEach((lectureName, courseId) {
+              // まずはレビューがない状態として全講義を追加
+              final tempTeacherName = '教員未設定';
+              final key = '${lectureName}_$tempTeacherName';
+              resultsMap[key] = LectureSearchResult(
+                lectureName: lectureName,
+                teacherName: tempTeacherName,
+                // reviewIdはここでは設定しない (null)
+              );
+            });
+
+            // 2. レビューのある講義情報を上書き
+            reviewMapping.forEach((key, reviewId) {
+              final parts = key.split('_');
+              final lectureName = parts.first;
+              final teacherName = parts.length > 1 ? parts.last : '教員未設定';
+
+              resultsMap[key] = LectureSearchResult(
+                lectureName: lectureName,
+                teacherName: teacherName,
+                reviewId: reviewId,
+              );
+            });
+
+            // 3. 評価を計算
+            final reviewsByReviewId = <String, List<DocumentSnapshot>>{};
+            if (snapshot.hasData) {
+              for (var doc in snapshot.data!.docs) {
+                final data = doc.data() as Map<String, dynamic>;
+                final reviewId = data['reviewId'] as String?;
+                if (reviewId != null) {
+                  reviewsByReviewId.putIfAbsent(reviewId, () => []).add(doc);
+                }
+              }
+            }
+
+            List<LectureSearchResult> allResults = resultsMap.values.toList();
+            for (var result in allResults) {
+              if (result.reviewId == null) continue; // レビューがなければスキップ
+              final reviews = reviewsByReviewId[result.reviewId!] ?? [];
+              if (reviews.isNotEmpty) {
+                result.reviewCount = reviews.length;
+                result.avgSatisfaction =
+                    reviews
+                        .map(
+                          (r) =>
+                              ((r.data()
+                                          as Map<
+                                            String,
+                                            dynamic
+                                          >)['overallSatisfaction']
+                                      as num)
+                                  .toDouble(),
+                        )
+                        .reduce((a, b) => a + b) /
+                    reviews.length;
+                final easinessReviews =
+                    reviews
+                        .where(
+                          (r) =>
+                              (r.data() as Map<String, dynamic>)['easiness'] !=
+                              null,
+                        )
+                        .toList();
+                if (easinessReviews.isNotEmpty) {
+                  result.avgEasiness =
+                      easinessReviews
+                          .map(
+                            (r) =>
+                                ((r.data() as Map<String, dynamic>)['easiness']
+                                        as num)
+                                    .toDouble(),
+                          )
+                          .reduce((a, b) => a + b) /
+                      easinessReviews.length;
+                }
+              }
+            }
+
+            // 4. 検索クエリでフィルタリング
+            if (widget.searchQuery != null && widget.searchQuery!.isNotEmpty) {
+              allResults =
+                  allResults.where((r) {
+                    return r.lectureName.toLowerCase().contains(
+                          widget.searchQuery!.toLowerCase(),
+                        ) ||
+                        r.teacherName.toLowerCase().contains(
+                          widget.searchQuery!.toLowerCase(),
+                        );
+                  }).toList();
+            }
+
+            if (allResults.isEmpty) {
+              return const Center(
+                child: Text(
+                  '該当する講義が見つかりませんでした。',
+                  style: TextStyle(color: Colors.white70, fontSize: 16),
+                ),
+              );
+            }
+
+            return ListView.builder(
+              padding: const EdgeInsets.all(8.0),
+              itemCount: allResults.length,
+              itemBuilder: (context, index) {
+                final result = allResults[index];
+                return _buildResultCard(result);
+              },
+            );
+          },
+        ),
       ),
     );
   }
