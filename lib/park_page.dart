@@ -868,6 +868,7 @@ class _ParkPageState extends ConsumerState<ParkPage> {
             : '期限なし';
     final questName = taskData['name'] as String? ?? '名称未設定';
     final description = taskData['description'] as String? ?? '';
+    final taskType = taskData['taskType'] as String? ?? '課題';
 
     return AnimatedOpacity(
       opacity: isFadingOut ? 0.0 : 1.0,
@@ -898,7 +899,9 @@ class _ParkPageState extends ConsumerState<ParkPage> {
                   _buildCountdownText(taskData),
                   const SizedBox(height: 4),
                   Text(
-                    questName,
+                    questName.length > 12
+                        ? '${questName.substring(0, 12)}...'
+                        : questName,
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: screenHeight * 0.025,
@@ -929,7 +932,7 @@ class _ParkPageState extends ConsumerState<ParkPage> {
                         ),
                       ),
                       child: Text(
-                        "課題: $questName\n詳細: $description\n期限: $deadlineText",
+                        "課題: $taskType\n詳細: $description\n期限: $deadlineText",
                         style: TextStyle(
                           fontSize: screenHeight * 0.020,
                           color: Colors.grey[100]!.withOpacity(0.95),
@@ -969,7 +972,7 @@ class _ParkPageState extends ConsumerState<ParkPage> {
             ),
           ),
           Positioned(
-            top: screenHeight * 0.208,
+            top: screenHeight * 0.218,
             right: screenWidth * 0.13,
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
@@ -992,7 +995,7 @@ class _ParkPageState extends ConsumerState<ParkPage> {
                     height: 24,
                   ),
                   const SizedBox(width: 8),
-                  const Text('討伐'),
+                  Text('討伐'),
                 ],
               ),
             ),
@@ -1029,8 +1032,8 @@ class _ParkPageState extends ConsumerState<ParkPage> {
             ),
           ),
           Positioned(
-            top: screenHeight * 0.2,
-            left: screenWidth * 0.09,
+            top: screenHeight * 0.13,
+            left: screenWidth * 0.08,
             child: FutureBuilder<String>(
               future: _getCreatorCharacterImage(
                 taskData['createdBy'] as String?,

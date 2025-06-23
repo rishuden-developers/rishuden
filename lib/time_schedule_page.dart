@@ -1324,12 +1324,23 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
               // タップされた位置の行インデックスを計算
               int tappedRowIndex = (tappedY / rowHeight).floor();
 
+              // 昼休みの場合は、授業コマの存在チェックをスキップ
+              if (tappedRowIndex == 2) {
+                // 昼休みの場合、12:30をデフォルトにする
+                const double totalMinutesFromMidnight = 12 * 60 + 30;
+                final startTime = TimeOfDay(hour: 12, minute: 30);
+                _showEditWeekdayEventDialog(
+                  dayIndex,
+                  -1,
+                  newEventStartTime: startTime,
+                );
+                return;
+              }
+
               // 行インデックスを時間割の時限インデックスに変換
               int periodIndex;
               if (tappedRowIndex < 2) {
                 periodIndex = tappedRowIndex; // 1限、2限
-              } else if (tappedRowIndex == 2) {
-                return; // 昼休みは無視
               } else {
                 periodIndex = tappedRowIndex - 1; // 3限以降
               }
