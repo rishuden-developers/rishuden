@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ReviewPost extends StatelessWidget {
   const ReviewPost({super.key});
@@ -40,8 +43,53 @@ class _ReviewDialogState extends State<ReviewDialog> {
   final List<String> traitsOptions = ['優しい', '厳しい', 'おもしろい', '聞き取りにくい'];
   final List<String> classFormats = ['対面', 'オンデマンド', 'Zoom'];
 
+  // 報酬計算メソッド
+  int _calculateReward() {
+    int reward = 5; // 基本報酬（満足度・楽単度・タグ入力）
+
+    // 詳細コメントがある場合は追加報酬
+    if (comment.trim().isNotEmpty) {
+      reward += 5; // プラス5個
+    }
+
+    return reward;
+  }
+
+  // たこ焼き報酬を付与するメソッド
+  Future<void> _giveTakoyakiReward(int amount) async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+
+      // Firestoreから現在のたこ焼き数を取得
+      final userDoc =
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .get();
+
+      int currentTakoyaki = 0;
+      if (userDoc.exists) {
+        currentTakoyaki = userDoc.data()?['takoyakiCount'] ?? 0;
+      }
+
+      // たこ焼き数を更新
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).update(
+        {'takoyakiCount': currentTakoyaki + amount},
+      );
+
+      // SharedPreferencesにも保存（アプリ内での表示用）
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt('takoyakiCount', currentTakoyaki + amount);
+    } catch (e) {
+      print('Error giving takoyaki reward: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final reward = _calculateReward();
+
     return Dialog(
       insetPadding: const EdgeInsets.all(16),
       child: SingleChildScrollView(
@@ -55,6 +103,28 @@ class _ReviewDialogState extends State<ReviewDialog> {
               const Text(
                 'レビュー投稿',
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.grey[300]!),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.star, color: Colors.amber, size: 20),
+                    const SizedBox(width: 8),
+                    Text(
+                      '報酬: たこ焼き${reward}個',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.orange,
+                      ),
+                    ),
+                  ],
+                ),
               ),
               const SizedBox(height: 16),
               const Text('総合満足度'),
@@ -126,9 +196,16 @@ class _ReviewDialogState extends State<ReviewDialog> {
               ),
               const SizedBox(height: 8),
               TextFormField(
-                decoration: const InputDecoration(labelText: 'おすすめコメント'),
+                decoration: const InputDecoration(
+                  labelText: 'おすすめコメント（詳細入力で+5個）',
+                  hintText: '詳細なコメントを入力すると追加報酬がもらえます',
+                ),
                 maxLines: 4,
-                onChanged: (value) => comment = value,
+                onChanged: (value) {
+                  setState(() {
+                    comment = value;
+                  });
+                },
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'コメントを入力してください';
@@ -145,15 +222,44 @@ class _ReviewDialogState extends State<ReviewDialog> {
                     child: const Text('キャンセル'),
                   ),
                   ElevatedButton(
-                    onPressed: () {
+                    onPressed: () async {
                       if (_formKey.currentState!.validate()) {
-                        // ここに保存処理やAPI呼び出しを実装
+                        // 報酬を付与
+                        await _giveTakoyakiReward(reward);
+
+                        // レビューデータをFirestoreに保存
+                        try {
+                          final user = FirebaseAuth.instance.currentUser;
+                          if (user != null) {
+                            await FirebaseFirestore.instance
+                                .collection('reviews')
+                                .add({
+                                  'userId': user.uid,
+                                  'satisfaction': satisfaction,
+                                  'ease': ease,
+                                  'examType': examType,
+                                  'attendance': attendance,
+                                  'teacherTraits': teacherTraits,
+                                  'classFormat': classFormat,
+                                  'comment': comment,
+                                  'createdAt': FieldValue.serverTimestamp(),
+                                  'reward': reward,
+                                });
+                          }
+                        } catch (e) {
+                          print('Error saving review: $e');
+                        }
+
                         Navigator.of(context).pop();
+
+                        // 報酬通知を表示
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content: const Text(
-                              'レビューを投稿しました',
-                              style: TextStyle(
+                            content: Text(
+                              comment.trim().isNotEmpty
+                                  ? 'レビューを投稿しました！たこ焼き${reward}個を獲得しました！'
+                                  : 'レビューを投稿しました！たこ焼き${reward}個を獲得しました！',
+                              style: const TextStyle(
                                 fontFamily: 'misaki',
                                 color: Colors.white,
                               ),

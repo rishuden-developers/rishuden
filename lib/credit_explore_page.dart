@@ -139,7 +139,19 @@ class _CreditExplorePageState extends State<CreditExplorePage> {
                         // ★ レビュー管理セクションを先に表示
                         _buildSectionTitle('レビューを管理', Icons.edit),
                         const SizedBox(height: 10),
-                        _buildMyReviewsButton(context),
+                        _buildFeatureCard(
+                          context,
+                          title: '自分の授業をレビューする',
+                          icon: Icons.edit,
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const MyReviewsPage(),
+                              ),
+                            );
+                          },
+                        ),
 
                         const SizedBox(height: 20), // ★ スペースを追加
                         // ランキング表示へのボタン
@@ -317,27 +329,26 @@ class _CreditExplorePageState extends State<CreditExplorePage> {
     );
   }
 
-  // ★ レビュー管理ページへのボタンを構築するウィジェット
-  Widget _buildMyReviewsButton(BuildContext context) {
+  Widget _buildFeatureCard(
+    BuildContext context, {
+    required String title,
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
     return Card(
       elevation: 4.0,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ListTile(
-        leading: Icon(Icons.rate_review, color: Colors.indigo[700]),
-        title: const Text(
-          '自分の授業をレビューする',
-          style: TextStyle(
+        leading: Icon(icon, color: Colors.indigo[700]),
+        title: Text(
+          title,
+          style: const TextStyle(
             fontWeight: FontWeight.bold,
             fontFamily: 'NotoSansJP',
           ),
         ),
         trailing: const Icon(Icons.arrow_forward_ios),
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const MyReviewsPage()),
-          );
-        },
+        onTap: onTap,
       ),
     );
   }

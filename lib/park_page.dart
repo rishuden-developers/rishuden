@@ -165,6 +165,21 @@ class _ParkPageState extends ConsumerState<ParkPage> {
     });
   }
 
+  void _showExpiredRpgMessage(Map<String, dynamic> taskData) {
+    _rpgMessageTimer?.cancel();
+    _rpgMessageTimer = Timer(const Duration(milliseconds: 1500), () {
+      if (!mounted) return;
+      setState(() {
+        _dialogueMessages = [
+          "課題「${taskData['name']}」は期限切れ...",
+          "期限を過ぎた課題には報酬はない...",
+          "次は期限を守るのだ、冒険者よ...",
+        ];
+        _currentMessageIndex = 0;
+      });
+    });
+  }
+
   void _createQuest(
     Map<String, dynamic> selectedClass,
     String taskType,
@@ -252,23 +267,31 @@ class _ParkPageState extends ConsumerState<ParkPage> {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return; // ユーザーがいない場合は何もしない
 
+    // 期限切れチェック
+    final deadline = taskData['deadline'] as Timestamp?;
+    final bool isExpired =
+        deadline != null && deadline.toDate().isBefore(DateTime.now());
+
     if (!mounted) return;
     setState(() {
       _crackingTasks.add(questId);
     });
 
-    _showRpgMessageAfterCrack(taskData);
+    // 期限切れの場合は特別なメッセージを表示
+    if (isExpired) {
+      _showExpiredRpgMessage(taskData);
+    } else {
+      _showRpgMessageAfterCrack(taskData);
+    }
 
     await Future.delayed(const Duration(milliseconds: 2500));
 
     if (!mounted) return;
 
-    // ★★★ ここからが追加箇所 ★★★
     // Firestoreのクエストドキュメントに討伐したユーザーIDを追加
     await FirebaseFirestore.instance.collection('quests').doc(questId).set({
       'completedUserIds': FieldValue.arrayUnion([user.uid]),
     }, SetOptions(merge: true));
-    // ★★★ ここまでが追加箇所 ★★★
 
     setState(() {
       _fadingOutTaskIndex = questId;
@@ -277,10 +300,21 @@ class _ParkPageState extends ConsumerState<ParkPage> {
     await Future.delayed(const Duration(milliseconds: 500));
 
     if (!mounted) return;
-    // 討伐後、クエストをリストから削除するロジックは一旦コメントアウトし、
-    // 代わりにUIを更新して討伐済み状態を示すように変更する可能性があります。
-    // await FirebaseFirestore.instance.collection('quests').doc(questId).delete();
 
+    // 期限切れの場合は報酬なし
+    if (isExpired) {
+      setState(() {
+        _crackingTasks.remove(questId);
+        if (_fadingOutTaskIndex == questId) {
+          _fadingOutTaskIndex = null;
+        }
+        // UI上は即座にリストから削除するが、ドキュメントは残す
+        _quests.removeWhere((quest) => quest['id'] == questId);
+      });
+      return;
+    }
+
+    // 新しい報酬システム: 課題提出でたこ焼き2個 + EXP5
     const int rewardExp = 5;
     const int rewardTakoyaki = 2;
 
@@ -297,6 +331,9 @@ class _ParkPageState extends ConsumerState<ParkPage> {
 
     // Firebaseにたこ焼き数を保存
     await _saveTakoyakiCountToFirebase();
+
+    // 達成度に応じた報酬をチェック
+    await _checkAndDistributeAchievementRewards(questId, taskData);
   }
 
   Future<void> _loadCharacterInfoFromFirebase() async {
@@ -1454,13 +1491,13 @@ class _ParkPageState extends ConsumerState<ParkPage> {
     final bool isCurrentlySupporting = await _isCurrentUserSupporting(questId);
     final int takoyakiChange = isCurrentlySupporting ? -1 : 1;
 
-    // 自分のたこ焼きが足りるかチェック
-    if (takoyakiChange > 0 && _takoyakiCount < 1) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('たこ焼きが足りません！')));
-      return;
-    }
+    // 自分のたこ焼きが足りるかチェック（削除：自分のたこ焼きは減らないため不要）
+    // if (takoyakiChange > 0 && _takoyakiCount < 1) {
+    //   ScaffoldMessenger.of(
+    //     context,
+    //   ).showSnackBar(const SnackBar(content: Text('たこ焼きが足りません！')));
+    //   return;
+    // }
 
     final questRef = FirebaseFirestore.instance
         .collection('quests')
@@ -1468,9 +1505,9 @@ class _ParkPageState extends ConsumerState<ParkPage> {
     final creatorRef = FirebaseFirestore.instance
         .collection('users')
         .doc(creatorId);
-    final selfRef = FirebaseFirestore.instance
-        .collection('users')
-        .doc(user.uid);
+    // final selfRef = FirebaseFirestore.instance
+    //     .collection('users')
+    //     .doc(user.uid);
 
     try {
       await FirebaseFirestore.instance.runTransaction((transaction) async {
@@ -1487,16 +1524,16 @@ class _ParkPageState extends ConsumerState<ParkPage> {
           'takoyakiCount': FieldValue.increment(takoyakiChange),
         });
 
-        // 3. 自分のたこ焼きを増減
-        transaction.update(selfRef, {
-          'takoyakiCount': FieldValue.increment(-takoyakiChange),
-        });
+        // 3. 自分のたこ焼きを増減（削除：自分のたこ焼きは減らない）
+        // transaction.update(selfRef, {
+        //   'takoyakiCount': FieldValue.increment(-takoyakiChange),
+        // });
       });
 
-      // UIを更新
-      setState(() {
-        _takoyakiCount -= takoyakiChange;
-      });
+      // UIを更新（削除：自分のたこ焼きは減らない）
+      // setState(() {
+      //   _takoyakiCount -= takoyakiChange;
+      // });
     } catch (e) {
       print("Error toggling takoyaki support: $e");
       ScaffoldMessenger.of(
@@ -1651,6 +1688,190 @@ class _ParkPageState extends ConsumerState<ParkPage> {
           context,
         ).showSnackBar(const SnackBar(content: Text("クエストの更新に失敗しました...")));
       }
+    }
+  }
+
+  // 達成度に応じた報酬をチェック
+  Future<void> _checkAndDistributeAchievementRewards(
+    String questId,
+    Map<String, dynamic> taskData,
+  ) async {
+    try {
+      final questDoc =
+          await FirebaseFirestore.instance
+              .collection('quests')
+              .doc(questId)
+              .get();
+
+      if (!questDoc.exists) return;
+
+      final questData = questDoc.data()!;
+      final completedUserIds = List<String>.from(
+        questData['completedUserIds'] ?? [],
+      );
+      final enrolledUserIds = List<String>.from(
+        questData['enrolledUserIds'] ?? [],
+      );
+      final creatorId = questData['createdBy'] as String?;
+
+      if (creatorId == null || enrolledUserIds.isEmpty) return;
+
+      final completionRate = completedUserIds.length / enrolledUserIds.length;
+      final isHalfCompleted = completionRate >= 0.5 && completionRate < 1.0;
+      final isFullyCompleted = completionRate >= 1.0;
+
+      // 既に報酬が配布済みかチェック
+      final alreadyRewarded =
+          questData['achievementRewardsDistributed'] ?? false;
+      if (alreadyRewarded) return;
+
+      if (isHalfCompleted) {
+        // 半数達成: 作成者に2個、全員に1個
+        await _distributeHalfCompletionRewards(
+          questId,
+          creatorId,
+          enrolledUserIds,
+        );
+      } else if (isFullyCompleted) {
+        // 全員達成: 作成者に10個、全員に5個
+        await _distributeFullCompletionRewards(
+          questId,
+          creatorId,
+          enrolledUserIds,
+        );
+      }
+    } catch (e) {
+      print('Error checking achievement rewards: $e');
+    }
+  }
+
+  // 半数達成時の報酬配布
+  Future<void> _distributeHalfCompletionRewards(
+    String questId,
+    String creatorId,
+    List<String> enrolledUserIds,
+  ) async {
+    try {
+      await FirebaseFirestore.instance.runTransaction((transaction) async {
+        // 作成者に2個
+        final creatorRef = FirebaseFirestore.instance
+            .collection('users')
+            .doc(creatorId);
+        transaction.update(creatorRef, {
+          'takoyakiCount': FieldValue.increment(2),
+        });
+
+        // 全員に1個
+        for (final userId in enrolledUserIds) {
+          final userRef = FirebaseFirestore.instance
+              .collection('users')
+              .doc(userId);
+          transaction.update(userRef, {
+            'takoyakiCount': FieldValue.increment(1),
+          });
+        }
+
+        // 報酬配布済みフラグを設定
+        final questRef = FirebaseFirestore.instance
+            .collection('quests')
+            .doc(questId);
+        transaction.update(questRef, {
+          'achievementRewardsDistributed': true,
+          'achievementType': 'half',
+        });
+      });
+
+      // 自分が対象者の場合、UIを更新
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser != null && enrolledUserIds.contains(currentUser.uid)) {
+        setState(() {
+          _takoyakiCount += 1;
+        });
+        await _saveTakoyakiCountToFirebase();
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text(
+              '半数達成！全員にたこ焼き1個、作成者に2個配布されました！',
+              style: TextStyle(fontFamily: 'misaki', color: Colors.white),
+            ),
+            backgroundColor: Colors.black.withOpacity(0.85),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: const BorderSide(color: Colors.white, width: 2.5),
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      print('Error distributing half completion rewards: $e');
+    }
+  }
+
+  // 全員達成時の報酬配布
+  Future<void> _distributeFullCompletionRewards(
+    String questId,
+    String creatorId,
+    List<String> enrolledUserIds,
+  ) async {
+    try {
+      await FirebaseFirestore.instance.runTransaction((transaction) async {
+        // 作成者に10個
+        final creatorRef = FirebaseFirestore.instance
+            .collection('users')
+            .doc(creatorId);
+        transaction.update(creatorRef, {
+          'takoyakiCount': FieldValue.increment(10),
+        });
+
+        // 全員に5個
+        for (final userId in enrolledUserIds) {
+          final userRef = FirebaseFirestore.instance
+              .collection('users')
+              .doc(userId);
+          transaction.update(userRef, {
+            'takoyakiCount': FieldValue.increment(5),
+          });
+        }
+
+        // 報酬配布済みフラグを設定
+        final questRef = FirebaseFirestore.instance
+            .collection('quests')
+            .doc(questId);
+        transaction.update(questRef, {
+          'achievementRewardsDistributed': true,
+          'achievementType': 'full',
+        });
+      });
+
+      // 自分が対象者の場合、UIを更新
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser != null && enrolledUserIds.contains(currentUser.uid)) {
+        setState(() {
+          _takoyakiCount += 5;
+        });
+        await _saveTakoyakiCountToFirebase();
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text(
+              '全員達成！全員にたこ焼き5個、作成者に10個配布されました！',
+              style: TextStyle(fontFamily: 'misaki', color: Colors.white),
+            ),
+            backgroundColor: Colors.black.withOpacity(0.85),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: const BorderSide(color: Colors.white, width: 2.5),
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      print('Error distributing full completion rewards: $e');
     }
   }
 }

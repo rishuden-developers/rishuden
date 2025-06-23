@@ -29,28 +29,30 @@ class CreditInputPage extends ConsumerStatefulWidget {
 }
 
 class _CreditInputPageState extends ConsumerState<CreditInputPage> {
-  // フォームのキーと選択された講義・教師名
   final _formKey = GlobalKey<FormState>();
+
+  // State variables for the form
   String _selectedLectureName = '';
   String _selectedTeacherName = '';
-
-  // レビュー入力フィールドのState
   double _overallSatisfaction = 3.0;
   double _easiness = 3.0;
-  LectureFormat? _selectedFormat;
-  AttendanceStrictness? _selectedAttendance;
-  ExamType? _selectedExamType;
-  final TextEditingController _teacherFeatureController =
-      TextEditingController();
-  final TextEditingController _commentController = TextEditingController();
-  final TextEditingController _tagsController =
-      TextEditingController(); // タグ入力用
+  String? _selectedExamType;
+  String? _selectedAttendance;
+  List<String> _selectedTeacherTraits = [];
+  String? _selectedClassFormat;
+  final _commentController = TextEditingController();
 
-  // 動的な講義リスト（時間割から取得）
+  // Options for dropdowns and chips
+  final List<String> _examOptions = ['レポート', '筆記', '出席点', 'その他'];
+  final List<String> _attendanceOptions = ['自由', '毎回点呼', '出席点あり', 'その他'];
+  final List<String> _traitsOptions = ['優しい', '厳しい', 'おもしろい', '聞き取りにくい'];
+  final List<String> _classFormats = ['対面', 'オンデマンド', 'Zoom', 'その他'];
+
+  bool _isLoading = false;
   List<Map<String, String>> _dynamicLectures = [];
 
   // ダミーの講義リスト（検索・選択機能がない場合は、外部から渡すか固定値）
-  List<Map<String, String>> _dummyLectures = [
+  final List<Map<String, String>> _dummyLectures = [
     {'name': '線形代数学Ⅰ', 'teacher': '山田 太郎'},
     {'name': 'データ構造とアルゴM', 'teacher': '佐藤 花子'},
     {'name': '経済学原論', 'teacher': '田中 健太'},
@@ -69,6 +71,15 @@ class _CreditInputPageState extends ConsumerState<CreditInputPage> {
       _selectedTeacherName = widget.teacherName!;
     }
     _loadLecturesFromTimetable();
+    _commentController.addListener(() {
+      setState(() {}); // To update reward display
+    });
+  }
+
+  @override
+  void dispose() {
+    _commentController.dispose();
+    super.dispose();
   }
 
   @override
@@ -106,80 +117,72 @@ class _CreditInputPageState extends ConsumerState<CreditInputPage> {
 
   Future<void> _submitReview() async {
     if (_formKey.currentState!.validate()) {
+      setState(() => _isLoading = true);
       try {
-        // グローバルレビューマッピングからreviewIdを取得
         final reviewId = ref
             .read(globalReviewMappingProvider.notifier)
             .getOrCreateReviewId(_selectedLectureName, _selectedTeacherName);
-
-        print(
-          'DEBUG: レビュー投稿 - 授業: $_selectedLectureName, 教員: $_selectedTeacherName, reviewId: $reviewId',
-        );
-
-        // 現在のユーザーを取得
         final user = FirebaseAuth.instance.currentUser;
-        if (user == null) {
-          throw Exception('ユーザーが認証されていません');
+        if (user == null) throw Exception('ユーザーが認証されていません');
+
+        int reward = 5;
+        if (_commentController.text.trim().isNotEmpty) {
+          reward += 5;
         }
 
-        // レビューデータを収集
         final reviewData = {
           'lectureName': _selectedLectureName,
           'teacherName': _selectedTeacherName,
           'reviewId': reviewId,
           'overallSatisfaction': _overallSatisfaction,
           'easiness': _easiness,
-          'lectureFormat': _selectedFormat?.toString().split('.').last,
-          'attendanceStrictness':
-              _selectedAttendance?.toString().split('.').last,
-          'examType': _selectedExamType?.toString().split('.').last,
-          'teacherFeature': _teacherFeatureController.text,
+          'lectureFormat': _selectedClassFormat,
+          'attendanceStrictness': _selectedAttendance,
+          'examType': _selectedExamType,
+          'teacherTraits': _selectedTeacherTraits,
           'comment': _commentController.text,
-          'tags':
-              _tagsController.text
-                  .split(',')
-                  .map((e) => e.trim())
-                  .where((e) => e.isNotEmpty)
-                  .toList(),
+          'tags': [], // This can be populated if needed in future
           'userId': user.uid,
           'createdAt': FieldValue.serverTimestamp(),
+          'reward': reward,
         };
 
-        // Firestoreにレビューを保存
+        // Save review and give reward
         await FirebaseFirestore.instance.collection('reviews').add(reviewData);
+        await _giveTakoyakiReward(reward);
 
-        print('DEBUG: レビューが正常に保存されました');
-
-        // レビュー投稿後、前のページに戻る
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text(
-              'レビューが投稿されました！',
-              style: TextStyle(fontFamily: 'misaki', color: Colors.white),
-            ),
+            content: Text('レビューを投稿しました！たこ焼き${reward}個GET！'),
             backgroundColor: Colors.black.withOpacity(0.85),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-              side: const BorderSide(color: Colors.white, width: 2.5),
-            ),
           ),
         );
       } catch (e) {
-        print('Error submitting review: $e');
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'レビューの投稿に失敗しました: $e',
-              style: TextStyle(fontFamily: 'misaki', color: Colors.white),
-            ),
-            backgroundColor: Colors.red.withOpacity(0.85),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-              side: const BorderSide(color: Colors.white, width: 2.5),
-            ),
-          ),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('レビューの投稿に失敗しました: $e')));
+      } finally {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Future<void> _giveTakoyakiReward(int amount) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    try {
+      final userRef = FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid);
+      await userRef.update({'takoyakiCount': FieldValue.increment(amount)});
+    } catch (e) {
+      if (e is FirebaseException && e.code == 'not-found') {
+        await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+          'takoyakiCount': amount,
+        }, SetOptions(merge: true));
+      } else {
+        print('たこ焼き報酬の付与に失敗: $e');
       }
     }
   }
@@ -191,23 +194,15 @@ class _CreditInputPageState extends ConsumerState<CreditInputPage> {
 
   @override
   Widget build(BuildContext context) {
+    int reward = 5;
+    if (_commentController.text.trim().isNotEmpty) {
+      reward += 5;
+    }
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'レビューを投稿',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-            fontFamily: 'NotoSansJP',
-          ),
-        ),
+        title: const Text('レビューを投稿'),
         backgroundColor: Colors.indigo[800],
-        elevation: 0,
-        centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
       ),
       body: Container(
         decoration: BoxDecoration(
@@ -218,297 +213,164 @@ class _CreditInputPageState extends ConsumerState<CreditInputPage> {
           ),
         ),
         child: SafeArea(
-          child: LayoutBuilder(
-            builder:
-                (context, constraints) => SingleChildScrollView(
-                  padding: const EdgeInsets.all(16.0),
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      minHeight:
-                          constraints.maxHeight - 32, // Adjust for padding
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(16.0),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildSectionTitle('レビュー対象講義', Icons.school),
+                  const SizedBox(height: 10),
+                  _buildLectureDisplay(),
+                  const SizedBox(height: 20),
+                  _buildSectionTitle('評価項目', Icons.star),
+                  const SizedBox(height: 10),
+                  _buildOverallSatisfaction(),
+                  const SizedBox(height: 10),
+                  _buildEasinessRating(),
+                  const SizedBox(height: 20),
+                  _buildSectionTitle('詳細情報', Icons.info_outline),
+                  const SizedBox(height: 10),
+                  _buildDropdown(
+                    '講義形式',
+                    _classFormats,
+                    _selectedClassFormat,
+                    (val) => setState(() => _selectedClassFormat = val),
+                  ),
+                  const SizedBox(height: 10),
+                  _buildDropdown(
+                    '出席の厳しさ',
+                    _attendanceOptions,
+                    _selectedAttendance,
+                    (val) => setState(() => _selectedAttendance = val),
+                  ),
+                  const SizedBox(height: 10),
+                  _buildDropdown(
+                    '試験の形式',
+                    _examOptions,
+                    _selectedExamType,
+                    (val) => setState(() => _selectedExamType = val),
+                  ),
+                  const SizedBox(height: 20),
+                  _buildSectionTitle('教員の特徴', Icons.person_outline),
+                  _buildChipsSection(),
+                  const SizedBox(height: 20),
+                  _buildSectionTitle(
+                    'コメント (+${_commentController.text.trim().isEmpty ? '5' : '0'}個)',
+                    Icons.comment,
+                  ),
+                  TextField(
+                    controller: _commentController,
+                    decoration: const InputDecoration(
+                      hintText: '授業の感想、TAの様子など...',
+                      filled: true,
+                      fillColor: Colors.white,
+                      border: OutlineInputBorder(),
                     ),
-                    child: IntrinsicHeight(
-                      child: Form(
-                        key: _formKey,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            // 講義選択セクション (CreditReviewPageから来た場合は表示しない)
-                            if (widget.lectureName == null ||
-                                widget.teacherName == null)
-                              _buildLectureSelection(),
-                            const SizedBox(height: 20),
-
-                            // レビュー対象の講義表示
-                            _buildCurrentLectureDisplay(),
-                            const SizedBox(height: 20),
-
-                            _buildSectionTitle('評価項目', Icons.star_half),
-                            const SizedBox(height: 10),
-                            _buildRatingSection('総合満足度', _overallSatisfaction, (
-                              rating,
-                            ) {
-                              setState(() {
-                                _overallSatisfaction = rating;
-                              });
-                            }),
-                            const SizedBox(height: 15),
-                            _buildRatingSection(
-                              '楽単度',
-                              _easiness,
-                              (rating) {
-                                setState(() {
-                                  _easiness = rating;
-                                });
-                              },
-                              icon: Icons.sentiment_satisfied_alt,
-                              activeColor: Colors.lightGreen,
-                            ),
-                            const SizedBox(height: 30),
-
-                            _buildSectionTitle('詳細情報', Icons.info),
-                            const SizedBox(height: 10),
-                            _buildDropdownField<LectureFormat>(
-                              '講義形式',
-                              _selectedFormat,
-                              LectureFormat.values,
-                              (value) {
-                                setState(() {
-                                  _selectedFormat = value;
-                                });
-                              },
-                              validator:
-                                  (value) =>
-                                      value == null ? '講義形式を選択してください' : null,
-                            ),
-                            const SizedBox(height: 15),
-                            _buildDropdownField<AttendanceStrictness>(
-                              '出席厳しさ',
-                              _selectedAttendance,
-                              AttendanceStrictness.values,
-                              (value) {
-                                setState(() {
-                                  _selectedAttendance = value;
-                                });
-                              },
-                              validator:
-                                  (value) =>
-                                      value == null ? '出席厳しさを選択してください' : null,
-                            ),
-                            const SizedBox(height: 15),
-                            _buildDropdownField<ExamType>(
-                              '試験形式',
-                              _selectedExamType,
-                              ExamType.values,
-                              (value) {
-                                setState(() {
-                                  _selectedExamType = value;
-                                });
-                              },
-                              validator:
-                                  (value) =>
-                                      value == null ? '試験形式を選択してください' : null,
-                            ),
-                            const SizedBox(height: 15),
-                            _buildTextField(
-                              controller: _teacherFeatureController,
-                              labelText: '教員特徴 (例: 丁寧、面白い、厳しい)',
-                              hintText: '例: 丁寧、質問しやすい',
-                              maxLines: 2,
-                            ),
-                            const SizedBox(height: 15),
-                            _buildTextField(
-                              controller: _commentController,
-                              labelText: 'コメント (詳細なレビュー)',
-                              hintText: '講義内容、課題量、テスト難易度など、自由に記入してください。',
-                              maxLines: 5,
-                              validator:
-                                  (value) =>
-                                      value == null || value.isEmpty
-                                          ? 'コメントは必須です'
-                                          : null,
-                            ),
-                            const SizedBox(height: 15),
-                            _buildTextField(
-                              controller: _tagsController,
-                              labelText: 'タグ (カンマ区切り)',
-                              hintText: '例: 楽単, レポート多め, オンライン完結',
-                              maxLines: 2,
-                            ),
-                            const SizedBox(height: 30),
-
-                            // 投稿ボタン
-                            ElevatedButton.icon(
-                              onPressed: _submitReview,
-                              icon: const Icon(Icons.send, color: Colors.white),
-                              label: const Text(
-                                'レビューを投稿する',
-                                style: TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                  fontFamily: 'NotoSansJP',
-                                ),
-                              ),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.indigo[700],
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 16,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  side: BorderSide(
-                                    color: Colors.blueAccent[100]!,
-                                    width: 1.5,
-                                  ),
-                                ),
-                                elevation: 4,
-                              ),
-                            ),
-                            const SizedBox(height: 20),
-
-                            // レビューランキングへのボタン (変更なし)
-                            _buildNavigateButton(
-                              context,
-                              'レビューランキングを見る',
-                              Icons.emoji_events,
-                              const CreditResultPage(
-                                rankingType: 'satisfaction',
-                              ), // ここも調整
-                              buttonColor: Colors.purple[700],
-                            ),
-                          ],
+                    maxLines: 5,
+                  ),
+                  const SizedBox(height: 20),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.amber.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.amber),
+                    ),
+                    child: Center(
+                      child: Text(
+                        '報酬: たこ焼き ${reward}個 GET!',
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
                         ),
                       ),
                     ),
                   ),
-                ),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: _isLoading ? null : _submitReview,
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        textStyle: const TextStyle(fontSize: 18),
+                      ),
+                      child:
+                          _isLoading
+                              ? const CircularProgressIndicator()
+                              : const Text('投稿する'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildSectionTitle(String title, IconData icon) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, color: Colors.white, size: 28),
-          const SizedBox(width: 10),
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-              fontFamily: 'NotoSansJP',
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  // --- Helper Widgets ---
 
-  Widget _buildLectureSelection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildSectionTitle(String title, IconData icon) {
+    return Row(
       children: [
-        _buildSectionTitle('レビュー対象講義の選択', Icons.class_),
-        const SizedBox(height: 10),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.9),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.blueAccent[100]!, width: 1.5),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                spreadRadius: 1,
-                blurRadius: 3,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
-              isExpanded: true,
-              value: _selectedLectureName.isEmpty ? null : _selectedLectureName,
-              hint: const Text(
-                '講義を選択してください',
-                style: TextStyle(color: Colors.grey),
-              ),
-              icon: const Icon(Icons.arrow_drop_down, color: Colors.indigo),
-              iconSize: 24,
-              elevation: 16,
-              style: const TextStyle(color: Colors.black87, fontSize: 16),
-              onChanged: (String? newValue) {
-                setState(() {
-                  _selectedLectureName = newValue!;
-                  // 選択された講義に対応する教員名も自動設定（仮のロジック）
-                  _selectedTeacherName =
-                      _dynamicLectures.firstWhere(
-                        (lec) => lec['name'] == newValue,
-                      )['teacher'] ??
-                      '';
-                });
-              },
-              items:
-                  _dynamicLectures.map<DropdownMenuItem<String>>((
-                    Map<String, String> lecture,
-                  ) {
-                    return DropdownMenuItem<String>(
-                      value: lecture['name'],
-                      child: Text('${lecture['name']} (${lecture['teacher']})'),
-                    );
-                  }).toList(),
-            ),
+        Icon(icon, color: Colors.white),
+        const SizedBox(width: 8),
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
           ),
         ),
       ],
     );
   }
 
-  Widget _buildCurrentLectureDisplay() {
+  Widget _buildLectureDisplay() {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            _selectedLectureName,
+            style: const TextStyle(fontSize: 16, color: Colors.white),
+          ),
+          Text(
+            _selectedTeacherName,
+            style: const TextStyle(fontSize: 14, color: Colors.white70),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOverallSatisfaction() {
     return Card(
-      margin: EdgeInsets.zero,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-      elevation: 5,
-      color: Colors.white,
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        padding: const EdgeInsets.all(12.0),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              'レビュー対象講義:',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Colors.indigo[900],
-                fontFamily: 'NotoSansJP',
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              _selectedLectureName.isNotEmpty ? _selectedLectureName : '未選択',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Colors.indigo[700],
-                fontFamily: 'NotoSansJP',
-              ),
-            ),
-            Text(
-              _selectedTeacherName.isNotEmpty ? _selectedTeacherName : '',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey[700],
-                fontFamily: 'NotoSansJP',
-              ),
+            const Text('総合満足度', style: TextStyle(fontSize: 16)),
+            RatingBar.builder(
+              initialRating: _overallSatisfaction,
+              minRating: 1,
+              itemCount: 5,
+              itemBuilder:
+                  (context, _) => const Icon(Icons.star, color: Colors.amber),
+              onRatingUpdate:
+                  (rating) => setState(() => _overallSatisfaction = rating),
             ),
           ],
         ),
@@ -516,185 +378,89 @@ class _CreditInputPageState extends ConsumerState<CreditInputPage> {
     );
   }
 
-  Widget _buildRatingSection(
-    String label,
-    double rating,
-    ValueChanged<double> onRatingUpdate, {
-    IconData icon = Icons.star,
-    Color activeColor = Colors.amber,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-            fontFamily: 'NotoSansJP',
-          ),
-        ),
-        const SizedBox(height: 8),
-        Center(
-          child: RatingBar.builder(
-            initialRating: rating,
-            minRating: 1,
-            direction: Axis.horizontal,
-            allowHalfRating: true,
-            itemCount: 5,
-            itemPadding: const EdgeInsets.symmetric(horizontal: 4.0),
-            itemBuilder: (context, _) => Icon(icon, color: activeColor),
-            onRatingUpdate: onRatingUpdate,
-          ),
-        ),
-        Center(
-          child: Text(
-            rating.toStringAsFixed(1),
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: activeColor,
+  Widget _buildEasinessRating() {
+    final List<IconData> smileyIcons = [
+      Icons.sentiment_very_dissatisfied,
+      Icons.sentiment_dissatisfied,
+      Icons.sentiment_neutral,
+      Icons.sentiment_satisfied,
+      Icons.sentiment_very_satisfied,
+    ];
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text('楽単度', style: TextStyle(fontSize: 16)),
+            Row(
+              children: List.generate(5, (index) {
+                return IconButton(
+                  icon: Icon(
+                    smileyIcons[index],
+                    color: _easiness >= index + 1 ? Colors.green : Colors.grey,
+                  ),
+                  onPressed: () => setState(() => _easiness = index + 1.0),
+                );
+              }),
             ),
-          ),
+          ],
         ),
-      ],
-    );
-  }
-
-  Widget _buildDropdownField<T>(
-    String labelText,
-    T? value,
-    List<T> items,
-    ValueChanged<T?> onChanged, {
-    String? Function(T?)? validator,
-  }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.9),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.blueAccent[100]!, width: 1.5),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 3,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: DropdownButtonFormField<T>(
-        value: value,
-        decoration: InputDecoration(
-          labelText: labelText,
-          labelStyle: TextStyle(color: Colors.grey[700]),
-          border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(vertical: 10),
-        ),
-        icon: const Icon(Icons.arrow_drop_down, color: Colors.indigo),
-        iconSize: 24,
-        elevation: 16,
-        style: const TextStyle(color: Colors.black87, fontSize: 16),
-        onChanged: onChanged,
-        validator: validator,
-        items:
-            items.map<DropdownMenuItem<T>>((T item) {
-              return DropdownMenuItem<T>(
-                value: item,
-                child: Text(_formatEnum(item)),
-              );
-            }).toList(),
       ),
     );
   }
 
-  Widget _buildTextField({
-    required TextEditingController controller,
-    required String labelText,
-    String? hintText,
-    int maxLines = 1,
-    String? Function(String?)? validator,
-  }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.9),
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 3,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: TextFormField(
-        controller: controller,
-        decoration: InputDecoration(
-          labelText: labelText,
-          hintText: hintText,
-          labelStyle: TextStyle(color: Colors.grey[700]),
-          hintStyle: TextStyle(color: Colors.grey[500]),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide.none,
-          ),
-          filled: true,
-          fillColor: Colors.white.withOpacity(
-            0,
-          ), // Set to transparent as container provides color
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 12,
+  Widget _buildDropdown(
+    String hint,
+    List<String> items,
+    String? currentValue,
+    ValueChanged<String?> onChanged,
+  ) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12.0),
+        child: DropdownButtonFormField<String>(
+          value: currentValue,
+          items:
+              items
+                  .map(
+                    (item) => DropdownMenuItem(value: item, child: Text(item)),
+                  )
+                  .toList(),
+          onChanged: onChanged,
+          decoration: InputDecoration(
+            labelText: hint,
+            border: InputBorder.none,
           ),
         ),
-        maxLines: maxLines,
-        style: const TextStyle(color: Colors.black87, fontSize: 16),
-        validator: validator,
       ),
     );
   }
 
-  // 共通のナビゲーションボタン（CreditInputPage内で使用する分のみ残す）
-  Widget _buildNavigateButton(
-    BuildContext context,
-    String label,
-    IconData icon,
-    Widget destination, {
-    Color? buttonColor,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: ElevatedButton.icon(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => destination),
-          );
-        },
-        icon: Icon(icon, color: Colors.white),
-        label: Text(
-          label,
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-            fontFamily: 'NotoSansJP',
-          ),
-        ),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: buttonColor ?? Colors.blueAccent,
-          foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-            side: BorderSide(
-              color: (buttonColor ?? Colors.blueAccent).withOpacity(0.5),
-              width: 1.5,
-            ),
-          ),
-          elevation: 4,
+  Widget _buildChipsSection() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: Wrap(
+          spacing: 8.0,
+          children:
+              _traitsOptions.map((trait) {
+                final isSelected = _selectedTeacherTraits.contains(trait);
+                return FilterChip(
+                  label: Text(trait),
+                  selected: isSelected,
+                  onSelected: (selected) {
+                    setState(() {
+                      if (selected) {
+                        _selectedTeacherTraits.add(trait);
+                      } else {
+                        _selectedTeacherTraits.remove(trait);
+                      }
+                    });
+                  },
+                );
+              }).toList(),
         ),
       ),
     );
