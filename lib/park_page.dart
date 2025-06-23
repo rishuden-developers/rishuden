@@ -869,6 +869,8 @@ class _ParkPageState extends ConsumerState<ParkPage> {
     final questName = taskData['name'] as String? ?? '名称未設定';
     final description = taskData['description'] as String? ?? '';
     final taskType = taskData['taskType'] as String? ?? '課題';
+    final creatorId = taskData['createdBy'] as String?;
+    final currentUserId = FirebaseAuth.instance.currentUser?.uid;
 
     return AnimatedOpacity(
       opacity: isFadingOut ? 0.0 : 1.0,
@@ -961,7 +963,7 @@ class _ParkPageState extends ConsumerState<ParkPage> {
                   );
                 }
                 if (!snapshot.hasData || snapshot.hasError) {
-                  return const SizedBox.shrink(); // エラー時は何も表示しない
+                  return const SizedBox.shrink();
                 }
                 final counts = snapshot.data!;
                 return TaskProgressGauge(
@@ -1033,7 +1035,7 @@ class _ParkPageState extends ConsumerState<ParkPage> {
           ),
           Positioned(
             top: screenHeight * 0.13,
-            left: screenWidth * 0.08,
+            left: screenWidth * 0.04,
             child: FutureBuilder<String>(
               future: _getCreatorCharacterImage(
                 taskData['createdBy'] as String?,
@@ -1050,35 +1052,46 @@ class _ParkPageState extends ConsumerState<ParkPage> {
                     fit: BoxFit.cover,
                   );
                 } else {
-                  imageWidget = Image.asset(snapshot.data!, fit: BoxFit.cover);
+                  imageWidget = Image.asset(
+                    snapshot.data!,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Image.asset(
+                        'assets/character_gorilla.png',
+                        fit: BoxFit.cover,
+                      );
+                    },
+                  );
                 }
-
+                final creatorIconSize = screenWidth * 0.14;
                 return Container(
-                  width: screenWidth * 0.14,
-                  height: screenWidth * 0.14,
+                  width: creatorIconSize,
+                  height: creatorIconSize,
                   decoration: BoxDecoration(
-                    shape: BoxShape.circle,
+                    color: Colors.black.withOpacity(0.5),
+                    borderRadius: BorderRadius.circular(8),
                     border: Border.all(
-                      color: Colors.white.withOpacity(0.5),
-                      width: 1.2,
+                      color: Colors.cyan.withOpacity(0.6),
+                      width: 1,
                     ),
                   ),
-                  child: ClipOval(child: imageWidget),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(7),
+                    child: imageWidget,
+                  ),
                 );
               },
             ),
           ),
-          if (isCracking)
-            Positioned.fill(
-              child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.05),
-                child: Opacity(
-                  opacity: 0.7,
-                  child: Image.asset(
-                    'assets/crack_overlay.png',
-                    fit: BoxFit.contain,
-                  ),
-                ),
+          if (creatorId == currentUserId)
+            Positioned(
+              top: screenHeight * 0.14,
+              right: screenWidth * 0.05,
+              child: IconButton(
+                icon: Icon(Icons.edit, color: Colors.white, size: 20),
+                onPressed: () {
+                  _showEditQuestDialog(context, taskData);
+                },
               ),
             ),
         ],
@@ -1388,6 +1401,129 @@ class _ParkPageState extends ConsumerState<ParkPage> {
     } catch (e) {
       print('Error getting subjugation info: $e');
       return {'completed': 0, 'total': 0};
+    }
+  }
+
+  void _showEditQuestDialog(
+    BuildContext context,
+    Map<String, dynamic> taskData,
+  ) {
+    final questId = taskData['id'] as String;
+    String editedTaskType = taskData['taskType'] as String;
+    String editedDescription = taskData['description'] as String;
+    DateTime editedDeadline = (taskData['deadline'] as Timestamp).toDate();
+    final List<String> taskTypes = ['レポート', '出席', '発表', '試験', 'その他'];
+
+    final descriptionController = TextEditingController(
+      text: editedDescription,
+    );
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: Text('クエストを編集'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    DropdownButton<String>(
+                      value: editedTaskType,
+                      items:
+                          taskTypes.map((String value) {
+                            return DropdownMenuItem<String>(
+                              value: value,
+                              child: Text(value),
+                            );
+                          }).toList(),
+                      onChanged: (newValue) {
+                        setDialogState(() {
+                          editedTaskType = newValue!;
+                        });
+                      },
+                    ),
+                    TextField(
+                      controller: descriptionController,
+                      decoration: InputDecoration(labelText: '詳細'),
+                      onChanged: (value) => editedDescription = value,
+                    ),
+                    SizedBox(height: 20),
+                    Text(
+                      '期限: ${DateFormat('MM/dd HH:mm').format(editedDeadline)}',
+                    ),
+                    ElevatedButton(
+                      child: Text('期限を変更'),
+                      onPressed: () async {
+                        final date = await showDatePicker(
+                          context: context,
+                          initialDate: editedDeadline,
+                          firstDate: DateTime.now(),
+                          lastDate: DateTime(2100),
+                        );
+                        if (date == null) return;
+                        final time = await showTimePicker(
+                          context: context,
+                          initialTime: TimeOfDay.fromDateTime(editedDeadline),
+                        );
+                        if (time == null) return;
+                        setDialogState(() {
+                          editedDeadline = DateTime(
+                            date.year,
+                            date.month,
+                            date.day,
+                            time.hour,
+                            time.minute,
+                          );
+                        });
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  child: Text('キャンセル'),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+                TextButton(
+                  child: Text('保存'),
+                  onPressed: () {
+                    _updateQuest(questId, {
+                      'taskType': editedTaskType,
+                      'description': editedDescription,
+                      'deadline': Timestamp.fromDate(editedDeadline),
+                    });
+                    Navigator.of(context).pop();
+                  },
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _updateQuest(String questId, Map<String, dynamic> data) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection('quests')
+          .doc(questId)
+          .update(data);
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text("クエストを更新しました！")));
+      }
+    } catch (e) {
+      print("Error updating quest: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text("クエストの更新に失敗しました...")));
+      }
     }
   }
 }
