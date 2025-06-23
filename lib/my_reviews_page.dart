@@ -59,16 +59,50 @@ class _MyReviewsPageState extends ConsumerState<MyReviewsPage> {
     if (!mounted) return;
     setState(() => _isLoading = true);
 
-    final courseMapping = ref.read(globalCourseMappingProvider);
-    final teacherNames =
-        ref.read(timetableProvider)['teacherNames'] as Map<String, String>? ??
-        {};
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      setState(() {
+        _myCourses = [];
+        _isLoading = false;
+      });
+      return;
+    }
+
+    // 1. ユーザーの履修情報を取得
+    final timetableDoc =
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .collection('timetable')
+            .doc('notes')
+            .get();
+
+    if (!timetableDoc.exists) {
+      setState(() {
+        _myCourses = [];
+        _isLoading = false;
+      });
+      return;
+    }
+
+    final timetableData = timetableDoc.data();
+    final userCourseIds = Map<String, String>.from(
+      timetableData?['courseIds'] ?? {},
+    );
+    final userTeacherNames = Map<String, String>.from(
+      timetableData?['teacherNames'] ?? {},
+    );
+
+    // 2. 履修情報から表示モデルを作成
+    final courses = <MyCourseReviewModel>[];
     final reviewMapping = ref.read(globalReviewMappingProvider);
 
-    final courses = <MyCourseReviewModel>[];
-    for (var entry in courseMapping.entries) {
+    for (var entry in userCourseIds.entries) {
       final subjectName = entry.key;
-      final teacherName = teacherNames[entry.value] ?? '';
+      final courseId = entry.value;
+      final teacherName = userTeacherNames[courseId] ?? '';
+
+      // reviewIdはグローバルマッピングから取得
       final reviewId = reviewMapping[subjectName] ?? '';
 
       courses.add(
@@ -81,7 +115,7 @@ class _MyReviewsPageState extends ConsumerState<MyReviewsPage> {
     }
     _myCourses = courses;
 
-    _subscribeToReviews();
+    _subscribeToReviews(); // 評価のリアルタイム更新
     setState(() => _isLoading = false);
   }
 
