@@ -508,7 +508,7 @@ class _ParkPageState extends ConsumerState<ParkPage> {
                           ),
                           const SizedBox(height: 16),
                           const Text(
-                            '★★★ ここに学生団体の紹介文を入れてください ★★★\n\n例：OZTECHは、学生の技術力向上と交流を目的とした団体です。アプリ開発や勉強会を定期的に開催しています。',
+                            '履修伝説を作成した学生団体\n大学入学を機にプログラミングを始めた阪大一回生三人と\nデザイン担当の2回生で構成されています\n\n',
                             style: TextStyle(
                               fontFamily: 'misaki',
                               fontSize: 16,
@@ -516,6 +516,92 @@ class _ParkPageState extends ConsumerState<ParkPage> {
                               height: 1.5,
                             ),
                             textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 16),
+                          // SNSリンク
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              InkWell(
+                                onTap:
+                                    () => launchUrl(
+                                      Uri.parse(
+                                        'https://www.instagram.com/yuto_cs.js?igsh=MWhkaGE1eDZydTRmeg%3D%3D&utm_source=qr',
+                                      ),
+                                    ),
+                                child: Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.pink.withOpacity(0.3),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: Colors.pink.withOpacity(0.6),
+                                    ),
+                                  ),
+                                  child: const Text(
+                                    'Instagram',
+                                    style: TextStyle(
+                                      fontFamily: 'misaki',
+                                      fontSize: 14,
+                                      color: Colors.pink,
+                                      decoration: TextDecoration.underline,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              InkWell(
+                                onTap:
+                                    () => launchUrl(
+                                      Uri.parse('https://x.com/oz_techjs?s=21'),
+                                    ),
+                                child: Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.black.withOpacity(0.3),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: Colors.black.withOpacity(0.6),
+                                    ),
+                                  ),
+                                  child: const Text(
+                                    '公式X',
+                                    style: TextStyle(
+                                      fontFamily: 'misaki',
+                                      fontSize: 14,
+                                      color: Colors.black,
+                                      decoration: TextDecoration.underline,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              InkWell(
+                                onTap:
+                                    () => launchUrl(
+                                      Uri.parse(
+                                        'https://youtube.com/@oz_tech?si=OaUZ2DanKvZ8DN2z',
+                                      ),
+                                    ),
+                                child: Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red.withOpacity(0.3),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: Colors.red.withOpacity(0.6),
+                                    ),
+                                  ),
+                                  child: const Text(
+                                    'YouTube',
+                                    style: TextStyle(
+                                      fontFamily: 'misaki',
+                                      fontSize: 14,
+                                      color: Colors.red,
+                                      decoration: TextDecoration.underline,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                           const SizedBox(height: 24),
                           ElevatedButton(
@@ -579,7 +665,7 @@ class _ParkPageState extends ConsumerState<ParkPage> {
                           ),
                           const SizedBox(height: 16),
                           const Text(
-                            '★★★ ここに開発サークルの紹介文を入れてください ★★★\n\n例：このアプリ「履修伝説」を開発している、ゲーム好きが集まるサークルです。いつでもメンバー募集中！',
+                            'アプリ開発サークル\n"ぽちぽちのつどい"はみんなの生活を豊かにするアプリを日夜開発中！\n\n',
                             style: TextStyle(
                               fontFamily: 'misaki',
                               fontSize: 16,
@@ -587,6 +673,24 @@ class _ParkPageState extends ConsumerState<ParkPage> {
                               height: 1.5,
                             ),
                             textAlign: TextAlign.center,
+                          ),
+                          InkWell(
+                            onTap:
+                                () => launchUrl(
+                                  Uri.parse(
+                                    'https://x.com/pochipochitudoi?s=21',
+                                  ),
+                                ),
+                            child: const Text(
+                              '公式Xはこちら',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontFamily: 'misaki',
+                                fontSize: 16,
+                                color: Colors.lightBlueAccent,
+                                decoration: TextDecoration.underline,
+                              ),
+                            ),
                           ),
                           const SizedBox(height: 24),
                           ElevatedButton(
@@ -1111,9 +1215,21 @@ class _ParkPageState extends ConsumerState<ParkPage> {
   }
 
   Widget _buildCountdownText(Map<String, dynamic> taskData) {
-    return _CountdownWidget(
-      deadline: (taskData['deadline'] as Timestamp).toDate(),
-    );
+    final deadline = taskData['deadline'] as Timestamp?;
+
+    if (deadline == null) {
+      return const Text(
+        '期限なし',
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+          color: Colors.white,
+        ),
+      );
+    }
+
+    return _CountdownWidget(deadline: deadline.toDate());
   }
 
   Widget _buildRpgMessageBox() {
