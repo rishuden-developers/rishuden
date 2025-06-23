@@ -1395,73 +1395,74 @@ class _ParkPageState extends ConsumerState<ParkPage> {
 class _CountdownWidget extends StatefulWidget {
   final DateTime deadline;
 
-  const _CountdownWidget({required this.deadline});
+  const _CountdownWidget({Key? key, required this.deadline}) : super(key: key);
 
   @override
-  State<_CountdownWidget> createState() => _CountdownWidgetState();
+  _CountdownWidgetState createState() => _CountdownWidgetState();
 }
 
-class _CountdownWidgetState extends State<_CountdownWidget> {
-  Timer? _timer;
-  String _daysStr = "0";
-  String _hoursStr = "00";
-  String _minutesStr = "00";
-  String _secondsStr = "00";
+class _CountdownWidgetState extends State<_CountdownWidget>
+    with SingleTickerProviderStateMixin {
+  late Timer _timer;
+  Duration _remaining = Duration.zero;
+  AnimationController? _animationController;
 
   @override
   void initState() {
     super.initState();
-    _updateCountdown();
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (mounted) {
-        _updateCountdown();
-      } else {
-        timer.cancel();
-      }
+    _updateRemainingTime();
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      _updateRemainingTime();
     });
   }
 
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
-  }
-
-  void _updateCountdown() {
+  void _updateRemainingTime() {
     final now = DateTime.now();
-    final difference = widget.deadline.difference(now);
+    final remaining =
+        widget.deadline.isAfter(now)
+            ? widget.deadline.difference(now)
+            : Duration.zero;
 
-    if (difference.isNegative) {
-      if (mounted) {
-        setState(() {
-          _daysStr = "0";
-          _hoursStr = "00";
-          _minutesStr = "00";
-          _secondsStr = "00";
-        });
-      }
-    } else {
-      final days = difference.inDays;
-      final hours = difference.inHours.remainder(24);
-      final minutes = difference.inMinutes.remainder(60);
-      final seconds = difference.inSeconds.remainder(60);
+    if (mounted) {
+      setState(() {
+        _remaining = remaining;
+      });
 
-      if (mounted) {
-        setState(() {
-          _daysStr = days.toString();
-          _hoursStr = hours.toString().padLeft(2, '0');
-          _minutesStr = minutes.toString().padLeft(2, '0');
-          _secondsStr = seconds.toString().padLeft(2, '0');
-        });
+      if (_remaining.inMinutes < 30 && _remaining.inSeconds > 0) {
+        if (_animationController == null) {
+          _animationController = AnimationController(
+            vsync: this,
+            duration: const Duration(milliseconds: 500),
+          )..repeat(reverse: true);
+        }
+      } else {
+        _animationController?.dispose();
+        _animationController = null;
       }
     }
   }
 
   @override
+  void dispose() {
+    _timer.cancel();
+    _animationController?.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
+    final days = _remaining.inDays;
+    final hours = _remaining.inHours % 24;
+    final minutes = _remaining.inMinutes % 60;
+    final seconds = _remaining.inSeconds % 60;
 
-    return RichText(
+    Color timeColor = const Color.fromARGB(255, 0, 255, 255); // Default: cyan
+    if (_remaining.inHours < 1 && _remaining.inSeconds > 0) {
+      timeColor = Colors.redAccent;
+    }
+
+    Widget textWidget = RichText(
       textAlign: TextAlign.center,
       text: TextSpan(
         style: TextStyle(
@@ -1479,20 +1480,11 @@ class _CountdownWidgetState extends State<_CountdownWidget> {
         ),
         children: <InlineSpan>[
           TextSpan(
-            text: _daysStr,
+            text: days.toString(),
             style: TextStyle(
-              color: const Color.fromARGB(255, 0, 255, 255), // 蛍光の水色
+              color: timeColor,
               shadows: [
-                Shadow(
-                  color: const Color.fromARGB(
-                    255,
-                    0,
-                    255,
-                    255,
-                  ).withOpacity(0.8),
-                  blurRadius: 10,
-                  offset: const Offset(0, 0),
-                ),
+                Shadow(color: timeColor.withOpacity(0.8), blurRadius: 10),
               ],
             ),
           ),
@@ -1506,20 +1498,11 @@ class _CountdownWidgetState extends State<_CountdownWidget> {
           ),
           const WidgetSpan(child: SizedBox(width: 8)),
           TextSpan(
-            text: _hoursStr,
+            text: hours.toString().padLeft(2, '0'),
             style: TextStyle(
-              color: const Color.fromARGB(255, 0, 255, 255), // 蛍光の水色
+              color: timeColor,
               shadows: [
-                Shadow(
-                  color: const Color.fromARGB(
-                    255,
-                    0,
-                    255,
-                    255,
-                  ).withOpacity(0.8),
-                  blurRadius: 10,
-                  offset: const Offset(0, 0),
-                ),
+                Shadow(color: timeColor.withOpacity(0.8), blurRadius: 10),
               ],
             ),
           ),
@@ -1533,20 +1516,11 @@ class _CountdownWidgetState extends State<_CountdownWidget> {
           ),
           const WidgetSpan(child: SizedBox(width: 8)),
           TextSpan(
-            text: _minutesStr,
+            text: minutes.toString().padLeft(2, '0'),
             style: TextStyle(
-              color: const Color.fromARGB(255, 0, 255, 255), // 蛍光の水色
+              color: timeColor,
               shadows: [
-                Shadow(
-                  color: const Color.fromARGB(
-                    255,
-                    0,
-                    255,
-                    255,
-                  ).withOpacity(0.8),
-                  blurRadius: 10,
-                  offset: const Offset(0, 0),
-                ),
+                Shadow(color: timeColor.withOpacity(0.8), blurRadius: 10),
               ],
             ),
           ),
@@ -1560,20 +1534,11 @@ class _CountdownWidgetState extends State<_CountdownWidget> {
           ),
           const WidgetSpan(child: SizedBox(width: 8)),
           TextSpan(
-            text: _secondsStr,
+            text: seconds.toString().padLeft(2, '0'),
             style: TextStyle(
-              color: const Color.fromARGB(255, 0, 255, 255), // 蛍光の水色
+              color: timeColor,
               shadows: [
-                Shadow(
-                  color: const Color.fromARGB(
-                    255,
-                    0,
-                    255,
-                    255,
-                  ).withOpacity(0.8),
-                  blurRadius: 10,
-                  offset: const Offset(0, 0),
-                ),
+                Shadow(color: timeColor.withOpacity(0.8), blurRadius: 10),
               ],
             ),
           ),
@@ -1588,5 +1553,11 @@ class _CountdownWidgetState extends State<_CountdownWidget> {
         ],
       ),
     );
+
+    if (_animationController != null) {
+      return FadeTransition(opacity: _animationController!, child: textWidget);
+    }
+
+    return textWidget;
   }
 }
