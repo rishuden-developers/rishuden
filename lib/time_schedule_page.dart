@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import 'dart:math';
 import 'dart:ui';
+import 'package:flutter/cupertino.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -1100,13 +1101,31 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                     children: [
                       InkWell(
                         onTap: () async {
-                          final TimeOfDay? picked = await showTimePicker(
+                          await showModalBottomSheet(
                             context: context,
-                            initialTime: startTime,
+                            builder: (BuildContext builder) {
+                              return Container(
+                                height: 250,
+                                child: CupertinoDatePicker(
+                                  mode: CupertinoDatePickerMode.time,
+                                  initialDateTime: DateTime(
+                                    2023,
+                                    1,
+                                    1,
+                                    startTime.hour,
+                                    startTime.minute,
+                                  ),
+                                  onDateTimeChanged: (DateTime newTime) {
+                                    setDialogState(() {
+                                      startTime = TimeOfDay.fromDateTime(
+                                        newTime,
+                                      );
+                                    });
+                                  },
+                                ),
+                              );
+                            },
                           );
-                          if (picked != null) {
-                            setDialogState(() => startTime = picked);
-                          }
                         },
                         child: Text(
                           "開始: ${startTime.format(context)}",
@@ -1118,13 +1137,29 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                       ),
                       InkWell(
                         onTap: () async {
-                          final TimeOfDay? picked = await showTimePicker(
+                          await showModalBottomSheet(
                             context: context,
-                            initialTime: endTime,
+                            builder: (BuildContext builder) {
+                              return Container(
+                                height: 250,
+                                child: CupertinoDatePicker(
+                                  mode: CupertinoDatePickerMode.time,
+                                  initialDateTime: DateTime(
+                                    2023,
+                                    1,
+                                    1,
+                                    endTime.hour,
+                                    endTime.minute,
+                                  ),
+                                  onDateTimeChanged: (DateTime newTime) {
+                                    setDialogState(() {
+                                      endTime = TimeOfDay.fromDateTime(newTime);
+                                    });
+                                  },
+                                ),
+                              );
+                            },
                           );
-                          if (picked != null) {
-                            setDialogState(() => endTime = picked);
-                          }
                         },
                         child: Text(
                           "終了: ${endTime.format(context)}",
@@ -1621,13 +1656,31 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                     children: [
                       InkWell(
                         onTap: () async {
-                          final TimeOfDay? picked = await showTimePicker(
+                          await showModalBottomSheet(
                             context: context,
-                            initialTime: startTime ?? TimeOfDay.now(),
+                            builder: (BuildContext builder) {
+                              return Container(
+                                height: 250,
+                                child: CupertinoDatePicker(
+                                  mode: CupertinoDatePickerMode.time,
+                                  initialDateTime: DateTime(
+                                    2023,
+                                    1,
+                                    1,
+                                    startTime?.hour ?? 10,
+                                    startTime?.minute ?? 0,
+                                  ),
+                                  onDateTimeChanged: (DateTime newTime) {
+                                    setDialogState(() {
+                                      startTime = TimeOfDay.fromDateTime(
+                                        newTime,
+                                      );
+                                    });
+                                  },
+                                ),
+                              );
+                            },
                           );
-                          if (picked != null) {
-                            setDialogState(() => startTime = picked);
-                          }
                         },
                         child: Text(
                           "開始: ${startTime?.format(context) ?? '未選択'}",
@@ -1639,14 +1692,29 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                       ),
                       InkWell(
                         onTap: () async {
-                          final TimeOfDay? picked = await showTimePicker(
+                          await showModalBottomSheet(
                             context: context,
-                            initialTime:
-                                endTime ?? startTime ?? TimeOfDay.now(),
+                            builder: (BuildContext builder) {
+                              return Container(
+                                height: 250,
+                                child: CupertinoDatePicker(
+                                  mode: CupertinoDatePickerMode.time,
+                                  initialDateTime: DateTime(
+                                    2023,
+                                    1,
+                                    1,
+                                    endTime?.hour ?? 12,
+                                    endTime?.minute ?? 0,
+                                  ),
+                                  onDateTimeChanged: (DateTime newTime) {
+                                    setDialogState(() {
+                                      endTime = TimeOfDay.fromDateTime(newTime);
+                                    });
+                                  },
+                                ),
+                              );
+                            },
                           );
-                          if (picked != null) {
-                            setDialogState(() => endTime = picked);
-                          }
                         },
                         child: Text(
                           "終了: ${endTime?.format(context) ?? '未選択'}",
