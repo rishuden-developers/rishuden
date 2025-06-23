@@ -1,5 +1,6 @@
 import 'package:rishuden/course_pattern.dart';
 import 'package:rishuden/timetable_entry.dart';
+import 'package:rishuden/services/course_pattern_service.dart';
 
 /// 科目パターンを判定するためのユーティリティクラス
 class CoursePatternDetector {
@@ -7,7 +8,10 @@ class CoursePatternDetector {
   ///
   /// 同じ科目名と教室の組み合わせを持つエントリーを集め、
   /// 最も頻度の高い曜日と時限を通常の時間として判定します。
-  static List<CoursePattern> detectPatterns(List<TimetableEntry> entries) {
+  /// 既存のユーザーのcourseIdと照合して、一致するものがあれば既存のcourseIdを使用します。
+  static Future<List<CoursePattern>> detectPatterns(
+    List<TimetableEntry> entries,
+  ) async {
     // 科目名と教室の組み合わせでグループ化
     Map<String, List<TimetableEntry>> groups = {};
     for (var entry in entries) {
@@ -56,18 +60,74 @@ class CoursePatternDetector {
         }
       }
 
-      patterns.add(
-        CoursePattern(
-          subjectName: group[0].subjectName,
-          classroom: group[0].classroom,
-          regularDayOfWeek: regularDayOfWeek,
-          regularPeriod: regularPeriod,
-          irregularSchedules: irregularSchedules,
-          cancelledDates: cancelledDates,
-        ),
+      // ★★★ 既存のcourseIdを検索 ★★★
+      String? existingCourseId = await _findExistingCourseId(
+        group[0].subjectName,
+        group[0].classroom,
+        regularDayOfWeek,
+        regularPeriod,
       );
+
+      if (existingCourseId != null) {
+        print('DEBUG: 既存のcourseIdを使用: $existingCourseId');
+        // 既存のcourseIdを使用してCoursePatternを作成
+        patterns.add(
+          CoursePattern.withExistingId(
+            subjectName: group[0].subjectName,
+            classroom: group[0].classroom,
+            regularDayOfWeek: regularDayOfWeek,
+            regularPeriod: regularPeriod,
+            courseId: existingCourseId,
+            irregularSchedules: irregularSchedules,
+            cancelledDates: cancelledDates,
+          ),
+        );
+      } else {
+        print('DEBUG: 新しいcourseIdを生成');
+        // 新しいcourseIdを生成
+        patterns.add(
+          CoursePattern(
+            subjectName: group[0].subjectName,
+            classroom: group[0].classroom,
+            regularDayOfWeek: regularDayOfWeek,
+            regularPeriod: regularPeriod,
+            irregularSchedules: irregularSchedules,
+            cancelledDates: cancelledDates,
+          ),
+        );
+      }
     }
 
     return patterns;
+  }
+
+  /// 既存のcourseIdを検索
+  /// 同じ授業名・教室・曜日・時限の組み合わせを持つCoursePatternを探す
+  static Future<String?> _findExistingCourseId(
+    String subjectName,
+    String classroom,
+    int regularDayOfWeek,
+    int regularPeriod,
+  ) async {
+    try {
+      // 期待されるcourseIdの形式
+      String expectedCourseId =
+          '$subjectName|$classroom|$regularDayOfWeek|$regularPeriod';
+
+      // Firestoreから既存のCoursePatternを検索
+      final coursePatternService = CoursePatternService();
+      final existingPattern = await coursePatternService.getCoursePattern(
+        expectedCourseId,
+      );
+
+      if (existingPattern != null) {
+        return existingPattern.courseId;
+      }
+
+      return null;
+    } catch (e) {
+      print('Error finding existing courseId: $e');
+      return null;
+    }
   }
 }

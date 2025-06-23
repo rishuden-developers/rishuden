@@ -171,23 +171,75 @@ class _ParkPageState extends ConsumerState<ParkPage> {
     DateTime deadline,
     String description,
   ) async {
+    print('DEBUG: _createQuest called with selectedClass: $selectedClass');
+    print(
+      'DEBUG: taskType: $taskType, deadline: $deadline, description: $description',
+    );
+
     final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
+    if (user == null) {
+      print('DEBUG: No user found, returning');
+      return;
+    }
 
     try {
+      final courseId = selectedClass['courseId'];
+      print('DEBUG: courseId: $courseId');
+
+      // ★★★ その授業を取っているユーザーを検索して記録 ★★★
+      print('DEBUG: Starting to search for enrolled users...');
+      final usersSnapshot =
+          await FirebaseFirestore.instance.collection('users').get();
+
+      List<String> enrolledUserIds = [];
+      print('DEBUG: Total users in database: ${usersSnapshot.docs.length}');
+
+      for (var userDoc in usersSnapshot.docs) {
+        final timetableDoc =
+            await FirebaseFirestore.instance
+                .collection('users')
+                .doc(userDoc.id)
+                .collection('timetable')
+                .doc('notes')
+                .get();
+
+        if (timetableDoc.exists) {
+          final data = timetableDoc.data()!;
+          final userCourseIds = Map<String, String>.from(
+            data['courseIds'] ?? {},
+          );
+
+          // そのユーザーがこのcourseIdの授業を取っているかチェック
+          if (userCourseIds.values.contains(courseId)) {
+            enrolledUserIds.add(userDoc.id);
+            print('DEBUG: User ${userDoc.id} is enrolled in course $courseId');
+          }
+        } else {
+          print('DEBUG: User ${userDoc.id} has no timetable data');
+        }
+      }
+      print(
+        'DEBUG: Found ${enrolledUserIds.length} enrolled users: $enrolledUserIds',
+      );
+
+      print('DEBUG: Creating quest document...');
       await FirebaseFirestore.instance.collection('quests').add({
         'name': selectedClass['subjectName'],
-        'courseId': selectedClass['courseId'], // courseIdを保存
+        'courseId': courseId, // courseIdを保存
         'taskType': taskType,
         'deadline': Timestamp.fromDate(deadline),
         'description': description,
         'createdAt': FieldValue.serverTimestamp(),
         'createdBy': user.uid,
         'completedUserIds': [], // 初期値
+        'enrolledUserIds': enrolledUserIds, // ★★★ その授業を取っているユーザーIDを記録 ★★★
       });
+      print('DEBUG: Quest document created successfully');
 
       // クエスト作成後にリストを再読み込み
+      print('DEBUG: Reloading quests...');
       await _loadQuestsFromFirestore();
+      print('DEBUG: Quests reloaded');
     } catch (e) {
       print('Error creating quest: $e');
       // エラーハンドリング
@@ -297,20 +349,14 @@ class _ParkPageState extends ConsumerState<ParkPage> {
 
   // Firestoreからクエストデータを読み込む
   Future<void> _loadQuestsFromFirestore() async {
+    print('DEBUG: _loadQuestsFromFirestore called');
     setState(() {
       _isLoadingQuests = true;
     });
     try {
-      final snapshot =
-          await FirebaseFirestore.instance
-              .collection('quests')
-              .orderBy('deadline', descending: false)
-              .get();
-
-      if (!mounted) return;
-
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) {
+        print('DEBUG: No user found, setting empty quests');
         setState(() {
           _quests = [];
           _isLoadingQuests = false;
@@ -318,10 +364,73 @@ class _ParkPageState extends ConsumerState<ParkPage> {
         return;
       }
 
+      // ★★★ ユーザーが取っている授業のcourseIdを取得 ★★★
+      print('DEBUG: Getting user timetable data...');
+      final userDoc =
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .collection('timetable')
+              .doc('notes')
+              .get();
+
+      Map<String, String> userCourseIds = {};
+      if (userDoc.exists) {
+        final data = userDoc.data()!;
+        userCourseIds = Map<String, String>.from(data['courseIds'] ?? {});
+        print('DEBUG: User courseIds: $userCourseIds');
+      } else {
+        print('DEBUG: User timetable document does not exist');
+      }
+
+      // ユーザーが取っている授業がない場合は空のリストを表示
+      if (userCourseIds.isEmpty) {
+        print('DEBUG: No user courseIds found, setting empty quests');
+        setState(() {
+          _quests = [];
+          _isLoadingQuests = false;
+        });
+        return;
+      }
+
+      // ★★★ ユーザーが取っている授業のcourseIdのみでクエストをフィルタリング ★★★
+      final userCourseIdValues = userCourseIds.values.toSet();
+      print('DEBUG: Filtering quests by courseIds: $userCourseIdValues');
+      print('DEBUG: User has ${userCourseIdValues.length} courses');
+
+      final snapshot =
+          await FirebaseFirestore.instance
+              .collection('quests')
+              .where('courseId', whereIn: userCourseIdValues.toList())
+              // .orderBy('deadline', descending: false) // 一時的にコメントアウト（インデックス作成後に復活）
+              .get();
+
+      print('DEBUG: Found ${snapshot.docs.length} quests in Firestore');
+
+      // 各クエストのcourseIdを確認
+      for (var doc in snapshot.docs) {
+        final questData = doc.data();
+        final questCourseId = questData['courseId'] as String?;
+        final questName = questData['name'] as String?;
+        print('DEBUG: Quest "${questName}" has courseId: $questCourseId');
+      }
+
+      if (!mounted) return;
+
       final quests =
           snapshot.docs.map((doc) {
             return {'id': doc.id, ...doc.data()};
           }).toList();
+
+      // ★★★ クライアント側でソート（インデックス作成後に削除予定） ★★★
+      quests.sort((a, b) {
+        final aDeadline = a['deadline'] as Timestamp?;
+        final bDeadline = b['deadline'] as Timestamp?;
+        if (aDeadline == null && bDeadline == null) return 0;
+        if (aDeadline == null) return 1;
+        if (bDeadline == null) return -1;
+        return aDeadline.compareTo(bDeadline);
+      });
 
       // 自分が既に完了したクエストを除外
       final filteredQuests =
@@ -330,10 +439,18 @@ class _ParkPageState extends ConsumerState<ParkPage> {
             return completedBy == null || !completedBy.contains(user.uid);
           }).toList();
 
+      print(
+        'DEBUG: After filtering completed quests: ${filteredQuests.length} quests',
+      );
+
       setState(() {
         _quests = filteredQuests;
         _isLoadingQuests = false;
       });
+      print('DEBUG: Quests loaded successfully');
+      print('DEBUG: _quests list content: $_quests');
+      print('DEBUG: _quests length: ${_quests.length}');
+      print('DEBUG: _isLoadingQuests: $_isLoadingQuests');
     } catch (e) {
       print('Error loading quests: $e');
       if (!mounted) return;
@@ -717,6 +834,12 @@ class _ParkPageState extends ConsumerState<ParkPage> {
               child: QuestCreationWidget(
                 onCancel: () => setState(() => isQuestCreationVisible = false),
                 onCreate: (selectedClass, taskType, deadline, description) {
+                  print('DEBUG: QuestCreationWidget onCreate called');
+                  print('DEBUG: selectedClass: $selectedClass');
+                  print('DEBUG: taskType: $taskType');
+                  print('DEBUG: deadline: $deadline');
+                  print('DEBUG: description: $description');
+
                   // ★★★ _createQuestを呼び出すように変更 ★★★
                   _createQuest(selectedClass, taskType, deadline, description);
                   setState(() {
@@ -731,6 +854,7 @@ class _ParkPageState extends ConsumerState<ParkPage> {
   }
 
   Widget _buildBulletinBoardPage(Map<String, dynamic> taskData) {
+    print('DEBUG: _buildBulletinBoardPage called with taskData: $taskData');
     final screenHeight = MediaQuery.of(context).size.height;
     final screenWidth = MediaQuery.of(context).size.width;
     final questId = taskData['id'] as String;
@@ -823,12 +947,25 @@ class _ParkPageState extends ConsumerState<ParkPage> {
             left: screenWidth * 0.08,
             width: screenWidth * 0.22,
             height: screenHeight * 0.035,
-            child: TaskProgressGauge(
-              defeatedCount:
-                  isCracking
-                      ? (taskData['defeatedCount'] ?? 0) + 1
-                      : (taskData['defeatedCount'] ?? 0),
-              totalParticipants: taskData['totalParticipants'] ?? 5,
+            child: FutureBuilder<Map<String, int>>(
+              future: _getSubjugationInfo(questId),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const SizedBox(
+                    width: 12,
+                    height: 12,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  );
+                }
+                if (!snapshot.hasData || snapshot.hasError) {
+                  return const SizedBox.shrink(); // エラー時は何も表示しない
+                }
+                final counts = snapshot.data!;
+                return TaskProgressGauge(
+                  defeatedCount: counts['completed'] ?? 0,
+                  totalParticipants: counts['total'] ?? 0,
+                );
+              },
             ),
           ),
           Positioned(
@@ -941,37 +1078,6 @@ class _ParkPageState extends ConsumerState<ParkPage> {
                 ),
               ),
             ),
-          // ★★★ 討伐人数表示を追加 ★★★
-          Positioned(
-            top: screenHeight * 0.363,
-            right: screenWidth * 0.08,
-            child: FutureBuilder<Map<String, int>>(
-              future: _getSubjugationInfo(questId),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const SizedBox(
-                    width: 12,
-                    height: 12,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  );
-                }
-                if (!snapshot.hasData || snapshot.hasError) {
-                  return const SizedBox.shrink(); // エラー時は何も表示しない
-                }
-                final counts = snapshot.data!;
-                return Row(
-                  children: [
-                    Icon(Icons.people, color: Colors.grey[700], size: 16),
-                    const SizedBox(width: 4),
-                    Text(
-                      '${counts['completed']} / ${counts['total']}',
-                      style: TextStyle(fontSize: 12, color: Colors.grey[800]),
-                    ),
-                  ],
-                );
-              },
-            ),
-          ),
         ],
       ),
     );
@@ -1272,21 +1378,10 @@ class _ParkPageState extends ConsumerState<ParkPage> {
       final questData = questDoc.data();
       final completedUserIds =
           (questData?['completedUserIds'] as List?)?.length ?? 0;
-      final courseId = questData?['courseId'] as String?;
+      final enrolledUserIds =
+          (questData?['enrolledUserIds'] as List?)?.length ?? 0;
 
-      if (courseId == null) {
-        return {'completed': completedUserIds, 'total': 0};
-      }
-
-      final enrollmentDoc =
-          await FirebaseFirestore.instance
-              .collection('course_enrollments')
-              .doc(courseId)
-              .get();
-      final totalUserIds =
-          (enrollmentDoc.data()?['enrolledUserIds'] as List?)?.length ?? 0;
-
-      return {'completed': completedUserIds, 'total': totalUserIds};
+      return {'completed': completedUserIds, 'total': enrolledUserIds};
     } catch (e) {
       print('Error getting subjugation info: $e');
       return {'completed': 0, 'total': 0};

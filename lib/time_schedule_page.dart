@@ -165,10 +165,18 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
           globalCourseMappingProvider.notifier,
         );
         for (var entry in savedCourseIds.entries) {
+          // 古い形式のデータの場合は、後方互換性のために古いAPIを使用
           final normalizedName = globalMappingNotifier.normalizeSubjectName(
             entry.key,
           );
-          globalMappingNotifier.addCourseMapping(normalizedName, entry.value);
+          // 古い形式のaddCourseMappingを使用（後方互換性のため）
+          // 新しい形式では、授業名・教室・曜日・時限が必要だが、
+          // 保存されたデータには教室・曜日・時限の情報がないため、
+          // 古いAPIを使用して復元する
+          globalMappingNotifier.addCourseMappingBySubjectName(
+            normalizedName,
+            entry.value,
+          );
         }
 
         print('DEBUG: 保存されたcourseIdを復元しました: $_globalSubjectToCourseId');
@@ -262,11 +270,18 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
         courseId = savedCourseIds[entry.subjectName]!;
         print('DEBUG: 保存されたcourseIdを使用: ${entry.subjectName} -> $courseId');
       } else {
-        // 保存されていない場合は新しく生成
+        // 保存されていない場合は新しく生成（授業名・教室・曜日・時限を使用）
         courseId = ref
             .read(globalCourseMappingProvider.notifier)
-            .getOrCreateCourseId(entry.subjectName);
-        print('DEBUG: 新しいcourseIdを生成: ${entry.subjectName} -> $courseId');
+            .getOrCreateCourseId(
+              entry.subjectName,
+              entry.classroom,
+              entry.dayOfWeek,
+              entry.period,
+            );
+        print(
+          'DEBUG: 新しいcourseIdを生成: ${entry.subjectName} (${entry.classroom}, 曜日:${entry.dayOfWeek}, 時限:${entry.period}) -> $courseId',
+        );
       }
 
       entry.courseId = courseId;

@@ -2,7 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-// グローバルな授業名 → courseId のマッピングを管理するProvider
+// グローバルな授業名・教室・曜日・時限 → courseId のマッピングを管理するProvider
 class GlobalCourseMappingNotifier extends StateNotifier<Map<String, String>> {
   int _idCounter = 0; // ★★★ 一意なIDを生成するためのカウンター ★★★
 
@@ -26,19 +26,42 @@ class GlobalCourseMappingNotifier extends StateNotifier<Map<String, String>> {
     _saveToFirestore();
   }
 
-  // 特定の授業名のcourseIdを取得（存在しない場合はnull）
-  String? getCourseId(String normalizedSubjectName) {
-    return state[normalizedSubjectName];
+  // 授業名・教室・曜日・時限の組み合わせからcourseIdを取得（存在しない場合はnull）
+  String? getCourseId(
+    String subjectName,
+    String classroom,
+    int dayOfWeek,
+    int period,
+  ) {
+    String key = _generateKey(subjectName, classroom, dayOfWeek, period);
+    return state[key];
   }
 
-  // 新しい授業名とcourseIdを追加
-  void addCourseMapping(String normalizedSubjectName, String courseId) {
+  // 新しい授業名・教室・曜日・時限とcourseIdを追加
+  void addCourseMapping(
+    String subjectName,
+    String classroom,
+    int dayOfWeek,
+    int period,
+    String courseId,
+  ) {
+    String key = _generateKey(subjectName, classroom, dayOfWeek, period);
     final newMapping = Map<String, String>.from(state);
-    newMapping[normalizedSubjectName] = courseId;
+    newMapping[key] = courseId;
     updateGlobalMapping(newMapping);
   }
 
-  // 授業名を正規化するメソッド
+  // 授業名・教室・曜日・時限の組み合わせからキーを生成
+  String _generateKey(
+    String subjectName,
+    String classroom,
+    int dayOfWeek,
+    int period,
+  ) {
+    return '$subjectName|$classroom|$dayOfWeek|$period';
+  }
+
+  // 授業名を正規化するメソッド（後方互換性のため残す）
   String normalizeSubjectName(String subjectName) {
     return subjectName
         .replaceAll(RegExp(r'[（）()【】\[\]]'), '') // 括弧類を削除
@@ -63,12 +86,51 @@ class GlobalCourseMappingNotifier extends StateNotifier<Map<String, String>> {
         .trim();
   }
 
-  // 授業名からcourseIdを取得または生成
-  String getOrCreateCourseId(String subjectName) {
+  // 授業名・教室・曜日・時限からcourseIdを取得または生成
+  String getOrCreateCourseId(
+    String subjectName,
+    String classroom,
+    int dayOfWeek,
+    int period,
+  ) {
+    // 既存のcourseIdを確認
+    final existingCourseId = getCourseId(
+      subjectName,
+      classroom,
+      dayOfWeek,
+      period,
+    );
+    if (existingCourseId != null) {
+      print(
+        'DEBUG: 既存の授業 "$subjectName" ($classroom, 曜日:$dayOfWeek, 時限:$period) -> courseId: $existingCourseId',
+      );
+      return existingCourseId;
+    }
+
+    // ★★★ 新しいcourseIdを生成（授業名|教室|曜日|時限の形式） ★★★
+    final newCourseId = '$subjectName|$classroom|$dayOfWeek|$period';
+
+    // 新しいマッピングを追加
+    addCourseMapping(subjectName, classroom, dayOfWeek, period, newCourseId);
+    print(
+      'DEBUG: 新しい授業 "$subjectName" ($classroom, 曜日:$dayOfWeek, 時限:$period) -> courseId: $newCourseId',
+    );
+
+    return newCourseId;
+  }
+
+  // 後方互換性のためのメソッド（授業名のみでcourseIdを取得）
+  String? getCourseIdBySubjectName(String normalizedSubjectName) {
+    // 古い形式のキーで検索
+    return state[normalizedSubjectName];
+  }
+
+  // 後方互換性のためのメソッド（授業名のみでcourseIdを取得または生成）
+  String getOrCreateCourseIdBySubjectName(String subjectName) {
     final normalizedName = normalizeSubjectName(subjectName);
 
     // 既存のcourseIdを確認
-    final existingCourseId = getCourseId(normalizedName);
+    final existingCourseId = getCourseIdBySubjectName(normalizedName);
     if (existingCourseId != null) {
       print('DEBUG: 既存の授業 "$subjectName" -> courseId: $existingCourseId');
       return existingCourseId;
@@ -85,6 +147,16 @@ class GlobalCourseMappingNotifier extends StateNotifier<Map<String, String>> {
     print('DEBUG: 新しい授業 "$subjectName" -> courseId: $newCourseId');
 
     return newCourseId;
+  }
+
+  // 後方互換性のためのメソッド（授業名のみでcourseIdを追加）
+  void addCourseMappingBySubjectName(
+    String normalizedSubjectName,
+    String courseId,
+  ) {
+    final newMapping = Map<String, String>.from(state);
+    newMapping[normalizedSubjectName] = courseId;
+    updateGlobalMapping(newMapping);
   }
 
   // Firestoreからデータを読み込み

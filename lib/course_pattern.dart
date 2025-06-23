@@ -41,6 +41,41 @@ class CoursePattern {
     courseId = _generateCourseId();
   }
 
+  /// 既存のcourseIdを使用するコンストラクタ
+  CoursePattern._withExistingId({
+    required this.subjectName,
+    required this.classroom,
+    required this.regularDayOfWeek,
+    required this.regularPeriod,
+    required String courseId,
+    Map<String, ({int dayOfWeek, int period})>? irregularSchedules,
+    List<String>? cancelledDates,
+  }) : irregularSchedules = irregularSchedules ?? {},
+       cancelledDates = cancelledDates ?? [] {
+    this.courseId = courseId;
+  }
+
+  /// 既存のcourseIdを使用するファクトリーメソッド
+  factory CoursePattern.withExistingId({
+    required String subjectName,
+    required String classroom,
+    required int regularDayOfWeek,
+    required int regularPeriod,
+    required String courseId,
+    Map<String, ({int dayOfWeek, int period})>? irregularSchedules,
+    List<String>? cancelledDates,
+  }) {
+    return CoursePattern._withExistingId(
+      subjectName: subjectName,
+      classroom: classroom,
+      regularDayOfWeek: regularDayOfWeek,
+      regularPeriod: regularPeriod,
+      courseId: courseId,
+      irregularSchedules: irregularSchedules,
+      cancelledDates: cancelledDates,
+    );
+  }
+
   /// 科目の一意なIDを生成
   String _generateCourseId() {
     return '$subjectName|$classroom|$regularDayOfWeek|$regularPeriod';

@@ -94,8 +94,35 @@ class _QuestCreationWidgetState extends ConsumerState<QuestCreationWidget> {
         monday,
       );
 
+      // ★★★ courseIdを設定 ★★★
+      for (var entry in timeTableEntries) {
+        // 保存されたcourseIdを確認
+        final savedCourseIds = ref.read(timetableProvider)['courseIds'] ?? {};
+        String courseId;
+
+        if (savedCourseIds.containsKey(entry.subjectName)) {
+          courseId = savedCourseIds[entry.subjectName]!;
+          print('DEBUG: 保存されたcourseIdを使用: ${entry.subjectName} -> $courseId');
+        } else {
+          // 保存されていない場合は新しく生成（授業名・教室・曜日・時限を使用）
+          courseId = ref
+              .read(globalCourseMappingProvider.notifier)
+              .getOrCreateCourseId(
+                entry.subjectName,
+                entry.classroom,
+                entry.dayOfWeek,
+                entry.period,
+              );
+          print(
+            'DEBUG: 新しいcourseIdを生成: ${entry.subjectName} (${entry.classroom}, 曜日:${entry.dayOfWeek}, 時限:${entry.period}) -> $courseId',
+          );
+        }
+
+        entry.courseId = courseId;
+      }
+
       // 授業判別と色分け
-      List<CoursePattern> patterns = CoursePatternDetector.detectPatterns(
+      List<CoursePattern> patterns = await CoursePatternDetector.detectPatterns(
         timeTableEntries,
       );
       Map<String, Color> courseColors = {};
