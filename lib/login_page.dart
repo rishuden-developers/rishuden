@@ -92,7 +92,7 @@ class _LoginPageState extends State<LoginPage> {
             TextField(
               controller: _emailController,
               decoration: const InputDecoration(
-                labelText: 'メールアドレス',
+                labelText: '大学のメールアドレス',
                 border: OutlineInputBorder(),
               ),
             ),
@@ -100,7 +100,7 @@ class _LoginPageState extends State<LoginPage> {
             TextField(
               controller: _passwordController,
               decoration: const InputDecoration(
-                labelText: 'パスワード',
+                labelText: 'パスワードを作成',
                 border: OutlineInputBorder(),
               ),
               obscureText: true,
