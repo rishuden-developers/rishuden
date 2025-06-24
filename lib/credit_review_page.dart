@@ -14,6 +14,7 @@ import 'credit_explore_page.dart'; // ボトムナビゲーション用
 import 'providers/global_review_mapping_provider.dart';
 import 'package:intl/intl.dart';
 import 'dart:async';
+import 'package:shared_preferences/shared_preferences.dart';
 
 // ★★★★ 補足: flutter_rating_bar パッケージの追加 ★★★★
 // pubspec.yaml ファイルの dependencies: の下に追加してください。
@@ -37,7 +38,8 @@ enum ExamType { report, written, attendanceBased, none, other }
 // Dummy Review Data Structure (for demonstration of filtering)
 class LectureReview {
   final String lectureName;
-  final String teacherName; // 追加
+  final String teacherName;
+  final String userId;
   final double overallSatisfaction;
   final double easiness;
   final LectureFormat lectureFormat;
@@ -45,13 +47,14 @@ class LectureReview {
   final ExamType examType;
   final String teacherFeature;
   final String comment;
-  final List<String> tags; // タグの追加
-  final String reviewId; // レビューの一意なID
-  final String reviewDate; // レビュー投稿日
+  final List<String> tags;
+  final String reviewId;
+  final String reviewDate;
 
   LectureReview({
     required this.lectureName,
     required this.teacherName,
+    required this.userId,
     required this.overallSatisfaction,
     required this.easiness,
     required this.lectureFormat,
@@ -68,6 +71,7 @@ class LectureReview {
 class CreditReviewPage extends ConsumerStatefulWidget {
   final String lectureName;
   final String teacherName;
+  final String? code; // ★ codeを追加（秋冬学期用）
   final String? initialDescription; // 講義の概要
   final double? initialOverallSatisfaction; // 講義全体の平均満足度
   final double? initialEasiness; // 講義全体の平均楽単度
@@ -76,6 +80,7 @@ class CreditReviewPage extends ConsumerStatefulWidget {
     super.key,
     required this.lectureName,
     required this.teacherName,
+    this.code, // ★ codeを追加
     this.initialDescription,
     this.initialOverallSatisfaction,
     this.initialEasiness,
@@ -113,77 +118,61 @@ class _CreditReviewPageState extends ConsumerState<CreditReviewPage> {
   }
 
   // Firebaseのレビュー変更を監視
-  void _subscribeToReviews() {
+  void _subscribeToReviews() async {
     setState(() => _isLoading = true);
     try {
-      // グローバルレビューマッピングからreviewIdを取得
-      final reviewId = ref
-          .read(globalReviewMappingProvider.notifier)
-          .getOrCreateReviewId(widget.lectureName, widget.teacherName);
-
-      print(
-        'DEBUG: レビュー読み込み - 授業: ${widget.lectureName}, 教員: ${widget.teacherName}, reviewId: $reviewId',
-      );
-
-      // ★ FirestoreのStreamを監視
-      final reviewsStream =
-          FirebaseFirestore.instance
+      final query =
+          await FirebaseFirestore.instance
               .collection('reviews')
-              .where('reviewId', isEqualTo: reviewId)
+              .where('code', isEqualTo: widget.code)
               .orderBy('createdAt', descending: true)
-              .snapshots();
-
-      _reviewsSubscription = reviewsStream.listen(
-        (snapshot) {
-          final reviews = <LectureReview>[];
-          for (final doc in snapshot.docs) {
-            final data = doc.data();
-            reviews.add(
-              LectureReview(
-                lectureName: data['lectureName'] ?? '',
-                teacherName: data['teacherName'] ?? '',
-                overallSatisfaction:
-                    (data['overallSatisfaction'] ?? 0.0).toDouble(),
-                easiness: (data['easiness'] ?? 0.0).toDouble(),
-                lectureFormat: LectureFormat.values.firstWhere(
-                  (e) => e.toString() == data['lectureFormat'],
-                  orElse: () => LectureFormat.other,
-                ),
-                attendanceStrictness: AttendanceStrictness.values.firstWhere(
-                  (e) => e.toString() == data['attendanceStrictness'],
-                  orElse: () => AttendanceStrictness.flexible,
-                ),
-                examType: ExamType.values.firstWhere(
-                  (e) => e.toString() == data['examType'],
-                  orElse: () => ExamType.other,
-                ),
-                teacherFeature: data['teacherFeature'] ?? '',
-                comment: data['comment'] ?? '',
-                tags: List<String>.from(data['tags'] ?? []),
-                reviewId: data['reviewId'] ?? '',
-                reviewDate:
-                    data['createdAt'] != null
-                        ? DateFormat(
-                          'yyyy/MM/dd',
-                        ).format((data['createdAt'] as Timestamp).toDate())
-                        : '',
+              .get();
+      final parsedReviews =
+          query.docs.map((doc) {
+            final data = doc.data() as Map<String, dynamic>;
+            return LectureReview(
+              lectureName: data['lectureName'] ?? '',
+              teacherName: data['teacherName'] ?? '',
+              userId: data['userId'] ?? '',
+              overallSatisfaction: _parseToDouble(
+                data['overallSatisfaction'] ?? data['satisfaction'],
               ),
+              easiness: _parseToDouble(data['easiness'] ?? data['ease']),
+              lectureFormat: LectureFormat.values.firstWhere(
+                (e) =>
+                    e.toString() == data['lectureFormat'] ||
+                    e.toString() == data['classFormat'],
+                orElse: () => LectureFormat.other,
+              ),
+              attendanceStrictness: AttendanceStrictness.values.firstWhere(
+                (e) =>
+                    e.toString() == data['attendanceStrictness'] ||
+                    e.toString() == data['attendance'],
+                orElse: () => AttendanceStrictness.flexible,
+              ),
+              examType: ExamType.values.firstWhere(
+                (e) => e.toString() == data['examType'],
+                orElse: () => ExamType.other,
+              ),
+              teacherFeature: data['teacherFeature'] ?? '',
+              comment: data['comment'] ?? '',
+              tags: List<String>.from(
+                data['tags'] ?? data['teacherTraits'] ?? [],
+              ),
+              reviewId: data['reviewId'] ?? '',
+              reviewDate:
+                  data['createdAt'] != null
+                      ? DateFormat(
+                        'yyyy/MM/dd',
+                      ).format((data['createdAt'] as Timestamp).toDate())
+                      : '',
             );
-          }
-
-          if (!mounted) return;
-          setState(() {
-            _allReviews = reviews;
-            _isLoading = false;
-          });
-          _applyFilters();
-        },
-        onError: (error) {
-          print('Error listening to reviews: $error');
-          if (!mounted) return;
-          setState(() => _isLoading = false);
-        },
-      );
+          }).toList();
+      setState(() {
+        _allReviews = parsedReviews;
+        _isLoading = false;
+      });
+      _applyFilters();
     } catch (e) {
       print('Error loading reviews: $e');
       if (!mounted) return;
@@ -231,8 +220,25 @@ class _CreditReviewPageState extends ConsumerState<CreditReviewPage> {
     return enumValue.toString().split('.').last;
   }
 
+  double _parseToDouble(dynamic value) {
+    if (value == null) return 0.0;
+    if (value is num) return value.toDouble();
+    if (value is String) return double.tryParse(value) ?? 0.0;
+    return 0.0;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+    final myReview =
+        user == null
+            ? null
+            : (_allReviews.firstWhereOrNull((r) => r.userId == user.uid));
+    final otherReviews =
+        user == null
+            ? _allReviews
+            : _allReviews.where((r) => r.userId != user.uid).toList();
+
     return Scaffold(
       appBar: AppBar(
         title: const Text(
@@ -297,9 +303,184 @@ class _CreditReviewPageState extends ConsumerState<CreditReviewPage> {
                                 _buildLectureInfoCard(),
                                 const SizedBox(height: 20),
                                 _buildOverallRatingsCard(),
+                                if (myReview != null)
+                                  Padding(
+                                    padding: const EdgeInsets.only(
+                                      top: 20.0,
+                                      bottom: 16.0,
+                                    ),
+                                    child: FutureBuilder<DocumentSnapshot>(
+                                      future:
+                                          FirebaseFirestore.instance
+                                              .collection('users')
+                                              .doc(myReview.userId)
+                                              .get(),
+                                      builder: (context, userSnapshot) {
+                                        String? characterImage;
+                                        if (userSnapshot.hasData &&
+                                            userSnapshot.data != null) {
+                                          final data =
+                                              userSnapshot.data!.data()
+                                                  as Map<String, dynamic>?;
+                                          characterImage =
+                                              data?['characterImage']
+                                                  as String?;
+                                        }
+                                        return Card(
+                                          color: Colors.cyan[50],
+                                          elevation: 6,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              16,
+                                            ),
+                                          ),
+                                          child: Padding(
+                                            padding: const EdgeInsets.all(16.0),
+                                            child: Row(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                // キャラクター画像
+                                                Container(
+                                                  width: 56,
+                                                  height: 56,
+                                                  decoration: BoxDecoration(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          12,
+                                                        ),
+                                                    color: Colors.grey[200],
+                                                  ),
+                                                  child:
+                                                      characterImage != null
+                                                          ? Image.asset(
+                                                            characterImage,
+                                                            fit: BoxFit.cover,
+                                                          )
+                                                          : Image.asset(
+                                                            'assets/character_gorilla.png',
+                                                            fit: BoxFit.cover,
+                                                          ),
+                                                ),
+                                                const SizedBox(width: 16),
+                                                // レビュー内容
+                                                Expanded(
+                                                  child: Column(
+                                                    crossAxisAlignment:
+                                                        CrossAxisAlignment
+                                                            .start,
+                                                    children: [
+                                                      const Text(
+                                                        'あなたのレビュー',
+                                                        style: TextStyle(
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                          fontSize: 16,
+                                                          color: Colors.cyan,
+                                                        ),
+                                                      ),
+                                                      const SizedBox(height: 8),
+                                                      Row(
+                                                        mainAxisAlignment:
+                                                            MainAxisAlignment
+                                                                .spaceBetween,
+                                                        children: [
+                                                          RatingBarIndicator(
+                                                            rating:
+                                                                myReview
+                                                                    .overallSatisfaction,
+                                                            itemBuilder:
+                                                                (
+                                                                  context,
+                                                                  index,
+                                                                ) => const Icon(
+                                                                  Icons.star,
+                                                                  color:
+                                                                      Colors
+                                                                          .amber,
+                                                                ),
+                                                            itemCount: 5,
+                                                            itemSize: 20.0,
+                                                            direction:
+                                                                Axis.horizontal,
+                                                          ),
+                                                          Text(
+                                                            myReview.reviewDate,
+                                                            style: TextStyle(
+                                                              fontSize: 12,
+                                                              color:
+                                                                  Colors
+                                                                      .grey[600],
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                      const SizedBox(height: 8),
+                                                      Text(
+                                                        '形式: ${_formatEnum(myReview.lectureFormat)}',
+                                                        style: const TextStyle(
+                                                          color: Colors.black87,
+                                                        ),
+                                                      ),
+                                                      Text(
+                                                        '出席: ${_formatEnum(myReview.attendanceStrictness)}',
+                                                        style: const TextStyle(
+                                                          color: Colors.black87,
+                                                        ),
+                                                      ),
+                                                      Text(
+                                                        '試験: ${_formatEnum(myReview.examType)}',
+                                                        style: const TextStyle(
+                                                          color: Colors.black87,
+                                                        ),
+                                                      ),
+                                                      Text(
+                                                        '教員特徴: ${myReview.teacherFeature}',
+                                                        style: const TextStyle(
+                                                          color: Colors.black87,
+                                                        ),
+                                                      ),
+                                                      const SizedBox(height: 8),
+                                                      Text(
+                                                        'コメント: ${myReview.comment}',
+                                                        style: const TextStyle(
+                                                          color: Colors.black87,
+                                                        ),
+                                                      ),
+                                                      const SizedBox(height: 8),
+                                                      Wrap(
+                                                        spacing: 6.0,
+                                                        children:
+                                                            myReview.tags
+                                                                .map(
+                                                                  (tag) => Chip(
+                                                                    label: Text(
+                                                                      tag,
+                                                                      style: TextStyle(
+                                                                        fontSize:
+                                                                            12,
+                                                                        color:
+                                                                            Colors.cyan[100],
+                                                                      ),
+                                                                    ),
+                                                                    backgroundColor:
+                                                                        Colors
+                                                                            .cyan[100],
+                                                                  ),
+                                                                )
+                                                                .toList(),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
                                 const SizedBox(height: 20),
-                                _buildPostReviewButton(context),
-                                const SizedBox(height: 30),
                                 _buildSectionTitle(
                                   'レビューを絞り込む',
                                   Icons.filter_list,
@@ -388,132 +569,216 @@ class _CreditReviewPageState extends ConsumerState<CreditReviewPage> {
                                   Icons.rate_review,
                                 ),
                                 const SizedBox(height: 10),
-                                _filteredReviews.isEmpty
-                                    ? const Center(
-                                      child: Text(
-                                        '該当するレビューがありません。',
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          color: Colors.white70,
-                                        ),
-                                      ),
-                                    )
-                                    : ListView.builder(
-                                      shrinkWrap: true,
-                                      physics:
-                                          const NeverScrollableScrollPhysics(),
-                                      itemCount: _filteredReviews.length,
-                                      itemBuilder: (context, index) {
-                                        final review = _filteredReviews[index];
-                                        return Card(
-                                          margin: const EdgeInsets.symmetric(
-                                            vertical: 8.0,
-                                          ),
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(
-                                              15,
-                                            ),
-                                          ),
-                                          elevation: 5,
-                                          color: Colors.white,
-                                          child: Padding(
-                                            padding: const EdgeInsets.all(16.0),
-                                            child: Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: [
-                                                Row(
-                                                  mainAxisAlignment:
-                                                      MainAxisAlignment
-                                                          .spaceBetween,
+                                // ★ 他ユーザーのレビューを全体評価の下にカード形式で表示
+                                if (otherReviews.isNotEmpty)
+                                  Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.stretch,
+                                    children: [
+                                      const SizedBox(height: 10),
+                                      ...otherReviews.map(
+                                        (
+                                          review,
+                                        ) => FutureBuilder<DocumentSnapshot>(
+                                          future:
+                                              FirebaseFirestore.instance
+                                                  .collection('users')
+                                                  .doc(review.userId)
+                                                  .get(),
+                                          builder: (context, userSnapshot) {
+                                            String? characterImage;
+                                            if (userSnapshot.hasData &&
+                                                userSnapshot.data != null) {
+                                              final data =
+                                                  userSnapshot.data!.data()
+                                                      as Map<String, dynamic>?;
+                                              characterImage =
+                                                  data?['characterImage']
+                                                      as String?;
+                                            }
+                                            return Card(
+                                              margin:
+                                                  const EdgeInsets.symmetric(
+                                                    vertical: 8.0,
+                                                  ),
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(15),
+                                              ),
+                                              elevation: 5,
+                                              color: Colors.white,
+                                              child: Padding(
+                                                padding: const EdgeInsets.all(
+                                                  16.0,
+                                                ),
+                                                child: Row(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
                                                   children: [
-                                                    RatingBarIndicator(
-                                                      rating:
-                                                          review
-                                                              .overallSatisfaction,
-                                                      itemBuilder:
-                                                          (
-                                                            context,
-                                                            index,
-                                                          ) => const Icon(
-                                                            Icons.star,
-                                                            color: Colors.amber,
-                                                          ),
-                                                      itemCount: 5,
-                                                      itemSize: 20.0,
-                                                      direction:
-                                                          Axis.horizontal,
-                                                    ),
-                                                    Text(
-                                                      review.reviewDate,
-                                                      style: TextStyle(
-                                                        fontSize: 12,
-                                                        color: Colors.grey[600],
+                                                    // キャラクター画像
+                                                    Container(
+                                                      width: 56,
+                                                      height: 56,
+                                                      decoration: BoxDecoration(
+                                                        borderRadius:
+                                                            BorderRadius.circular(
+                                                              12,
+                                                            ),
+                                                        color: Colors.grey[200],
                                                       ),
+                                                      child:
+                                                          characterImage != null
+                                                              ? Image.asset(
+                                                                characterImage,
+                                                                fit:
+                                                                    BoxFit
+                                                                        .cover,
+                                                              )
+                                                              : Image.asset(
+                                                                'assets/character_gorilla.png',
+                                                                fit:
+                                                                    BoxFit
+                                                                        .cover,
+                                                              ),
                                                     ),
-                                                  ],
-                                                ),
-                                                const SizedBox(height: 8),
-                                                Text(
-                                                  '形式: ${_formatEnum(review.lectureFormat)}',
-                                                  style: const TextStyle(
-                                                    color: Colors.black87,
-                                                  ),
-                                                ),
-                                                Text(
-                                                  '出席: ${_formatEnum(review.attendanceStrictness)}',
-                                                  style: const TextStyle(
-                                                    color: Colors.black87,
-                                                  ),
-                                                ),
-                                                Text(
-                                                  '試験: ${_formatEnum(review.examType)}',
-                                                  style: const TextStyle(
-                                                    color: Colors.black87,
-                                                  ),
-                                                ),
-                                                Text(
-                                                  '教員特徴: ${review.teacherFeature}',
-                                                  style: const TextStyle(
-                                                    color: Colors.black87,
-                                                  ),
-                                                ),
-                                                const SizedBox(height: 8),
-                                                Text(
-                                                  'コメント: ${review.comment}',
-                                                  style: const TextStyle(
-                                                    color: Colors.black87,
-                                                  ),
-                                                ),
-                                                const SizedBox(height: 8),
-                                                Wrap(
-                                                  spacing: 6.0,
-                                                  children:
-                                                      review.tags
-                                                          .map(
-                                                            (tag) => Chip(
-                                                              label: Text(
-                                                                tag,
+                                                    const SizedBox(width: 16),
+                                                    // レビュー内容
+                                                    Expanded(
+                                                      child: Column(
+                                                        crossAxisAlignment:
+                                                            CrossAxisAlignment
+                                                                .start,
+                                                        children: [
+                                                          Row(
+                                                            mainAxisAlignment:
+                                                                MainAxisAlignment
+                                                                    .spaceBetween,
+                                                            children: [
+                                                              RatingBarIndicator(
+                                                                rating:
+                                                                    review
+                                                                        .overallSatisfaction,
+                                                                itemBuilder:
+                                                                    (
+                                                                      context,
+                                                                      index,
+                                                                    ) => const Icon(
+                                                                      Icons
+                                                                          .star,
+                                                                      color:
+                                                                          Colors
+                                                                              .amber,
+                                                                    ),
+                                                                itemCount: 5,
+                                                                itemSize: 20.0,
+                                                                direction:
+                                                                    Axis.horizontal,
+                                                              ),
+                                                              Text(
+                                                                review
+                                                                    .reviewDate,
                                                                 style: TextStyle(
                                                                   fontSize: 12,
                                                                   color:
                                                                       Colors
-                                                                          .brown[700],
+                                                                          .grey[600],
                                                                 ),
                                                               ),
-                                                              backgroundColor:
+                                                            ],
+                                                          ),
+                                                          const SizedBox(
+                                                            height: 8,
+                                                          ),
+                                                          Text(
+                                                            '形式: ${_formatEnum(review.lectureFormat)}',
+                                                            style: const TextStyle(
+                                                              color:
                                                                   Colors
-                                                                      .orangeAccent[50],
+                                                                      .black87,
                                                             ),
-                                                          )
-                                                          .toList(),
+                                                          ),
+                                                          Text(
+                                                            '出席: ${_formatEnum(review.attendanceStrictness)}',
+                                                            style: const TextStyle(
+                                                              color:
+                                                                  Colors
+                                                                      .black87,
+                                                            ),
+                                                          ),
+                                                          Text(
+                                                            '試験: ${_formatEnum(review.examType)}',
+                                                            style: const TextStyle(
+                                                              color:
+                                                                  Colors
+                                                                      .black87,
+                                                            ),
+                                                          ),
+                                                          Text(
+                                                            '教員特徴: ${review.teacherFeature}',
+                                                            style: const TextStyle(
+                                                              color:
+                                                                  Colors
+                                                                      .black87,
+                                                            ),
+                                                          ),
+                                                          const SizedBox(
+                                                            height: 8,
+                                                          ),
+                                                          Text(
+                                                            'コメント: ${review.comment}',
+                                                            style: const TextStyle(
+                                                              color:
+                                                                  Colors
+                                                                      .black87,
+                                                            ),
+                                                          ),
+                                                          const SizedBox(
+                                                            height: 8,
+                                                          ),
+                                                          Wrap(
+                                                            spacing: 6.0,
+                                                            children:
+                                                                review.tags
+                                                                    .map(
+                                                                      (
+                                                                        tag,
+                                                                      ) => Chip(
+                                                                        label: Text(
+                                                                          tag,
+                                                                          style: const TextStyle(
+                                                                            fontSize:
+                                                                                12,
+                                                                            color:
+                                                                                Colors.brown,
+                                                                          ),
+                                                                        ),
+                                                                        backgroundColor:
+                                                                            Colors.orangeAccent[50],
+                                                                      ),
+                                                                    )
+                                                                    .toList(),
+                                                          ),
+                                                          const SizedBox(
+                                                            height: 12,
+                                                          ),
+                                                          _TakoyakiButton(
+                                                            userId:
+                                                                review.userId,
+                                                            reviewId:
+                                                                review.reviewId,
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                  ],
                                                 ),
-                                              ],
-                                            ),
-                                          ),
-                                        );
-                                      },
-                                    ),
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                               ],
                             ),
                           ),
@@ -649,9 +914,15 @@ class _CreditReviewPageState extends ConsumerState<CreditReviewPage> {
                 (context) => CreditInputPage(
                   lectureName: widget.lectureName,
                   teacherName: widget.teacherName,
+                  code: widget.code,
                 ),
           ),
-        );
+        ).then((result) {
+          if (result == true) {
+            // 投稿完了時にレビューを再取得
+            _subscribeToReviews();
+          }
+        });
       },
       icon: const Icon(Icons.edit, color: Colors.white),
       label: const Text(
@@ -739,5 +1010,95 @@ class _CreditReviewPageState extends ConsumerState<CreditReviewPage> {
         ),
       ),
     );
+  }
+}
+
+// --- たこ焼きボタンWidget ---
+class _TakoyakiButton extends StatefulWidget {
+  final String? userId;
+  final String reviewId;
+  const _TakoyakiButton({this.userId, required this.reviewId});
+
+  @override
+  State<_TakoyakiButton> createState() => _TakoyakiButtonState();
+}
+
+class _TakoyakiButtonState extends State<_TakoyakiButton> {
+  bool _sent = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkIfSent();
+  }
+
+  Future<void> _checkIfSent() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _sent =
+          prefs.getBool('takoyaki_sent_${widget.reviewId}_${user.uid}') ??
+          false;
+    });
+  }
+
+  Future<void> _sendTakoyaki() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null || widget.userId == null) return;
+    // Firestoreで投稿者にたこ焼きを1つ加算
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(widget.userId)
+        .update({'takoyakiCount': FieldValue.increment(1)});
+    // ローカルで送信済みフラグを保存
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('takoyaki_sent_${widget.reviewId}_${user.uid}', true);
+    setState(() {
+      _sent = true;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text(
+          'たこ焼きを送りました！',
+          style: TextStyle(color: Colors.white),
+        ),
+        backgroundColor: Colors.black87,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        ElevatedButton.icon(
+          onPressed: _sent ? null : _sendTakoyaki,
+          icon: Image.asset('assets/takoyaki.png', width: 24, height: 24),
+          label: Text(
+            _sent ? '送信済み' : '有益！たこ焼き',
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: _sent ? Colors.grey : Colors.orange,
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+extension FirstWhereOrNullExtension<E> on Iterable<E> {
+  E? firstWhereOrNull(bool Function(E) test) {
+    for (var element in this) {
+      if (test(element)) return element;
+    }
+    return null;
   }
 }

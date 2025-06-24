@@ -79,7 +79,7 @@ class _SettingPageState extends State<SettingPage> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: const Text(
-                'カレンダーURLを保存しました！',
+                'カレンダーURLを保存しました！\n新規発行のURLは反映まで最大1日程度かかる場合があります。',
                 style: TextStyle(fontFamily: 'misaki', color: Colors.white),
               ),
               backgroundColor: Colors.black.withOpacity(0.85),
@@ -87,6 +87,7 @@ class _SettingPageState extends State<SettingPage> {
                 borderRadius: BorderRadius.circular(12),
                 side: const BorderSide(color: Colors.white, width: 2.5),
               ),
+              duration: const Duration(seconds: 5),
             ),
           );
           setState(() {
@@ -303,11 +304,20 @@ class _SettingPageState extends State<SettingPage> {
                         Column(
                           children: [
                             Image.asset(
-                              'assets/calendar.png',
+                              'assets/calender.png',
                               width: double.infinity,
                               fit: BoxFit.fitWidth,
                             ),
                             const SizedBox(height: 16),
+                            const Text(
+                              'KOANの課題ページのURLをコピーして、下の入力欄に貼り付けてください。\n例: https://koan.osaka-u.ac.jp/...\n\n※ 新規発行のカレンダーURLは反映まで最大1日程度かかる場合があります。',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.black87,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 8),
                             Text(
                               '大学の授業カレンダーを同期',
                               style: TextStyle(

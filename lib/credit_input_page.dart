@@ -23,12 +23,14 @@ class CreditInputPage extends ConsumerStatefulWidget {
   final String? lectureName;
   final String? teacherName;
   final String? courseId;
+  final String? code;
 
   const CreditInputPage({
     super.key,
     this.lectureName,
     this.teacherName,
     this.courseId,
+    this.code,
   });
 
   @override
@@ -166,52 +168,45 @@ class _CreditInputPageState extends ConsumerState<CreditInputPage> {
     }
 
     try {
-      // 1. lectureNameからcourseIdを取得
+      // 1. lectureNameからcourseIdを取得、なければcodeを使う
       final courseMapping = ref.read(globalCourseMappingProvider);
       final courseId = courseMapping[lectureName];
+      final docId =
+          (courseId != null && courseId.isNotEmpty) ? courseId : widget.code;
+      if (docId == null || docId.isEmpty) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('courseId/codeが見つかりません。')));
+        setState(() => _isLoading = false);
+        return;
+      }
 
-      // 2. timetableProviderの既存関数を使って教員名を保存
-      if (courseId != null) {
+      // 2. timetableProviderの既存関数を使って教員名を保存（courseIdがある場合のみ）
+      if (courseId != null && courseId.isNotEmpty) {
         ref
             .read(timetableProvider.notifier)
             .setTeacherName(courseId, editedTeacherName);
       }
 
-      // 3. reviewIdを取得または生成
-      final reviewId = ref
-          .read(globalReviewMappingProvider.notifier)
-          .getOrCreateReviewId(lectureName, editedTeacherName);
-
-      // 4. 保存するレビューデータを作成
+      // 3. 保存するレビューデータを作成
       final reviewData = {
         'lectureName': lectureName,
         'teacherName': editedTeacherName,
-        'reviewId': reviewId,
         'userId': user.uid,
         'overallSatisfaction': _overallSatisfaction,
         'easiness': _easiness,
+        'lectureFormat': _classFormat,
+        'attendanceStrictness': _selectedAttendance,
         'examType': _selectedExamType,
-        'attendance': _selectedAttendance,
-        'teacherTraits': _selectedTraits,
-        'classFormat': _classFormat,
+        'teacherFeature':
+            _selectedTraits.isNotEmpty ? _selectedTraits.join(', ') : '',
+        'tags': _selectedTraits,
         'comment': _commentController.text.trim(),
         'createdAt': FieldValue.serverTimestamp(),
       };
 
-      // 5. 既存のレビューがあれば更新、なければ新規作成 (Upsert)
-      final reviewQuery = FirebaseFirestore.instance
-          .collection('reviews')
-          .where('reviewId', isEqualTo: reviewId)
-          .where('userId', isEqualTo: user.uid)
-          .limit(1);
-
-      final existingReviews = await reviewQuery.get();
-
-      if (existingReviews.docs.isEmpty) {
-        await FirebaseFirestore.instance.collection('reviews').add(reviewData);
-      } else {
-        await existingReviews.docs.first.reference.update(reviewData);
-      }
+      // reviewsコレクションに直接addで保存
+      await FirebaseFirestore.instance.collection('reviews').add(reviewData);
 
       // 6. 報酬の計算と付与
       int reward = 5;
@@ -226,16 +221,14 @@ class _CreditInputPageState extends ConsumerState<CreditInputPage> {
         ).showSnackBar(SnackBar(content: Text('レビューを保存しました！たこ焼き$reward個GET！')));
         Navigator.pop(context, true); // 正常に保存されたことを示す
       }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('エラーが発生しました: $e')));
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+    } catch (e, st) {
+      print('レビュー投稿エラー: $e');
+      print(st);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('レビュー投稿に失敗: $e')));
+      setState(() => _isLoading = false);
+      return;
     }
   }
 

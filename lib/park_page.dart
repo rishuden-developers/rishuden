@@ -597,10 +597,10 @@ class _ParkPageState extends ConsumerState<ParkPage> {
                                 child: Container(
                                   padding: const EdgeInsets.all(8),
                                   decoration: BoxDecoration(
-                                    color: Colors.pink.withOpacity(0.3),
+                                    color: Colors.pink.withOpacity(0.6),
                                     borderRadius: BorderRadius.circular(8),
                                     border: Border.all(
-                                      color: Colors.pink.withOpacity(0.6),
+                                      color: Colors.pink.withOpacity(0.8),
                                     ),
                                   ),
                                   child: const Text(
@@ -608,7 +608,8 @@ class _ParkPageState extends ConsumerState<ParkPage> {
                                     style: TextStyle(
                                       fontFamily: 'misaki',
                                       fontSize: 14,
-                                      color: Colors.pink,
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
                                       decoration: TextDecoration.underline,
                                     ),
                                   ),
@@ -622,10 +623,10 @@ class _ParkPageState extends ConsumerState<ParkPage> {
                                 child: Container(
                                   padding: const EdgeInsets.all(8),
                                   decoration: BoxDecoration(
-                                    color: Colors.black.withOpacity(0.3),
+                                    color: Colors.black.withOpacity(0.6),
                                     borderRadius: BorderRadius.circular(8),
                                     border: Border.all(
-                                      color: Colors.black.withOpacity(0.6),
+                                      color: Colors.black.withOpacity(0.8),
                                     ),
                                   ),
                                   child: const Text(
@@ -633,7 +634,8 @@ class _ParkPageState extends ConsumerState<ParkPage> {
                                     style: TextStyle(
                                       fontFamily: 'misaki',
                                       fontSize: 14,
-                                      color: Colors.black,
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
                                       decoration: TextDecoration.underline,
                                     ),
                                   ),
@@ -649,10 +651,10 @@ class _ParkPageState extends ConsumerState<ParkPage> {
                                 child: Container(
                                   padding: const EdgeInsets.all(8),
                                   decoration: BoxDecoration(
-                                    color: Colors.red.withOpacity(0.3),
+                                    color: Colors.red.withOpacity(0.6),
                                     borderRadius: BorderRadius.circular(8),
                                     border: Border.all(
-                                      color: Colors.red.withOpacity(0.6),
+                                      color: Colors.red.withOpacity(0.8),
                                     ),
                                   ),
                                   child: const Text(
@@ -660,7 +662,8 @@ class _ParkPageState extends ConsumerState<ParkPage> {
                                     style: TextStyle(
                                       fontFamily: 'misaki',
                                       fontSize: 14,
-                                      color: Colors.red,
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
                                       decoration: TextDecoration.underline,
                                     ),
                                   ),
@@ -1055,6 +1058,56 @@ class _ParkPageState extends ConsumerState<ParkPage> {
       child: Stack(
         alignment: Alignment.center,
         children: [
+          Positioned(
+            top: screenHeight * 0.13,
+            left: screenWidth * 0.04,
+            child: FutureBuilder<String>(
+              future: _getCreatorCharacterImage(
+                taskData['createdBy'] as String?,
+              ),
+              builder: (context, snapshot) {
+                Widget imageWidget;
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  imageWidget = const Center(
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  );
+                } else if (snapshot.hasError || !snapshot.hasData) {
+                  imageWidget = Image.asset(
+                    'assets/character_gorilla.png',
+                    fit: BoxFit.cover,
+                  );
+                } else {
+                  imageWidget = Image.asset(
+                    snapshot.data!,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Image.asset(
+                        'assets/character_gorilla.png',
+                        fit: BoxFit.cover,
+                      );
+                    },
+                  );
+                }
+                final creatorIconSize = screenWidth * 0.14;
+                return Container(
+                  width: creatorIconSize,
+                  height: creatorIconSize,
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.5),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: Colors.cyan.withOpacity(0.6),
+                      width: 1,
+                    ),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(7),
+                    child: imageWidget,
+                  ),
+                );
+              },
+            ),
+          ),
           Positioned.fill(
             child: Opacity(
               opacity: 0.4,
@@ -1180,56 +1233,6 @@ class _ParkPageState extends ConsumerState<ParkPage> {
                   Text('討伐'),
                 ],
               ),
-            ),
-          ),
-          Positioned(
-            top: screenHeight * 0.13,
-            left: screenWidth * 0.04,
-            child: FutureBuilder<String>(
-              future: _getCreatorCharacterImage(
-                taskData['createdBy'] as String?,
-              ),
-              builder: (context, snapshot) {
-                Widget imageWidget;
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  imageWidget = const Center(
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  );
-                } else if (snapshot.hasError || !snapshot.hasData) {
-                  imageWidget = Image.asset(
-                    'assets/character_gorilla.png',
-                    fit: BoxFit.cover,
-                  );
-                } else {
-                  imageWidget = Image.asset(
-                    snapshot.data!,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Image.asset(
-                        'assets/character_gorilla.png',
-                        fit: BoxFit.cover,
-                      );
-                    },
-                  );
-                }
-                final creatorIconSize = screenWidth * 0.14;
-                return Container(
-                  width: creatorIconSize,
-                  height: creatorIconSize,
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.5),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: Colors.cyan.withOpacity(0.6),
-                      width: 1,
-                    ),
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(7),
-                    child: imageWidget,
-                  ),
-                );
-              },
             ),
           ),
           if (creatorId == currentUserId)

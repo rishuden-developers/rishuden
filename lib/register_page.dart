@@ -101,6 +101,20 @@ class _RegisterPageState extends State<RegisterPage> {
               decoration: InputDecoration(labelText: 'パスワード'),
               obscureText: true,
             ),
+            const SizedBox(height: 24),
+            Image.asset(
+              'assets/calender.png',
+              width: 220,
+              height: 120,
+              fit: BoxFit.contain,
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'KOANの課題ページのURLをコピーして、下の入力欄に貼り付けてください。\n例: https://koan.osaka-u.ac.jp/...\n\n※ 新規発行のカレンダーURLは反映まで最大1日程度かかる場合があります。',
+              style: TextStyle(fontSize: 13, color: Colors.black87),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 12),
             TextField(
               controller: _calendarUrlController,
               decoration: InputDecoration(labelText: 'カレンダーURL (.ics形式)'),

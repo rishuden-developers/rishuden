@@ -4,7 +4,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ReviewPost extends StatelessWidget {
-  const ReviewPost({super.key});
+  final String? code;
+
+  const ReviewPost({super.key, this.code});
 
   @override
   Widget build(BuildContext context) {
@@ -14,7 +16,7 @@ class ReviewPost extends StatelessWidget {
         showDialog(
           context: context,
           barrierDismissible: true,
-          builder: (context) => const ReviewDialog(),
+          builder: (context) => ReviewDialog(code: code),
         );
       },
     );
@@ -22,7 +24,9 @@ class ReviewPost extends StatelessWidget {
 }
 
 class ReviewDialog extends StatefulWidget {
-  const ReviewDialog({super.key});
+  final String? code;
+
+  const ReviewDialog({super.key, this.code});
 
   @override
   State<ReviewDialog> createState() => _ReviewDialogState();
@@ -231,34 +235,37 @@ class _ReviewDialogState extends State<ReviewDialog> {
                         try {
                           final user = FirebaseAuth.instance.currentUser;
                           if (user != null) {
+                            final reviewData = {
+                              'userId': user.uid,
+                              'satisfaction': satisfaction,
+                              'ease': ease,
+                              'examType': examType,
+                              'attendance': attendance,
+                              'teacherTraits': teacherTraits,
+                              'classFormat': classFormat,
+                              'comment': comment,
+                              'createdAt': FieldValue.serverTimestamp(),
+                              'reward': reward,
+                              if (widget.code != null &&
+                                  widget.code!.isNotEmpty)
+                                'code': widget.code,
+                            };
+
                             await FirebaseFirestore.instance
                                 .collection('reviews')
-                                .add({
-                                  'userId': user.uid,
-                                  'satisfaction': satisfaction,
-                                  'ease': ease,
-                                  'examType': examType,
-                                  'attendance': attendance,
-                                  'teacherTraits': teacherTraits,
-                                  'classFormat': classFormat,
-                                  'comment': comment,
-                                  'createdAt': FieldValue.serverTimestamp(),
-                                  'reward': reward,
-                                });
+                                .add(reviewData);
                           }
                         } catch (e) {
                           print('Error saving review: $e');
                         }
 
-                        Navigator.of(context).pop();
+                        Navigator.of(context).pop(true);
 
                         // 報酬通知を表示
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             content: Text(
-                              comment.trim().isNotEmpty
-                                  ? 'レビューを投稿しました！たこ焼き${reward}個を獲得しました！'
-                                  : 'レビューを投稿しました！たこ焼き${reward}個を獲得しました！',
+                              'レビューを 投稿しました！ たこ焼きを ${reward}個 獲得した！',
                               style: const TextStyle(
                                 fontFamily: 'misaki',
                                 color: Colors.white,

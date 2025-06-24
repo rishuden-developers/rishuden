@@ -70,6 +70,8 @@ flutter:
     - assets/takoyaki_off.png
     - assets/night_view.png
     - assets/floating.png
+    - assets/calender.png
+
   fonts:
     - family: Noto Sans JP
       fonts:

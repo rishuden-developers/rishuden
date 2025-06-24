@@ -168,7 +168,6 @@ class _CurrentSemesterCourseCardState
               .collection('reviews')
               .where('courseId', isEqualTo: widget.courseId)
               .get();
-
       final docs = query.docs;
       if (docs.isEmpty) {
         setState(() {
@@ -179,7 +178,6 @@ class _CurrentSemesterCourseCardState
         });
         return;
       }
-
       double sumSatisfaction = 0.0;
       double sumEasiness = 0.0;
       for (final doc in docs) {
@@ -187,7 +185,6 @@ class _CurrentSemesterCourseCardState
         sumSatisfaction += (data['overallSatisfaction'] ?? 0.0) * 1.0;
         sumEasiness += (data['easiness'] ?? 0.0) * 1.0;
       }
-
       setState(() {
         avgSatisfaction = sumSatisfaction / docs.length;
         avgEasiness = sumEasiness / docs.length;

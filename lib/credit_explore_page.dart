@@ -100,25 +100,6 @@ class _CreditExplorePageState extends State<CreditExplorePage> {
                 });
               }),
               const SizedBox(height: 10),
-              _buildFilterDropdown(
-                '種類で絞り込む (必修/選択)',
-                _selectedCategory,
-                _categories,
-                (String? newValue) {
-                  setState(() {
-                    _selectedCategory = newValue;
-                  });
-                },
-              ),
-              const SizedBox(height: 10),
-              _buildFilterDropdown('曜日で絞り込む', _selectedDayOfWeek, _daysOfWeek, (
-                String? newValue,
-              ) {
-                setState(() {
-                  _selectedDayOfWeek = newValue;
-                });
-              }),
-              const SizedBox(height: 10),
               _buildFilterDropdown('タグで絞り込む', _selectedTag, _tags, (
                 String? newValue,
               ) {

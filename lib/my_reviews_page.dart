@@ -68,7 +68,16 @@ class _MyReviewsPageState extends ConsumerState<MyReviewsPage> {
       return;
     }
 
-    // 1. ユーザーの履修情報を取得
+    // reviewsコレクションから自分のレビューを全件取得
+    final query =
+        await FirebaseFirestore.instance
+            .collection('reviews')
+            .where('userId', isEqualTo: user.uid)
+            .get();
+    final myReviews =
+        query.docs.map((doc) => doc.data() as Map<String, dynamic>).toList();
+
+    // 履修情報を取得
     final timetableDoc =
         await FirebaseFirestore.instance
             .collection('users')
@@ -76,15 +85,6 @@ class _MyReviewsPageState extends ConsumerState<MyReviewsPage> {
             .collection('timetable')
             .doc('notes')
             .get();
-
-    if (!timetableDoc.exists) {
-      setState(() {
-        _myCourses = [];
-        _isLoading = false;
-      });
-      return;
-    }
-
     final timetableData = timetableDoc.data();
     final userCourseIds = Map<String, String>.from(
       timetableData?['courseIds'] ?? {},
@@ -93,30 +93,49 @@ class _MyReviewsPageState extends ConsumerState<MyReviewsPage> {
       timetableData?['teacherNames'] ?? {},
     );
 
-    // 2. 履修情報から表示モデルを作成
+    // 各授業ごとに自分のレビューを集計
     final courses = <MyCourseReviewModel>[];
-    final reviewMapping = ref.read(globalReviewMappingProvider);
-
     for (var entry in userCourseIds.entries) {
       final subjectName = entry.key;
       final courseId = entry.value;
       final teacherName = userTeacherNames[courseId] ?? '';
-
-      // reviewIdはグローバルマッピングから取得
-      final reviewId = reviewMapping[subjectName] ?? '';
-
+      final reviewsForCourse =
+          myReviews
+              .where(
+                (r) =>
+                    r['lectureName'] == subjectName &&
+                    r['teacherName'] == teacherName,
+              )
+              .toList();
+      double avgSatisfaction = 0.0;
+      double avgEasiness = 0.0;
+      if (reviewsForCourse.isNotEmpty) {
+        avgSatisfaction =
+            reviewsForCourse
+                .map((r) => (r['overallSatisfaction'] ?? 0.0) * 1.0)
+                .reduce((a, b) => a + b) /
+            reviewsForCourse.length;
+        avgEasiness =
+            reviewsForCourse
+                .map((r) => (r['easiness'] ?? 0.0) * 1.0)
+                .reduce((a, b) => a + b) /
+            reviewsForCourse.length;
+      }
       courses.add(
         MyCourseReviewModel(
           subjectName: subjectName,
           teacherName: teacherName,
-          reviewId: reviewId,
+          reviewId: courseId,
+          avgSatisfaction: avgSatisfaction,
+          avgEasiness: avgEasiness,
+          reviewCount: reviewsForCourse.length,
         ),
       );
     }
-    _myCourses = courses;
-
-    _subscribeToReviews(); // 評価のリアルタイム更新
-    setState(() => _isLoading = false);
+    setState(() {
+      _myCourses = courses;
+      _isLoading = false;
+    });
   }
 
   void _subscribeToReviews() {
