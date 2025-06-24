@@ -143,6 +143,7 @@ class _CreditExplorePageState extends State<CreditExplorePage> {
                       subtitle: '秋冬学期',
                       icon: Icons.school,
                       color: Colors.green[700]!,
+                      isDisabled: true,
                       onTap: () {
                         Navigator.push(
                           context,
@@ -352,6 +353,7 @@ class _CreditExplorePageState extends State<CreditExplorePage> {
     required IconData icon,
     required Color color,
     required VoidCallback onTap,
+    bool isDisabled = false,
   }) {
     return Container(
       height: 200,
@@ -363,7 +365,7 @@ class _CreditExplorePageState extends State<CreditExplorePage> {
         ),
         child: InkWell(
           borderRadius: BorderRadius.circular(20),
-          onTap: onTap,
+          onTap: isDisabled ? null : onTap,
           child: Container(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(20),
@@ -373,35 +375,68 @@ class _CreditExplorePageState extends State<CreditExplorePage> {
                 colors: [color, color.withOpacity(0.8)],
               ),
             ),
-            child: Padding(
-              padding: const EdgeInsets.all(20.0),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(icon, size: 48, color: Colors.white),
-                  const SizedBox(height: 16),
-                  Text(
-                    title,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                      fontFamily: 'NotoSansJP',
-                      height: 1.3,
+            child: Stack(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(20.0),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(icon, size: 48, color: Colors.white),
+                      const SizedBox(height: 16),
+                      Text(
+                        title,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          fontFamily: 'NotoSansJP',
+                          height: 1.3,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        subtitle,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.white.withOpacity(0.9),
+                          fontFamily: 'NotoSansJP',
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (isDisabled)
+                  Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(20),
+                      color: Colors.black.withOpacity(0.6),
+                    ),
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.hourglass_empty,
+                            size: 32,
+                            color: Colors.white,
+                          ),
+                          const SizedBox(height: 8),
+                          const Text(
+                            '準備中',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                              fontFamily: 'NotoSansJP',
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    subtitle,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.white.withOpacity(0.9),
-                      fontFamily: 'NotoSansJP',
-                    ),
-                  ),
-                ],
-              ),
+              ],
             ),
           ),
         ),

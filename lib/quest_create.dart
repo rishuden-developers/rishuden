@@ -9,6 +9,7 @@ import 'course_pattern.dart';
 import 'providers/timetable_provider.dart';
 import 'providers/global_course_mapping_provider.dart';
 import 'package:intl/intl.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class QuestCreationWidget extends ConsumerStatefulWidget {
   final void Function() onCancel;
@@ -664,5 +665,28 @@ class _QuestCreationWidgetState extends ConsumerState<QuestCreationWidget> {
   String _getDayName(int dayOfWeek) {
     const days = ['月', '火', '水', '木', '金', '土', '日'];
     return days[dayOfWeek];
+  }
+
+  // クエストの保存
+  Future<void> _addGlobalQuest(
+    String courseId,
+    Map<String, dynamic> questData,
+  ) async {
+    await FirebaseFirestore.instance
+        .collection('courses')
+        .doc(courseId)
+        .collection('quests')
+        .add(questData);
+  }
+
+  // クエストの取得
+  Future<List<Map<String, dynamic>>> _getGlobalQuests(String courseId) async {
+    final snapshot =
+        await FirebaseFirestore.instance
+            .collection('courses')
+            .doc(courseId)
+            .collection('quests')
+            .get();
+    return snapshot.docs.map((doc) => doc.data()).toList();
   }
 }

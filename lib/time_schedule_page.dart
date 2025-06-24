@@ -287,22 +287,28 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
 
       entry.courseId = courseId;
       courseIdMap[entry.subjectName] = courseId;
-
-      // ★★★ 新しい授業にデフォルトの出席方針を設定 ★★★
-      final currentPolicies = Map<String, String>.from(attendancePolicies);
-      if (!currentPolicies.containsKey(courseId)) {
-        currentPolicies[courseId] = AttendancePolicy.mandatory.toString();
-        _updateAttendancePolicies(currentPolicies);
-        print(
-          'DEBUG: 新しい授業 "${entry.subjectName}" -> courseId: $courseId -> デフォルト出席方針: mandatory',
-        );
-      }
-
-      print('DEBUG: ${entry.subjectName} -> courseId: ${entry.courseId}');
     }
 
     // ★★★ courseIdをTimetableProviderに保存 ★★★
     _updateCourseIds(courseIdMap);
+
+    // ★★★ Firestoreのusers/{uid}/timetable/entriesにもcourseIdを必ず含めて保存 ★★★
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        final entriesToSave =
+            timeTableEntries.map((entry) => entry.toMap()).toList();
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .collection('timetable')
+            .doc('entries')
+            .set({'entries': entriesToSave}, SetOptions(merge: true));
+        print('DEBUG: FirestoreにcourseId付きで時間割エントリを保存しました');
+      }
+    } catch (e) {
+      print('ERROR: Firestoreへの時間割保存に失敗: $e');
+    }
 
     // ★★★ 乱数で色を生成 ★★★
     _courseColors.clear();
@@ -2782,9 +2788,12 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
       text: cellNotes[oneTimeNoteKey] ?? weeklyNotes[weeklyNoteKey] ?? '',
     );
     final attendancePolicy = attendancePolicies[courseId] ?? 'flexible';
-    final teacherNameController = TextEditingController(
-      text: teacherNames[courseId] ?? '',
-    );
+    final teacherNameController = TextEditingController();
+
+    // グローバル教員名を取得してセット
+    _getGlobalTeacherName(courseId).then((name) {
+      teacherNameController.text = name;
+    });
 
     showDialog(
       context: context,
@@ -2833,68 +2842,6 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                     ),
                     SizedBox(height: 16),
                     // 出席ボタン
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        ElevatedButton(
-                          onPressed: () {
-                            final uniqueKey =
-                                "${courseId}_${DateFormat('yyyyMMdd').format(_displayedMonday)}";
-                            _setAttendanceStatus(
-                              uniqueKey,
-                              courseId,
-                              AttendanceStatus.present,
-                            );
-                            Navigator.of(context).pop();
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.green,
-                            foregroundColor: Colors.white,
-                          ),
-                          child: Text('出席'),
-                        ),
-                        ElevatedButton(
-                          onPressed: () {
-                            final uniqueKey =
-                                "${courseId}_${DateFormat('yyyyMMdd').format(_displayedMonday)}";
-                            _setAttendanceStatus(
-                              uniqueKey,
-                              courseId,
-                              AttendanceStatus.absent,
-                            );
-                            Navigator.of(context).pop();
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.red,
-                            foregroundColor: Colors.white,
-                          ),
-                          child: Text('欠席'),
-                        ),
-                        ElevatedButton(
-                          onPressed: () {
-                            final uniqueKey =
-                                "${courseId}_${DateFormat('yyyyMMdd').format(_displayedMonday)}";
-                            _setAttendanceStatus(
-                              uniqueKey,
-                              courseId,
-                              AttendanceStatus.late,
-                            );
-                            Navigator.of(context).pop();
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.orange,
-                            foregroundColor: Colors.white,
-                          ),
-                          child: Text('遅刻'),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 8),
-                    // 出席状況表示
-                    Text(
-                      '出席: ${absenceCount[courseId] ?? 0} | 欠席: ${absenceCount[courseId] ?? 0} | 遅刻: ${lateCount[courseId] ?? 0}',
-                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                    ),
                   ],
                 ),
               ),
@@ -2904,7 +2851,7 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                   child: Text('キャンセル'),
                 ),
                 TextButton(
-                  onPressed: () {
+                  onPressed: () async {
                     // メモを保存
                     final newText = memoController.text.trim();
                     final newCellNotes = Map<String, String>.from(cellNotes);
@@ -2926,12 +2873,10 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                     newPolicies[courseId] = selectedPolicy;
                     _updateAttendancePolicies(newPolicies);
 
-                    // 教員名を保存
+                    // 教員名をグローバルに保存
                     final teacherName = teacherNameController.text.trim();
                     if (teacherName.isNotEmpty) {
-                      ref
-                          .read(timetableProvider.notifier)
-                          .setTeacherName(courseId, teacherName);
+                      await _setGlobalTeacherName(courseId, teacherName);
                     }
 
                     Navigator.of(context).pop();
@@ -2944,6 +2889,31 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
         );
       },
     );
+  }
+
+  // 教員名を取得
+  Future<String> _getGlobalTeacherName(String courseId) async {
+    final doc =
+        await FirebaseFirestore.instance
+            .collection('courses')
+            .doc(courseId)
+            .collection('meta')
+            .doc('info')
+            .get();
+    return doc.data()?['teacherName'] ?? '';
+  }
+
+  // 教員名を保存
+  Future<void> _setGlobalTeacherName(
+    String courseId,
+    String teacherName,
+  ) async {
+    await FirebaseFirestore.instance
+        .collection('courses')
+        .doc(courseId)
+        .collection('meta')
+        .doc('info')
+        .set({'teacherName': teacherName}, SetOptions(merge: true));
   }
 }
 

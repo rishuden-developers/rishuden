@@ -50,6 +50,7 @@ class _CreditInputPageState extends ConsumerState<CreditInputPage> {
   String? _selectedAttendance;
 
   List<String> _selectedTraits = [];
+  List<String> _selectedTags = []; // 授業のタグ用
   String? _classFormat;
 
   // Options for dropdowns and chips
@@ -64,22 +65,27 @@ class _CreditInputPageState extends ConsumerState<CreditInputPage> {
     '鬼',
     '楽単',
   ];
+  final List<String> _tagOptions = [
+    '楽単',
+    '神講義',
+    '鬼講義',
+    '単位取りやすい',
+    '単位取りにくい',
+    '面白い',
+    'つまらない',
+    '実用的',
+    '理論的',
+    '実習あり',
+    'グループワーク',
+    'プレゼンあり',
+    '小テストあり',
+    'レポートあり',
+    '出席あり',
+  ];
   final List<String> _classFormats = ['対面', 'オンデマンド', 'Zoom', 'その他'];
 
   bool _isLoading = false;
   List<Map<String, String>> _dynamicLectures = [];
-
-  // ダミーの講義リスト（検索・選択機能がない場合は、外部から渡すか固定値）
-  final List<Map<String, String>> _dummyLectures = [
-    {'name': '線形代数学Ⅰ', 'teacher': '山田 太郎'},
-    {'name': 'データ構造とアルゴM', 'teacher': '佐藤 花子'},
-    {'name': '経済学原論', 'teacher': '田中 健太'},
-    {'name': '日本文学史', 'teacher': '鈴木 文子'},
-    {'name': '物理学実験', 'teacher': '渡辺 剛'},
-    {'name': '情報倫理', 'teacher': '山田 太郎'},
-    {'name': '現代社会論', 'teacher': '高橋 涼子'},
-    {'name': '国際法入門', 'teacher': '伊藤 大輔'},
-  ];
 
   @override
   void initState() {
@@ -117,23 +123,64 @@ class _CreditInputPageState extends ConsumerState<CreditInputPage> {
       final lecturesWithTeachers =
           ref.read(timetableProvider.notifier).getLecturesWithTeachers();
 
-      // ダミー講義リストも含める
-      final allLectures = <Map<String, String>>[];
-      allLectures.addAll(_dummyLectures);
-      allLectures.addAll(lecturesWithTeachers);
+      print('DEBUG: 時間割から取得した講義一覧: $lecturesWithTeachers');
+
+      // courseIdと紐付けされた授業のみをフィルタリング
+      final courseMapping = ref.read(globalCourseMappingProvider);
+      print('DEBUG: courseMappingの内容: $courseMapping');
+      print('DEBUG: courseMappingのキー一覧: ${courseMapping.keys.toList()}');
+
+      final filteredLectures = <Map<String, String>>[];
+
+      for (final lecture in lecturesWithTeachers) {
+        final lectureName = lecture['name'] ?? '';
+        print('DEBUG: チェック中の講義名: "$lectureName"');
+        print(
+          'DEBUG: courseMappingに存在するか: ${courseMapping.containsKey(lectureName)}',
+        );
+        if (courseMapping.containsKey(lectureName)) {
+          filteredLectures.add(lecture);
+          print('DEBUG: 追加された講義: $lecture');
+        }
+      }
 
       setState(() {
-        _dynamicLectures = allLectures;
+        _dynamicLectures = filteredLectures;
       });
 
-      print('DEBUG: 時間割から教員名付き講義を読み込みました: ${_dynamicLectures.length}件');
+      print('DEBUG: courseIdと紐付けされた講義を読み込みました: ${_dynamicLectures.length}件');
       print('DEBUG: 教員名付き講義一覧: $_dynamicLectures');
     } catch (e) {
       print('Error loading lectures from timetable: $e');
       setState(() {
-        _dynamicLectures = _dummyLectures;
+        _dynamicLectures = [];
       });
     }
+  }
+
+  // グローバル教員名取得
+  Future<String> _getGlobalTeacherName(String courseId) async {
+    final doc =
+        await FirebaseFirestore.instance
+            .collection('courses')
+            .doc(courseId)
+            .collection('meta')
+            .doc('info')
+            .get();
+    return doc.data()?['teacherName'] ?? '';
+  }
+
+  // グローバル教員名保存
+  Future<void> _setGlobalTeacherName(
+    String courseId,
+    String teacherName,
+  ) async {
+    await FirebaseFirestore.instance
+        .collection('courses')
+        .doc(courseId)
+        .collection('meta')
+        .doc('info')
+        .set({'teacherName': teacherName}, SetOptions(merge: true));
   }
 
   Future<void> _saveReview() async {
@@ -168,30 +215,18 @@ class _CreditInputPageState extends ConsumerState<CreditInputPage> {
     }
 
     try {
-      // 1. lectureNameからcourseIdを取得、なければcodeを使う
+      // 1. lectureNameからcourseIdを取得
       final courseMapping = ref.read(globalCourseMappingProvider);
       final courseId = courseMapping[lectureName];
-      final docId =
-          (courseId != null && courseId.isNotEmpty) ? courseId : widget.code;
-      if (docId == null || docId.isEmpty) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('courseId/codeが見つかりません。')));
-        setState(() => _isLoading = false);
-        return;
-      }
-
-      // 2. timetableProviderの既存関数を使って教員名を保存（courseIdがある場合のみ）
       if (courseId != null && courseId.isNotEmpty) {
-        ref
-            .read(timetableProvider.notifier)
-            .setTeacherName(courseId, editedTeacherName);
+        await _setGlobalTeacherName(courseId, editedTeacherName);
       }
 
-      // 3. 保存するレビューデータを作成
+      // 2. 保存するレビューデータを作成
       final reviewData = {
         'lectureName': lectureName,
         'teacherName': editedTeacherName,
+        'courseId': courseId ?? '', // courseIdがnullの場合は空文字を保存
         'userId': user.uid,
         'overallSatisfaction': _overallSatisfaction,
         'easiness': _easiness,
@@ -200,7 +235,8 @@ class _CreditInputPageState extends ConsumerState<CreditInputPage> {
         'examType': _selectedExamType,
         'teacherFeature':
             _selectedTraits.isNotEmpty ? _selectedTraits.join(', ') : '',
-        'tags': _selectedTraits,
+        'teacherTraits': _selectedTraits,
+        'tags': _selectedTags,
         'comment': _commentController.text.trim(),
         'createdAt': FieldValue.serverTimestamp(),
       };
@@ -318,6 +354,9 @@ class _CreditInputPageState extends ConsumerState<CreditInputPage> {
                   const SizedBox(height: 20),
                   _buildSectionTitle('教員の特徴', Icons.person_outline),
                   _buildChipsSection(),
+                  const SizedBox(height: 20),
+                  _buildSectionTitle('授業のタグ', Icons.label),
+                  _buildTagChipsSection(),
                   const SizedBox(height: 20),
                   _buildSectionTitle(
                     'コメント (+${_commentController.text.trim().isEmpty ? '5' : '0'}個)',
@@ -551,13 +590,45 @@ class _CreditInputPageState extends ConsumerState<CreditInputPage> {
     );
   }
 
+  Widget _buildTagChipsSection() {
+    return Card(
+      elevation: 0,
+      color: Colors.white.withOpacity(0.8),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      child: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: Wrap(
+          spacing: 8.0,
+          runSpacing: 4.0,
+          children:
+              _tagOptions.map((tag) {
+                final isSelected = _selectedTags.contains(tag);
+                return FilterChip(
+                  label: Text(tag),
+                  selected: isSelected,
+                  onSelected: (selected) {
+                    setState(() {
+                      if (selected) {
+                        _selectedTags.add(tag);
+                      } else {
+                        _selectedTags.remove(tag);
+                      }
+                    });
+                  },
+                  selectedColor: Colors.cyan[100],
+                  checkmarkColor: Colors.black,
+                );
+              }).toList(),
+        ),
+      ),
+    );
+  }
+
+  // 講義選択時にグローバル教員名をセット
   void _showLectureSelectionDialog() async {
     final Map<String, String> allCourses = ref.read(
       globalCourseMappingProvider,
     );
-    final Map<String, String> teacherNames =
-        ref.read(timetableProvider)['teacherNames'] as Map<String, String>? ??
-        {};
 
     // Create a list of lecture names for the dialog
     final lectures = allCourses.keys.toList();
@@ -565,7 +636,6 @@ class _CreditInputPageState extends ConsumerState<CreditInputPage> {
     final String? selected = await showDialog(
       context: context,
       builder: (context) {
-        // ... (Dialog implementation)
         return SimpleDialog(
           title: const Text('講義を選択'),
           children:
@@ -582,9 +652,12 @@ class _CreditInputPageState extends ConsumerState<CreditInputPage> {
     if (selected != null) {
       setState(() {
         _selectedLectureName = selected;
-        final courseId = allCourses[selected];
-        _teacherNameController.text = teacherNames[courseId] ?? '';
       });
+      final courseId = allCourses[selected];
+      if (courseId != null) {
+        final teacherName = await _getGlobalTeacherName(courseId);
+        _teacherNameController.text = teacherName;
+      }
     }
   }
 }
