@@ -45,7 +45,7 @@ class _QuestCreationWidgetState extends ConsumerState<QuestCreationWidget> {
   bool _isDataLoaded = false; // データ読み込みフラグ
   bool _firestoreLoaded = false;
 
-  final List<String> taskTypes = ['レポート', '出席', '発表', '試験', 'その他'];
+  final List<String> taskTypes = ['レポート', '発表', 'その他'];
 
   // Provider経由でデータを取得
   Map<String, dynamic>? get selectedClass =>
@@ -347,7 +347,29 @@ class _QuestCreationWidgetState extends ConsumerState<QuestCreationWidget> {
                   ElevatedButton(
                     onPressed:
                         (tempTaskType != null && tempDeadline != null)
-                            ? () {
+                            ? () async {
+                              // 週のクエスト作成回数をチェック
+                              final courseId =
+                                  selectedClass!['courseId'] as String?;
+                              if (courseId != null) {
+                                final weeklyCount = await _getWeeklyQuestCount(
+                                  courseId,
+                                );
+                                if (weeklyCount >= 2) {
+                                  if (mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: const Text(
+                                          'この授業の今週のクエスト作成上限（2回）に達しています',
+                                        ),
+                                        backgroundColor: Colors.orange,
+                                      ),
+                                    );
+                                  }
+                                  return;
+                                }
+                              }
+
                               ref
                                   .read(timetableProvider.notifier)
                                   .updateQuestTaskType(tempTaskType);
@@ -811,6 +833,20 @@ class _QuestCreationWidgetState extends ConsumerState<QuestCreationWidget> {
       final courseId = baseQuest['courseId'] as String?;
       if (courseId == null) return;
 
+      // 週のクエスト作成回数をチェック
+      final weeklyCount = await _getWeeklyQuestCount(courseId);
+      if (weeklyCount >= 2) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('この授業の今週のクエスト作成上限（2回）に達しています'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+        return;
+      }
+
       // その授業を取っているユーザーIDを取得
       final enrolledUsersSnapshot =
           await FirebaseFirestore.instance
@@ -855,6 +891,39 @@ class _QuestCreationWidgetState extends ConsumerState<QuestCreationWidget> {
           ),
         );
       }
+    }
+  }
+
+  // 今週のクエスト作成回数を取得
+  Future<int> _getWeeklyQuestCount(String courseId) async {
+    try {
+      final now = DateTime.now();
+      final startOfWeek = now
+          .subtract(Duration(days: now.weekday - 1))
+          .copyWith(
+            hour: 0,
+            minute: 0,
+            second: 0,
+            millisecond: 0,
+            microsecond: 0,
+          );
+      final endOfWeek = startOfWeek.add(const Duration(days: 7));
+
+      final snapshot =
+          await FirebaseFirestore.instance
+              .collection('quests')
+              .where('courseId', isEqualTo: courseId)
+              .where(
+                'createdAt',
+                isGreaterThanOrEqualTo: Timestamp.fromDate(startOfWeek),
+              )
+              .where('createdAt', isLessThan: Timestamp.fromDate(endOfWeek))
+              .get();
+
+      return snapshot.docs.length;
+    } catch (e) {
+      print('Error getting weekly quest count: $e');
+      return 0;
     }
   }
 }
