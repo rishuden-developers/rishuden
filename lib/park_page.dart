@@ -109,7 +109,7 @@ class _ParkPageState extends ConsumerState<ParkPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text(
-            '今日のたこ焼きはもう受け取ったで！また明日な！',
+            '今日の たこ焼きは もう 受け取ったで！ また 明日な！',
             style: TextStyle(fontFamily: 'misaki', color: Colors.white),
           ),
           backgroundColor: Colors.black.withOpacity(0.85),
@@ -138,7 +138,7 @@ class _ParkPageState extends ConsumerState<ParkPage> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: const Text(
-          'たこ焼きを10個ゲットした！',
+          'たこ焼きを 10個 ゲットした！',
           style: TextStyle(fontFamily: 'misaki', color: Colors.white),
         ),
         backgroundColor: Colors.black.withOpacity(0.85),
@@ -334,6 +334,34 @@ class _ParkPageState extends ConsumerState<ParkPage> {
 
     // 達成度に応じた報酬をチェック
     await _checkAndDistributeAchievementRewards(questId, taskData);
+
+    // 通知メッセージを表示
+    if (rewardTakoyaki > 0) {
+      // 作成者の情報を取得
+      final creatorDoc =
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(taskData['createdBy'] as String?)
+              .get();
+      final creatorData = creatorDoc.data();
+      final creatorCharacter =
+          creatorData?['character'] as String? ?? '不明なキャラクター';
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '${_userName}は ${creatorCharacter}に クエスト作成の お礼の たこ焼きを 一個 渡した',
+            style: const TextStyle(fontFamily: 'misaki', color: Colors.white),
+          ),
+          backgroundColor: Colors.black.withOpacity(0.85),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: const BorderSide(color: Colors.white, width: 2.5),
+          ),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
   }
 
   Future<void> _loadCharacterInfoFromFirebase() async {
@@ -1155,37 +1183,6 @@ class _ParkPageState extends ConsumerState<ParkPage> {
             ),
           ),
           Positioned(
-            top: screenHeight * 0.33,
-            right: screenWidth * 0.13,
-            child: GestureDetector(
-              onTap:
-                  () => _toggleTakoyakiSupport(
-                    questId,
-                    taskData['createdBy'] as String?,
-                  ),
-              child: FutureBuilder<bool>(
-                future: _isCurrentUserSupporting(questId),
-                builder: (context, snapshot) {
-                  final bool isSupporting = snapshot.data ?? false;
-                  return Container(
-                    width: screenWidth * 0.15,
-                    height: screenWidth * 0.15,
-                    decoration: BoxDecoration(
-                      image: DecorationImage(
-                        image: AssetImage(
-                          isSupporting
-                              ? 'assets/takoyaki.png'
-                              : 'assets/takoyaki_off.png',
-                        ),
-                        fit: BoxFit.contain,
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-          ),
-          Positioned(
             top: screenHeight * 0.13,
             left: screenWidth * 0.04,
             child: FutureBuilder<String>(
@@ -1246,6 +1243,45 @@ class _ParkPageState extends ConsumerState<ParkPage> {
                 },
               ),
             ),
+          Positioned(
+            top: screenHeight * 0.33,
+            right: screenWidth * 0.13,
+            child: InkWell(
+              onTap:
+                  () => _toggleTakoyakiSupport(
+                    questId,
+                    taskData['createdBy'] as String?,
+                    taskData,
+                  ),
+              borderRadius: BorderRadius.circular(screenWidth * 0.08),
+              child: Container(
+                width: screenWidth * 0.15,
+                height: screenWidth * 0.15,
+                child: Center(
+                  child: FutureBuilder<bool>(
+                    future: _isCurrentUserSupporting(questId),
+                    builder: (context, snapshot) {
+                      final bool isSupporting = snapshot.data ?? false;
+                      return Container(
+                        width: screenWidth * 0.12,
+                        height: screenWidth * 0.12,
+                        decoration: BoxDecoration(
+                          image: DecorationImage(
+                            image: AssetImage(
+                              isSupporting
+                                  ? 'assets/takoyaki.png'
+                                  : 'assets/takoyaki_off.png',
+                            ),
+                            fit: BoxFit.contain,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -1477,14 +1513,18 @@ class _ParkPageState extends ConsumerState<ParkPage> {
     }
   }
 
-  Future<void> _toggleTakoyakiSupport(String questId, String? creatorId) async {
+  Future<void> _toggleTakoyakiSupport(
+    String questId,
+    String? creatorId,
+    Map<String, dynamic> taskData,
+  ) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null || creatorId == null) return;
     if (user.uid == creatorId) {
       // 自分自身には贈れない
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('自分のクエストにたこ焼きは贈れません！')));
+      ).showSnackBar(const SnackBar(content: Text('自分の クエストに たこ焼きは 贈れません！')));
       return;
     }
 
@@ -1495,7 +1535,7 @@ class _ParkPageState extends ConsumerState<ParkPage> {
     // if (takoyakiChange > 0 && _takoyakiCount < 1) {
     //   ScaffoldMessenger.of(
     //     context,
-    //   ).showSnackBar(const SnackBar(content: Text('たこ焼きが足りません！')));
+    //   ).showSnackBar(const SnackBar(content: Text('たこ焼きが 足りません！')));
     //   return;
     // }
 
@@ -1530,16 +1570,101 @@ class _ParkPageState extends ConsumerState<ParkPage> {
         // });
       });
 
-      // UIを更新（削除：自分のたこ焼きは減らない）
-      // setState(() {
-      //   _takoyakiCount -= takoyakiChange;
-      // });
+      // 作成者向けの通知データを保存
+      if (takoyakiChange > 0) {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(creatorId)
+            .collection('notifications')
+            .add({
+              'type': 'takoyaki_received',
+              'message': '神が あなたの 作った クエストに たこ焼きを 送りました',
+              'questId': questId,
+              'questName': taskData['name'] ?? 'クエスト',
+              'createdAt': FieldValue.serverTimestamp(),
+              'isRead': false,
+            });
+      } else {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(creatorId)
+            .collection('notifications')
+            .add({
+              'type': 'takoyaki_returned',
+              'message': '神が あなたの 作った クエストから たこ焼きを 取り戻しました',
+              'questId': questId,
+              'questName': taskData['name'] ?? 'クエスト',
+              'createdAt': FieldValue.serverTimestamp(),
+              'isRead': false,
+            });
+      }
+
+      // 通知メッセージを表示
+      if (takoyakiChange > 0) {
+        // 作成者の情報を取得
+        final creatorDoc =
+            await FirebaseFirestore.instance
+                .collection('users')
+                .doc(creatorId)
+                .get();
+        final creatorData = creatorDoc.data();
+        final creatorCharacter =
+            creatorData?['character'] as String? ?? '不明なキャラクター';
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '${_userName}は ${creatorCharacter}に クエスト作成の お礼の たこ焼きを 一個 渡した',
+              style: const TextStyle(fontFamily: 'misaki', color: Colors.white),
+            ),
+            backgroundColor: Colors.black.withOpacity(0.85),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: const BorderSide(color: Colors.white, width: 2.5),
+            ),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      } else {
+        // 作成者の情報を取得
+        final creatorDoc =
+            await FirebaseFirestore.instance
+                .collection('users')
+                .doc(creatorId)
+                .get();
+        final creatorData = creatorDoc.data();
+        final creatorCharacter =
+            creatorData?['character'] as String? ?? '不明なキャラクター';
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '${_userName}は ${creatorCharacter}から たこ焼きを 一個 取り戻した',
+              style: const TextStyle(fontFamily: 'misaki', color: Colors.white),
+            ),
+            backgroundColor: Colors.black.withOpacity(0.85),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: const BorderSide(color: Colors.white, width: 2.5),
+            ),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+
+      // UIを強制的に更新してたこ焼きボタンの状態を切り替える
+      if (mounted) {
+        setState(() {});
+      }
     } catch (e) {
       print("Error toggling takoyaki support: $e");
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('処理に失敗しました。')));
+      ).showSnackBar(const SnackBar(content: Text('処理に 失敗しました。')));
     }
+
+    // 達成度に応じた報酬をチェック
+    await _checkAndDistributeAchievementRewards(questId, taskData);
   }
 
   // ★★★ ここまで ★★★
@@ -1679,14 +1804,14 @@ class _ParkPageState extends ConsumerState<ParkPage> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text("クエストを更新しました！")));
+        ).showSnackBar(const SnackBar(content: Text("クエストを 更新しました！")));
       }
     } catch (e) {
       print("Error updating quest: $e");
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text("クエストの更新に失敗しました...")));
+        ).showSnackBar(const SnackBar(content: Text("クエストの 更新に 失敗しました...")));
       }
     }
   }

@@ -1,0 +1,345 @@
+{
+  "category": "中国語",
+  "courses": [
+    {
+      "code": "192591",
+      "period": "月1",
+      "name": "中国語初級Ⅱ",
+      "semester": "秋～冬",
+      "teacher": "畢　鳴飛",
+      "department": "マルチリンガル教育センター",
+      "target": "人",
+      "category": "中国語"
+    },
+    {
+      "code": "192593",
+      "period": "月1",
+      "name": "中国語初級Ⅱ",
+      "semester": "秋～冬",
+      "teacher": "孫　樹喬",
+      "department": "マルチリンガル教育センター",
+      "target": "文",
+      "category": "中国語"
+    },
+    {
+      "code": "192603",
+      "period": "月2",
+      "name": "中国語初級Ⅱ",
+      "semester": "秋～冬",
+      "teacher": "相場　美紀子",
+      "department": "マルチリンガル教育センター",
+      "target": "理",
+      "category": "中国語"
+    },
+    {
+      "code": "192604",
+      "period": "月2",
+      "name": "中国語初級Ⅱ",
+      "semester": "秋～冬",
+      "teacher": "王　蘭",
+      "department": "マルチリンガル教育センター",
+      "target": "理",
+      "category": "中国語"
+    },
+    {
+      "code": "192615",
+      "period": "月3",
+      "name": "中国語初級Ⅱ",
+      "semester": "秋～冬",
+      "teacher": "田中　智行",
+      "department": "人文学研究科",
+      "target": "工（理・電）",
+      "category": "中国語"
+    },
+    {
+      "code": "192617",
+      "period": "月3",
+      "name": "中国語初級Ⅱ",
+      "semester": "秋～冬",
+      "teacher": "相場　美紀子",
+      "department": "マルチリンガル教育センター",
+      "target": "工（理・電）",
+      "category": "中国語"
+    },
+    {
+      "code": "192618",
+      "period": "月3",
+      "name": "中国語初級Ⅱ",
+      "semester": "秋～冬",
+      "teacher": "孫　樹喬",
+      "department": "マルチリンガル教育センター",
+      "target": "工（理・電）",
+      "category": "中国語"
+    },
+    {
+      "code": "192620",
+      "period": "月3",
+      "name": "中国語初級Ⅱ",
+      "semester": "秋～冬",
+      "teacher": "徐　玉",
+      "department": "マルチリンガル教育センター",
+      "target": "工（理・電）",
+      "category": "中国語"
+    },
+    {
+      "code": "192616",
+      "period": "月3",
+      "name": "中国語初級Ⅱ",
+      "semester": "秋～冬",
+      "teacher": "畢　鳴飛",
+      "department": "マルチリンガル教育センター",
+      "target": "工（理・電）",
+      "category": "中国語"
+    },
+    {
+      "code": "192619",
+      "period": "月5",
+      "name": "中国語初級Ⅰ",
+      "semester": "秋～冬",
+      "teacher": "劉　曉娟",
+      "department": "マルチリンガル教育センター",
+      "target": "全学部（外を除く）",
+      "category": "中国語"
+    },
+    {
+      "code": "192595",
+      "period": "火1",
+      "name": "中国語初級Ⅱ",
+      "semester": "秋～冬",
+      "teacher": "八木　堅二",
+      "department": "人文学研究科",
+      "target": "法経",
+      "category": "中国語"
+    },
+    {
+      "code": "192597",
+      "period": "火1",
+      "name": "中国語初級Ⅱ",
+      "semester": "秋～冬",
+      "teacher": "王　蘭",
+      "department": "マルチリンガル教育センター",
+      "target": "法経",
+      "category": "中国語"
+    },
+    {
+      "code": "192599",
+      "period": "火1",
+      "name": "中国語初級Ⅱ",
+      "semester": "秋～冬",
+      "teacher": "相場　美紀子",
+      "department": "マルチリンガル教育センター",
+      "target": "法経",
+      "category": "中国語"
+    },
+    {
+      "code": "192600",
+      "period": "火1",
+      "name": "中国語初級Ⅱ",
+      "semester": "秋～冬",
+      "teacher": "田中　智行",
+      "department": "人文学研究科",
+      "target": "法経",
+      "category": "中国語"
+    },
+    {
+      "code": "192596",
+      "period": "火1",
+      "name": "中国語初級Ⅱ",
+      "semester": "秋～冬",
+      "teacher": "潘　哲毅",
+      "department": "マルチリンガル教育センター",
+      "target": "法経",
+      "category": "中国語"
+    },
+    {
+      "code": "192601",
+      "period": "水1",
+      "name": "中国語初級Ⅱ",
+      "semester": "秋～冬",
+      "teacher": "佐髙　春音",
+      "department": "人文学研究科",
+      "target": "医歯薬",
+      "category": "中国語"
+    },
+    {
+      "code": "192602",
+      "period": "水1",
+      "name": "中国語初級Ⅱ",
+      "semester": "秋～冬",
+      "teacher": "劉　驫",
+      "department": "人文学研究科",
+      "target": "医歯薬",
+      "category": "中国語"
+    },
+    {
+      "code": "192598",
+      "period": "水1",
+      "name": "中国語初級Ⅱ",
+      "semester": "秋～冬",
+      "teacher": "王　周明",
+      "department": "人文学研究科",
+      "target": "医歯薬",
+      "category": "中国語"
+    },
+    {
+      "code": "192605",
+      "period": "水4",
+      "name": "中国語初級Ⅱ",
+      "semester": "秋～冬",
+      "teacher": "佐髙　春音",
+      "department": "人文学研究科",
+      "target": "基",
+      "category": "中国語"
+    },
+    {
+      "code": "192607",
+      "period": "水4",
+      "name": "中国語初級Ⅱ",
+      "semester": "秋～冬",
+      "teacher": "潘　英峰",
+      "department": "マルチリンガル教育センター",
+      "target": "基",
+      "category": "中国語"
+    },
+    {
+      "code": "192609",
+      "period": "水4",
+      "name": "中国語初級Ⅱ",
+      "semester": "秋～冬",
+      "teacher": "八木　堅二",
+      "department": "人文学研究科",
+      "target": "基",
+      "category": "中国語"
+    },
+    {
+      "code": "192610",
+      "period": "水4",
+      "name": "中国語初級Ⅱ",
+      "semester": "秋～冬",
+      "teacher": "太田　匡亮",
+      "department": "マルチリンガル教育センター",
+      "target": "基",
+      "category": "中国語"
+    },
+    {
+      "code": "192606",
+      "period": "水4",
+      "name": "中国語初級Ⅱ",
+      "semester": "秋～冬",
+      "teacher": "王　周明",
+      "department": "人文学研究科",
+      "target": "基",
+      "category": "中国語"
+    },
+    {
+      "code": "192611",
+      "period": "金2",
+      "name": "中国語初級Ⅱ",
+      "semester": "秋～冬",
+      "teacher": "黄　晨雯",
+      "department": "人文学研究科",
+      "target": "工（然・地・環）",
+      "category": "中国語"
+    },
+    {
+      "code": "192613",
+      "period": "金2",
+      "name": "中国語初級Ⅱ",
+      "semester": "秋～冬",
+      "teacher": "畢　鳴飛",
+      "department": "マルチリンガル教育センター",
+      "target": "工（然・地・環）",
+      "category": "中国語"
+    },
+    {
+      "code": "192614",
+      "period": "金2",
+      "name": "中国語初級Ⅱ",
+      "semester": "秋～冬",
+      "teacher": "岡野　翔太",
+      "department": "マルチリンガル教育センター",
+      "target": "工（然・地・環）",
+      "category": "中国語"
+    },
+    {
+      "code": "192612",
+      "period": "金2",
+      "name": "中国語初級Ⅱ",
+      "semester": "秋～冬",
+      "teacher": "張　曼青",
+      "department": "マルチリンガル教育センター",
+      "target": "工（然・地・環）",
+      "category": "中国語"
+    },
+    {
+      "code": "194593",
+      "period": "月2",
+      "name": "中国語中級",
+      "semester": "秋～冬",
+      "teacher": "深尾　葉子",
+      "department": "人文学研究科",
+      "target": "文",
+      "category": "中国語"
+    },
+    {
+      "code": "194595",
+      "period": "火2",
+      "name": "中国語中級",
+      "semester": "秋～冬",
+      "teacher": "王　蘭",
+      "department": "マルチリンガル教育センター",
+      "target": "法経",
+      "category": "中国語"
+    },
+    {
+      "code": "194597",
+      "period": "火2",
+      "name": "中国語中級",
+      "semester": "秋～冬",
+      "teacher": "佐髙　春音",
+      "department": "人文学研究科",
+      "target": "法経",
+      "category": "中国語"
+    },
+    {
+      "code": "194598",
+      "period": "火2",
+      "name": "中国語中級",
+      "semester": "秋～冬",
+      "teacher": "田中　智行",
+      "department": "人文学研究科",
+      "target": "法経",
+      "category": "中国語"
+    },
+    {
+      "code": "194599",
+      "period": "火2",
+      "name": "中国語中級",
+      "semester": "秋～冬",
+      "teacher": "孫　樹喬",
+      "department": "マルチリンガル教育センター",
+      "target": "法経",
+      "category": "中国語"
+    },
+    {
+      "code": "194596",
+      "period": "火2",
+      "name": "中国語中級",
+      "semester": "秋～冬",
+      "teacher": "劉　驫",
+      "department": "人文学研究科",
+      "target": "法経",
+      "category": "中国語"
+    },
+    {
+      "code": "194601",
+      "period": "火5",
+      "name": "中国語上級",
+      "semester": "秋～冬",
+      "teacher": "孫　樹喬",
+      "department": "マルチリンガル教育センター",
+      "target": "全学部（外を除く）",
+      "category": "中国語"
+    }
+  ]
+}

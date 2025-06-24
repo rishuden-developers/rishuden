@@ -1,0 +1,25 @@
+{
+  "category": "専門基礎科目（図学）",
+  "courses": [
+    {
+      "code": "137745",
+      "period": "火3",
+      "name": "図学演義B",
+      "semester": "秋～冬",
+      "instructor": "安福　健祐",
+      "department": "D3センター",
+      "target": "工（地）",
+      "category": "図学"
+    },
+    {
+      "code": "137741",
+      "period": "金3～4",
+      "name": "図学演義A",
+      "semester": "秋",
+      "instructor": "末岡　裕一郎",
+      "department": "工学研究科",
+      "target": "工（理）",
+      "category": "図学"
+    }
+  ]
+}

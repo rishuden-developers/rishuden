@@ -1,0 +1,415 @@
+{
+  "category": "ドイツ語",
+  "courses": [
+    {
+      "code": "192445",
+      "period": "火1",
+      "name": "ドイツ語初級Ⅱ",
+      "semester": "秋～冬",
+      "teacher": "村上　八重子",
+      "department": "マルチリンガル教育センター",
+      "target": "法経",
+      "category": "ドイツ語"
+    },
+    {
+      "code": "192447",
+      "period": "火1",
+      "name": "ドイツ語初級Ⅱ",
+      "semester": "秋～冬",
+      "teacher": "荒島　浩雅",
+      "department": "マルチリンガル教育センター",
+      "target": "法経",
+      "category": "ドイツ語"
+    },
+    {
+      "code": "192449",
+      "period": "火1",
+      "name": "ドイツ語初級Ⅱ",
+      "semester": "秋～冬",
+      "teacher": "永谷　麻衣子",
+      "department": "マルチリンガル教育センター",
+      "target": "法経",
+      "category": "ドイツ語"
+    },
+    {
+      "code": "192451",
+      "period": "火1",
+      "name": "ドイツ語初級Ⅱ",
+      "semester": "秋～冬",
+      "teacher": "土居　三佐子",
+      "department": "マルチリンガル教育センター",
+      "target": "法経",
+      "category": "ドイツ語"
+    },
+    {
+      "code": "192467",
+      "period": "火3",
+      "name": "ドイツ語初級Ⅱ",
+      "semester": "秋～冬",
+      "teacher": "山田　真実",
+      "department": "マルチリンガル教育センター",
+      "target": "理基",
+      "category": "ドイツ語"
+    },
+    {
+      "code": "192469",
+      "period": "火3",
+      "name": "ドイツ語初級Ⅱ",
+      "semester": "秋～冬",
+      "teacher": "西村　知紘",
+      "department": "マルチリンガル教育センター",
+      "target": "理基",
+      "category": "ドイツ語"
+    },
+    {
+      "code": "192471",
+      "period": "火3",
+      "name": "ドイツ語初級Ⅱ",
+      "semester": "秋～冬",
+      "teacher": "西出　佳詩子",
+      "department": "人文学研究科",
+      "target": "理基",
+      "category": "ドイツ語"
+    },
+    {
+      "code": "192473",
+      "period": "火3",
+      "name": "ドイツ語初級Ⅱ",
+      "semester": "秋～冬",
+      "teacher": "荒島　浩雅",
+      "department": "マルチリンガル教育センター",
+      "target": "理基",
+      "category": "ドイツ語"
+    },
+    {
+      "code": "192475",
+      "period": "火3",
+      "name": "ドイツ語初級Ⅱ",
+      "semester": "秋～冬",
+      "teacher": "永谷　麻衣子",
+      "department": "マルチリンガル教育センター",
+      "target": "理基",
+      "category": "ドイツ語"
+    },
+    {
+      "code": "192477",
+      "period": "火3",
+      "name": "ドイツ語初級Ⅱ",
+      "semester": "秋～冬",
+      "teacher": "土居　三佐子",
+      "department": "マルチリンガル教育センター",
+      "target": "理基",
+      "category": "ドイツ語"
+    },
+    {
+      "code": "192479",
+      "period": "火3",
+      "name": "ドイツ語初級Ⅱ",
+      "semester": "秋～冬",
+      "teacher": "土谷　真理子",
+      "department": "マルチリンガル教育センター",
+      "target": "理基",
+      "category": "ドイツ語"
+    },
+    {
+      "code": "192453",
+      "period": "水1",
+      "name": "ドイツ語初級Ⅱ",
+      "semester": "秋～冬",
+      "teacher": "中村　綾乃",
+      "department": "人文学研究科",
+      "target": "医歯薬",
+      "category": "ドイツ語"
+    },
+    {
+      "code": "192455",
+      "period": "水1",
+      "name": "ドイツ語初級Ⅱ",
+      "semester": "秋～冬",
+      "teacher": "井坂　ゆかり",
+      "department": "人文学研究科",
+      "target": "医歯薬",
+      "category": "ドイツ語"
+    },
+    {
+      "code": "192457",
+      "period": "水1",
+      "name": "ドイツ語初級Ⅱ",
+      "semester": "秋～冬",
+      "teacher": "永谷　麻衣子",
+      "department": "マルチリンガル教育センター",
+      "target": "医歯薬",
+      "category": "ドイツ語"
+    },
+    {
+      "code": "192459",
+      "period": "水1",
+      "name": "ドイツ語初級Ⅱ",
+      "semester": "秋～冬",
+      "teacher": "西村　知紘",
+      "department": "マルチリンガル教育センター",
+      "target": "医歯薬",
+      "category": "ドイツ語"
+    },
+    {
+      "code": "192461",
+      "period": "水1",
+      "name": "ドイツ語初級Ⅱ",
+      "semester": "秋～冬",
+      "teacher": "永谷　益朗",
+      "department": "マルチリンガル教育センター",
+      "target": "医歯薬",
+      "category": "ドイツ語"
+    },
+    {
+      "code": "192463",
+      "period": "水1",
+      "name": "ドイツ語初級Ⅱ",
+      "semester": "秋～冬",
+      "teacher": "江川　英明",
+      "department": "マルチリンガル教育センター",
+      "target": "医歯薬",
+      "category": "ドイツ語"
+    },
+    {
+      "code": "192465",
+      "period": "水1",
+      "name": "ドイツ語初級Ⅱ",
+      "semester": "秋～冬",
+      "teacher": "山田　真実",
+      "department": "マルチリンガル教育センター",
+      "target": "医歯薬",
+      "category": "ドイツ語"
+    },
+    {
+      "code": "192493",
+      "period": "木1",
+      "name": "ドイツ語初級Ⅱ",
+      "semester": "秋～冬",
+      "teacher": "西出　佳詩子",
+      "department": "人文学研究科",
+      "target": "工（理・電）",
+      "category": "ドイツ語"
+    },
+    {
+      "code": "192495",
+      "period": "木1",
+      "name": "ドイツ語初級Ⅱ",
+      "semester": "秋～冬",
+      "teacher": "福田　覚",
+      "department": "人文学研究科",
+      "target": "工（理・電）",
+      "category": "ドイツ語"
+    },
+    {
+      "code": "192497",
+      "period": "木1",
+      "name": "ドイツ語初級Ⅱ",
+      "semester": "秋～冬",
+      "teacher": "村上　八重子",
+      "department": "マルチリンガル教育センター",
+      "target": "工（理・電）",
+      "category": "ドイツ語"
+    },
+    {
+      "code": "192499",
+      "period": "木1",
+      "name": "ドイツ語初級Ⅱ",
+      "semester": "秋～冬",
+      "teacher": "津田　保夫",
+      "department": "人文学研究科",
+      "target": "工（理・電）",
+      "category": "ドイツ語"
+    },
+    {
+      "code": "192501",
+      "period": "木1",
+      "name": "ドイツ語初級Ⅱ",
+      "semester": "秋～冬",
+      "teacher": "永谷　益朗",
+      "department": "マルチリンガル教育センター",
+      "target": "工（理・電）",
+      "category": "ドイツ語"
+    },
+    {
+      "code": "192483",
+      "period": "金2",
+      "name": "ドイツ語初級Ⅱ",
+      "semester": "秋～冬",
+      "teacher": "山本　佳樹",
+      "department": "人文学研究科",
+      "target": "工（然・地・環）",
+      "category": "ドイツ語"
+    },
+    {
+      "code": "192485",
+      "period": "金2",
+      "name": "ドイツ語初級Ⅱ",
+      "semester": "秋～冬",
+      "teacher": "津田　保夫",
+      "department": "人文学研究科",
+      "target": "工（然・地・環）",
+      "category": "ドイツ語"
+    },
+    {
+      "code": "192487",
+      "period": "金2",
+      "name": "ドイツ語初級Ⅱ",
+      "semester": "秋～冬",
+      "teacher": "井坂　ゆかり",
+      "department": "人文学研究科",
+      "target": "工（然・地・環）",
+      "category": "ドイツ語"
+    },
+    {
+      "code": "192489",
+      "period": "金2",
+      "name": "ドイツ語初級Ⅱ",
+      "semester": "秋～冬",
+      "teacher": "中村　綾乃",
+      "department": "人文学研究科",
+      "target": "工（然・地・環）",
+      "category": "ドイツ語"
+    },
+    {
+      "code": "192491",
+      "period": "金2",
+      "name": "ドイツ語初級Ⅱ",
+      "semester": "秋～冬",
+      "teacher": "福田　覚",
+      "department": "人文学研究科",
+      "target": "工（然・地・環）",
+      "category": "ドイツ語"
+    },
+    {
+      "code": "192441",
+      "period": "金4",
+      "name": "ドイツ語初級Ⅱ",
+      "semester": "秋～冬",
+      "teacher": "福田　覚",
+      "department": "人文学研究科",
+      "target": "人文",
+      "category": "ドイツ語"
+    },
+    {
+      "code": "192443",
+      "period": "金4",
+      "name": "ドイツ語初級Ⅱ",
+      "semester": "秋～冬",
+      "teacher": "津田　保夫",
+      "department": "人文学研究科",
+      "target": "人文",
+      "category": "ドイツ語"
+    },
+    {
+      "code": "192505",
+      "period": "火5",
+      "name": "ドイツ語初級Ⅱ＜再履修生のみ＞",
+      "semester": "秋～冬",
+      "teacher": "酒詰　悠太",
+      "department": "人文学研究科",
+      "target": "全学部（外を除く）",
+      "category": "ドイツ語"
+    },
+    {
+      "code": "192509",
+      "period": "火5",
+      "name": "ドイツ語初級Ⅰ＜再履修生のみ＞",
+      "semester": "秋～冬",
+      "teacher": "山本　佳樹",
+      "department": "人文学研究科",
+      "target": "全学部（外を除く）",
+      "category": "ドイツ語"
+    },
+    {
+      "code": "194443",
+      "period": "月2",
+      "name": "ドイツ語中級",
+      "semester": "秋～冬",
+      "teacher": "フェーゲル ベルトリンデ",
+      "department": "マルチリンガル教育センター",
+      "target": "文",
+      "category": "ドイツ語"
+    },
+    {
+      "code": "194445",
+      "period": "月2",
+      "name": "ドイツ語中級",
+      "semester": "秋～冬",
+      "teacher": "江川　英明",
+      "department": "マルチリンガル教育センター",
+      "target": "文",
+      "category": "ドイツ語"
+    },
+    {
+      "code": "194447",
+      "period": "火2",
+      "name": "ドイツ語中級",
+      "semester": "秋～冬",
+      "teacher": "福田　覚",
+      "department": "人文学研究科",
+      "target": "法経",
+      "category": "ドイツ語"
+    },
+    {
+      "code": "194449",
+      "period": "火2",
+      "name": "ドイツ語中級",
+      "semester": "秋～冬",
+      "teacher": "西出　佳詩子",
+      "department": "人文学研究科",
+      "target": "法経",
+      "category": "ドイツ語"
+    },
+    {
+      "code": "194451",
+      "period": "火2",
+      "name": "ドイツ語中級",
+      "semester": "秋～冬",
+      "teacher": "フェーゲル ベルトリンデ",
+      "department": "マルチリンガル教育センター",
+      "target": "法経",
+      "category": "ドイツ語"
+    },
+    {
+      "code": "194453",
+      "period": "火2",
+      "name": "ドイツ語中級",
+      "semester": "秋～冬",
+      "teacher": "アウマン オリバー",
+      "department": "マルチリンガル教育センター",
+      "target": "法経",
+      "category": "ドイツ語"
+    },
+    {
+      "code": "194455",
+      "period": "月5",
+      "name": "ドイツ語中級＜再履修生のみ＞（吹田開講）",
+      "semester": "秋～冬",
+      "teacher": "アウマン オリバー",
+      "department": "マルチリンガル教育センター",
+      "target": "全学部（外を除く）",
+      "category": "ドイツ語"
+    },
+    {
+      "code": "194457",
+      "period": "水5",
+      "name": "ドイツ語中級＜再履修生のみ＞",
+      "semester": "秋～冬",
+      "teacher": "井坂　ゆかり",
+      "department": "人文学研究科",
+      "target": "全学部（外を除く）",
+      "category": "ドイツ語"
+    },
+    {
+      "code": "194461",
+      "period": "火5",
+      "name": "ドイツ語上級",
+      "semester": "秋～冬",
+      "teacher": "ヴァスマー ヨハネス",
+      "department": "人文学研究科",
+      "target": "全学部（外を除く）",
+      "category": "ドイツ語"
+    }
+  ]
+}

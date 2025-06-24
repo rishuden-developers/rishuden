@@ -1,0 +1,234 @@
+{
+  "category": "健康・スポーツ教育科目",
+  "courses": [
+    {
+      "code": "137341",
+      "period": "月1",
+      "name": "スマート・スポーツリテラシー",
+      "semester": "秋～冬",
+      "instructor": "中田　研",
+      "department": "医学系研究科",
+      "target": "全学部",
+      "category": "健康・スポーツ教育科目"
+    },
+    {
+      "code": "137342",
+      "period": "月1",
+      "name": "スマート・ヘルスリテラシー",
+      "semester": "秋～冬",
+      "instructor": "金本　隆司",
+      "department": "医学系研究科",
+      "target": "全学部",
+      "category": "健康・スポーツ教育科目"
+    },
+    {
+      "code": "137344",
+      "period": "月2",
+      "name": "スマート・スポーツリテラシー",
+      "semester": "秋～冬",
+      "instructor": "松尾　知之",
+      "department": "医学系研究科",
+      "target": "全学部",
+      "category": "健康・スポーツ教育科目"
+    },
+    {
+      "code": "137345",
+      "period": "月2",
+      "name": "スマート・ヘルスリテラシー",
+      "semester": "秋～冬",
+      "instructor": "金本　隆司",
+      "department": "医学系研究科",
+      "target": "全学部",
+      "category": "健康・スポーツ教育科目"
+    },
+    {
+      "code": "137347",
+      "period": "月3",
+      "name": "スマート・スポーツリテラシー",
+      "semester": "秋～冬",
+      "instructor": "小見山　高明",
+      "department": "全学教育推進機構",
+      "target": "全学部",
+      "category": "健康・スポーツ教育科目"
+    },
+    {
+      "code": "137348",
+      "period": "月3",
+      "name": "スマート・ヘルスリテラシー",
+      "semester": "秋～冬",
+      "instructor": "近田　彰治",
+      "department": "医学系研究科",
+      "target": "全学部"
+    },
+    {
+      "code": "137350",
+      "period": "火1",
+      "name": "スマート・スポーツリテラシー",
+      "semester": "秋～冬",
+      "instructor": "難波　秀行",
+      "department": "全学教育推進機構",
+      "target": "全学部",
+      "category": "健康・スポーツ教育科目"
+    },
+    {
+      "code": "137351",
+      "period": "火1",
+      "name": "スマート・ヘルスリテラシー",
+      "semester": "秋～冬",
+      "instructor": "七五三木　聡",
+      "department": "全学教育推進機構",
+      "target": "全学部",
+      "category": "健康・スポーツ教育科目"
+    },
+    {
+      "code": "137353",
+      "period": "火2",
+      "name": "スマート・スポーツリテラシー",
+      "semester": "秋～冬",
+      "instructor": "島本　英樹",
+      "department": "全学教育推進機構",
+      "target": "全学部",
+      "category": "健康・スポーツ教育科目"
+    },
+    {
+      "code": "137354",
+      "period": "火2",
+      "name": "スマート・ヘルスリテラシー",
+      "semester": "秋～冬",
+      "instructor": "栁澤　琢史",
+      "department": "医学系研究科",
+      "target": "全学部",
+      "category": "健康・スポーツ教育科目"
+    },
+    {
+      "code": "137356",
+      "period": "火3",
+      "name": "スマート・スポーツリテラシー",
+      "semester": "秋～冬",
+      "instructor": "小笠原　一生",
+      "department": "医学系研究科",
+      "target": "全学部",
+      "category": "健康・スポーツ教育科目"
+    },
+    {
+      "code": "137357",
+      "period": "火3",
+      "name": "スマート・ヘルスリテラシー",
+      "semester": "秋～冬",
+      "instructor": "小見山　高明",
+      "department": "全学教育推進機構",
+      "target": "全学部",
+      "category": "健康・スポーツ教育科目"
+    },
+    {
+      "code": "137359",
+      "period": "木1",
+      "name": "スマート・スポーツリテラシー",
+      "semester": "秋～冬",
+      "instructor": "難波　秀行",
+      "department": "全学教育推進機構",
+      "target": "全学部",
+      "category": "健康・スポーツ教育科目"
+    },
+    {
+      "code": "137360",
+      "period": "木1",
+      "name": "スマート・ヘルスリテラシー",
+      "semester": "秋～冬",
+      "instructor": "山川　学志",
+      "department": "医学系研究科",
+      "target": "全学部",
+      "category": "健康・スポーツ教育科目"
+    },
+    {
+      "code": "137362",
+      "period": "木2",
+      "name": "スマート・スポーツリテラシー",
+      "semester": "秋～冬",
+      "instructor": "近田　彰治",
+      "department": "医学系研究科",
+      "target": "全学部",
+      "category": "健康・スポーツ教育科目"
+    },
+    {
+      "code": "137363",
+      "period": "木2",
+      "name": "スマート・ヘルスリテラシー",
+      "semester": "秋～冬",
+      "instructor": "横山　光樹",
+      "department": "医学系研究科",
+      "target": "全学部",
+      "category": "健康・スポーツ教育科目"
+    },
+    {
+      "code": "137365",
+      "period": "木3",
+      "name": "スマート・スポーツリテラシー",
+      "semester": "秋～冬",
+      "instructor": "青山　千紗",
+      "department": "健康スポーツ科学教育研究環",
+      "target": "全学部",
+      "category": "健康・スポーツ教育科目"
+    },
+    {
+      "code": "137366",
+      "period": "木3",
+      "name": "スマート・ヘルスリテラシー",
+      "semester": "秋～冬",
+      "instructor": "山川　学志",
+      "department": "医学系研究科",
+      "target": "全学部",
+      "category": "健康・スポーツ教育科目"
+    },
+    {
+      "code": "137368",
+      "period": "金2",
+      "name": "スマート・スポーツリテラシー",
+      "semester": "秋～冬",
+      "instructor": "青山　千紗",
+      "department": "健康スポーツ科学教育研究環",
+      "target": "全学部",
+      "category": "健康・スポーツ教育科目"
+    },
+    {
+      "code": "137369",
+      "period": "金2",
+      "name": "スマート・ヘルスリテラシー",
+      "semester": "秋～冬",
+      "instructor": "内藤　智之",
+      "department": "医学系研究科",
+      "target": "全学部",
+      "category": "健康・スポーツ教育科目"
+    },
+    {
+      "code": "137371",
+      "period": "金3",
+      "name": "スマート・スポーツリテラシー",
+      "semester": "秋～冬",
+      "instructor": "小笠原　一生",
+      "department": "医学系研究科",
+      "target": "全学部",
+      "category": "健康・スポーツ教育科目"
+    },
+    {
+      "code": "137372",
+      "period": "金3",
+      "name": "スマート・ヘルスリテラシー",
+      "semester": "秋～冬",
+      "instructor": "中谷　大作",
+      "department": "健康スポーツ科学教育研究環",
+      "target": "全学部",
+      "category": "健康・スポーツ教育科目"
+    },
+    {
+      "code": "137374",
+      "period": "オンデマンド",
+      "name": "スマート・スポーツリテラシー",
+      "semester": "秋～冬",
+      "instructor": "七五三木　聡",
+      "department": "全学教育推進機構",
+      "target": "全学部",
+      "category": "健康・スポーツ教育科目"
+    }
+  ]
+}

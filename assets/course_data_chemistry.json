@@ -1,0 +1,235 @@
+{
+  "category": "化学",
+  "courses": [
+    {
+      "code": "137611",
+      "period": "月1",
+      "name": "基礎有機化学",
+      "semester": "秋～冬",
+      "instructor": "大洞　光司",
+      "department": "工学研究科",
+      "target": "工（然）",
+      "category": "化学"
+    },
+    {
+      "code": "137615",
+      "period": "月1",
+      "name": "基礎無機化学",
+      "semester": "秋～冬",
+      "instructor": "野尻　正樹",
+      "department": "理学研究科",
+      "target": "工（理1～125）",
+      "category": "化学"
+    },
+    {
+      "code": "137617",
+      "period": "月1",
+      "name": "基礎無機化学",
+      "semester": "秋～冬",
+      "instructor": "福田　貴光",
+      "department": "理学研究科",
+      "target": "工（理126～）",
+      "category": "化学"
+    },
+    {
+      "code": "137619",
+      "period": "月1",
+      "name": "基礎無機化学",
+      "semester": "秋～冬",
+      "instructor": "吉田　将己",
+      "department": "理学研究科",
+      "target": "基（電）・工（然）",
+      "category": "化学"
+    },
+    {
+      "code": "137621",
+      "period": "月1",
+      "name": "化学基礎論D",
+      "semester": "秋～冬",
+      "instructor": "上田　貴洋",
+      "department": "理学研究科",
+      "target": "理（物・生命（数・物））",
+      "category": "化学"
+    },
+    {
+      "code": "137623",
+      "period": "月1",
+      "name": "化学基礎論Ｂ",
+      "semester": "秋～冬",
+      "instructor": "寺尾　憲",
+      "department": "理学研究科",
+      "target": "理（化）",
+      "category": "化学"
+    },
+    {
+      "code": "137625",
+      "period": "月1",
+      "name": "化学基礎論Ｂ",
+      "semester": "秋～冬",
+      "instructor": "井上　正志",
+      "department": "理学研究科",
+      "target": "理（生物・生命（化・生）・数）",
+      "category": "化学"
+    },
+    {
+      "code": "137633",
+      "period": "月1",
+      "name": "化学熱力学",
+      "semester": "秋～冬",
+      "instructor": "中野　元裕",
+      "department": "理学研究科",
+      "target": "薬",
+      "category": "化学"
+    },
+    {
+      "code": "137635",
+      "period": "月4",
+      "name": "化学基礎論Ｂ",
+      "semester": "秋～冬",
+      "instructor": "川口　辰也",
+      "department": "理学研究科",
+      "target": "工（電）",
+      "category": "化学"
+    },
+    {
+      "code": "137639",
+      "period": "火2",
+      "name": "化学基礎論Ｂ",
+      "semester": "秋～冬",
+      "instructor": "中澤　康浩",
+      "department": "理学研究科",
+      "target": "医（看）",
+      "category": "化学"
+    },
+    {
+      "code": "137643",
+      "period": "火2",
+      "name": "基礎有機化学",
+      "semester": "秋～冬",
+      "instructor": "蓑島　維文",
+      "department": "工学研究科",
+      "target": "医（検）・歯",
+      "category": "化学"
+    },
+    {
+      "code": "137673",
+      "period": "水3～5",
+      "name": "基礎化学実験",
+      "semester": "秋",
+      "instructor": "山口　和也",
+      "department": "全学教育推進機構",
+      "target": "工（理161～）",
+      "category": "化学"
+    },
+    {
+      "code": "137679",
+      "period": "水3～5",
+      "name": "基礎化学実験",
+      "semester": "冬",
+      "instructor": "山口　和也",
+      "department": "全学教育推進機構",
+      "target": "工（理1～160）",
+      "category": "化学"
+    },
+    {
+      "code": "137645",
+      "period": "木2",
+      "name": "化学基礎論Ｂ",
+      "semester": "秋～冬",
+      "instructor": "岡田　美智雄",
+      "department": "理学研究科",
+      "target": "工（理1～95）",
+      "category": "化学"
+    },
+    {
+      "code": "137647",
+      "period": "木2",
+      "name": "化学基礎論Ｂ",
+      "semester": "秋～冬",
+      "instructor": "川口　辰也",
+      "department": "理学研究科",
+      "target": "工（理96〜190)",
+      "category": "化学"
+    },
+    {
+      "code": "137648",
+      "period": "木2",
+      "name": "化学基礎論Ｂ",
+      "semester": "秋～冬",
+      "instructor": "宮久保　圭祐",
+      "department": "総合学術博物館",
+      "target": "工（理191〜・環)",
+      "category": "化学"
+    },
+    {
+      "code": "137655",
+      "period": "木3",
+      "name": "化学基礎論Ｂ",
+      "semester": "秋～冬",
+      "instructor": "井上　正志",
+      "department": "理学研究科",
+      "target": "工（然）",
+      "category": "化学"
+    },
+    {
+      "code": "137681",
+      "period": "木3～5",
+      "name": "基礎化学実験",
+      "semester": "冬",
+      "instructor": "山口　和也",
+      "department": "全学教育推進機構",
+      "target": "医（放・検）・歯・基（シ）",
+      "category": "化学"
+    },
+    {
+      "code": "137661",
+      "period": "金1",
+      "name": "化学熱力学",
+      "semester": "秋～冬",
+      "instructor": "中野　元裕",
+      "department": "理学研究科",
+      "target": "歯",
+      "category": "化学"
+    },
+    {
+      "code": "137663",
+      "period": "金1",
+      "name": "化学基礎論Ｂ",
+      "semester": "秋～冬",
+      "instructor": "圷　広樹",
+      "department": "理学研究科",
+      "target": "基（電1～52・情1～50）",
+      "category": "化学"
+    },
+    {
+      "code": "137665",
+      "period": "金1",
+      "name": "化学基礎論Ｂ",
+      "semester": "秋～冬",
+      "instructor": "谷口　正輝",
+      "department": "産業科学研究所",
+      "target": "基（電53～・情51～）",
+      "category": "化学"
+    },
+    {
+      "code": "137675",
+      "period": "金3～5",
+      "name": "基礎化学実験",
+      "semester": "秋",
+      "instructor": "山口　和也",
+      "department": "全学教育推進機構",
+      "target": "工（然1～160）",
+      "category": "化学"
+    },
+    {
+      "code": "137683",
+      "period": "金3～5",
+      "name": "基礎化学実験",
+      "semester": "冬",
+      "instructor": "山口　和也",
+      "department": "全学教育推進機構",
+      "target": "工（然161～・環）",
+      "category": "化学"
+    }
+  ]
+}

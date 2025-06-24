@@ -19,13 +19,20 @@ import 'providers/current_page_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'credit_explore_page.dart';
 import 'setting_page.dart';
+import 'data_upload_page.dart';
 
-class MainPage extends ConsumerWidget {
+class MainPage extends ConsumerStatefulWidget {
   final bool showLoginBonus;
 
-  MainPage({super.key, this.showLoginBonus = false});
+  const MainPage({super.key, this.showLoginBonus = false});
 
+  @override
+  ConsumerState<MainPage> createState() => _MainPageState();
+}
+
+class _MainPageState extends ConsumerState<MainPage> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  bool _hasShownLoginBonus = false;
 
   // park_page.dart から Drawer内のタイルを作成するメソッドを移植
   Widget _buildDrawerTile(IconData icon, String title, VoidCallback onTap) {
@@ -71,13 +78,16 @@ class MainPage extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    // ログインボーナス通知を表示
+  Widget build(BuildContext context) {
+    // ログインボーナス通知を表示（一度だけ）
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (showLoginBonus) {
+      if (widget.showLoginBonus && !_hasShownLoginBonus) {
+        setState(() {
+          _hasShownLoginBonus = true;
+        });
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('ログインボーナス！たこ焼きを1個獲得しました！'),
+            content: Text('ログインボーナス！ たこ焼きを 1個 獲得しました！'),
             duration: Duration(seconds: 3),
           ),
         );

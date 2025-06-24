@@ -512,21 +512,26 @@ class _CharacterQuestionPageState extends State<CharacterQuestionPage> {
       godScoreSum += norm[idx];
     }
     if (currentAnswersNonNull[11] == 0)
-      godScoreSum += norm[11] * 1.1; // 計画A 少し重視
+      godScoreSum += norm[11] * 1.3; // 計画A 重視（1.1→1.3）
     if (currentAnswersNonNull[13] == 1)
-      godScoreSum += norm[13] * 1.1; // 困難B 少し重視
-    godScoreSum += nonAttendanceScore * 1.2; // 真面目さ重視
+      godScoreSum += norm[13] * 1.2; // 困難B 少し重視（1.1→1.2）
+    godScoreSum += nonAttendanceScore * 1.5; // 真面目さ重視（1.2→1.5）
     if (currentAnswersNonNull[15] == 0)
-      godScoreSum += norm[15] * 1.1; // ゆる授業A 少し重視
+      godScoreSum += norm[15] * 1.2; // ゆる授業A 少し重視（1.1→1.2）
     if (currentAnswersNonNull[16] == 0 || currentAnswersNonNull[16] == 4)
-      godScoreSum += norm[16] * 1.2; // 価値観AorE 重視
+      godScoreSum += norm[16] * 1.3; // 価値観AorE 重視（1.2→1.3）
     if (currentAnswersNonNull[17] == 0)
-      godScoreSum += norm[17] * 1.1; // リスクA 少し重視
+      godScoreSum += norm[17] * 1.2; // リスクA 少し重視（1.1→1.2）
     if (currentAnswersNonNull[19] == 0 || currentAnswersNonNull[19] == 1)
-      godScoreSum += norm[19] * 1.1;
-    // 12項目。目標5%。閾値を調整 (例: 平均4.0で48点)
-    if (godScoreSum >= 48.0) {
-      // ★ 閾値を48に調整
+      godScoreSum += norm[19] * 1.2; // 自由時間AorB 少し重視（1.1→1.2）
+
+    // 追加の重み付け
+    godScoreSum += norm[6] * 0.3; // 集中力 追加ボーナス
+    godScoreSum += norm[8] * 0.2; // モチベーション 追加ボーナス
+
+    // 12項目。目標5%。閾値を調整 (48.0→40.0)
+    if (godScoreSum >= 40.0) {
+      // ★ 閾値を40に調整
       return "神";
     }
 

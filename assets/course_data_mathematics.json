@@ -1,0 +1,605 @@
+{
+  "category": "数学",
+  "courses": [
+    {
+      "code": "137401",
+      "period": "月3",
+      "name": "線形代数学概論",
+      "semester": "秋～冬",
+      "instructor": "武田　秀一郎",
+      "department": "理学研究科",
+      "target": "医（医）",
+      "category": "数学"
+    },
+    {
+      "code": "137403",
+      "period": "月3",
+      "name": "線形代数学入門",
+      "semester": "秋～冬",
+      "instructor": "吉永　正彦",
+      "department": "理学研究科",
+      "target": "人（1〜75）・外",
+      "category": "数学"
+    },
+    {
+      "code": "137405",
+      "period": "月3",
+      "name": "線形代数学入門",
+      "semester": "秋～冬",
+      "instructor": "髙橋　篤史",
+      "department": "理学研究科",
+      "target": "人（76〜）・外",
+      "category": "数学"
+    },
+    {
+      "code": "137407",
+      "period": "火1～2",
+      "name": "基礎解析学・同演義Ⅱ",
+      "semester": "秋～冬",
+      "instructor": "中村　誠",
+      "department": "情報科学研究科",
+      "target": "理（数）",
+      "category": "数学"
+    },
+    {
+      "code": "137409",
+      "period": "火1～2",
+      "name": "基礎解析学・同演義Ⅱ",
+      "semester": "秋～冬",
+      "instructor": "佐久間　紀佳",
+      "department": "理学研究科",
+      "target": "理（物・生命（数・物））",
+      "category": "数学"
+    },
+    {
+      "code": "137411",
+      "period": "火1～2",
+      "name": "基礎解析学・同演義Ⅱ",
+      "semester": "秋～冬",
+      "instructor": "平井　祐紀",
+      "department": "全学教育推進機構",
+      "target": "基（電1〜52）",
+      "category": "数学"
+    },
+    {
+      "code": "137413",
+      "period": "火1～2",
+      "name": "基礎解析学・同演義Ⅱ",
+      "semester": "秋～冬",
+      "instructor": "土居　伸一",
+      "department": "理学研究科",
+      "target": "基（電53〜）",
+      "category": "数学"
+    },
+    {
+      "code": "137415",
+      "period": "火1～2",
+      "name": "基礎解析学・同演義Ⅱ",
+      "semester": "秋～冬",
+      "instructor": "野場　啓",
+      "department": "理学研究科",
+      "target": "基（化）",
+      "category": "数学"
+    },
+    {
+      "code": "137417",
+      "period": "火1～2",
+      "name": "基礎解析学・同演義Ⅱ",
+      "semester": "秋～冬",
+      "instructor": "永見　誠二",
+      "department": "全学教育推進機構",
+      "target": "基（シ1〜58）",
+      "category": "数学"
+    },
+    {
+      "code": "137419",
+      "period": "火1～2",
+      "name": "基礎解析学・同演義Ⅱ",
+      "semester": "秋～冬",
+      "instructor": "菊池　和徳",
+      "department": "理学研究科",
+      "target": "基（シ59〜116）",
+      "category": "数学"
+    },
+    {
+      "code": "137421",
+      "period": "火1～2",
+      "name": "基礎解析学・同演義Ⅱ",
+      "semester": "秋～冬",
+      "instructor": "大野　浩司",
+      "department": "理学研究科",
+      "target": "基（シ117〜）",
+      "category": "数学"
+    },
+    {
+      "code": "137423",
+      "period": "火1～2",
+      "name": "基礎解析学・同演義Ⅱ",
+      "semester": "秋～冬",
+      "instructor": "石渡　通徳",
+      "department": "基礎工学研究科",
+      "target": "基（情）",
+      "category": "数学"
+    },
+    {
+      "code": "137425",
+      "period": "火2",
+      "name": "基礎解析学Ⅱ",
+      "semester": "秋～冬",
+      "instructor": "縄田　紀夫",
+      "department": "情報科学研究科",
+      "target": "理（化）",
+      "category": "数学"
+    },
+    {
+      "code": "137427",
+      "period": "火2",
+      "name": "基礎解析学Ⅱ",
+      "semester": "秋～冬",
+      "instructor": "未定",
+      "department": "理学研究科",
+      "target": "理（生物・生命（化・生））",
+      "category": "数学"
+    },
+    {
+      "code": "137437",
+      "period": "火3",
+      "name": "線形代数学Ⅱ",
+      "semester": "秋～冬",
+      "instructor": "後藤　竜司",
+      "department": "理学研究科",
+      "target": "工（理1〜62）",
+      "category": "数学"
+    },
+    {
+      "code": "137439",
+      "period": "火3",
+      "name": "線形代数学Ⅱ",
+      "semester": "秋～冬",
+      "instructor": "未定",
+      "department": "理学研究科",
+      "target": "工（理63〜123）",
+      "category": "数学"
+    },
+    {
+      "code": "137441",
+      "period": "火3",
+      "name": "線形代数学Ⅱ",
+      "semester": "秋～冬",
+      "instructor": "永見　誠二",
+      "department": "全学教育推進機構",
+      "target": "工（理124〜186）",
+      "category": "数学"
+    },
+    {
+      "code": "137443",
+      "period": "火3",
+      "name": "線形代数学Ⅱ",
+      "semester": "秋～冬",
+      "instructor": "矢野　孝次",
+      "department": "理学研究科",
+      "target": "工（理187〜）",
+      "category": "数学"
+    },
+    {
+      "code": "137429",
+      "period": "火3～4",
+      "name": "基礎解析学・同演義Ⅱ",
+      "semester": "秋～冬",
+      "instructor": "三口　雄大",
+      "department": "全学教育推進機構",
+      "target": "工（然1〜55）",
+      "category": "数学"
+    },
+    {
+      "code": "137431",
+      "period": "火3～4",
+      "name": "基礎解析学・同演義Ⅱ",
+      "semester": "秋～冬",
+      "instructor": "盛田　健彦",
+      "department": "全学教育推進機構",
+      "target": "工（然56〜110）",
+      "category": "数学"
+    },
+    {
+      "code": "137433",
+      "period": "火3～4",
+      "name": "基礎解析学・同演義Ⅱ",
+      "semester": "秋～冬",
+      "instructor": "上田　秀雄",
+      "department": "全学教育推進機構",
+      "target": "工（然111〜165）",
+      "category": "数学"
+    },
+    {
+      "code": "137435",
+      "period": "火3～4",
+      "name": "基礎解析学・同演義Ⅱ",
+      "semester": "秋～冬",
+      "instructor": "小林　雅子",
+      "department": "全学教育推進機構",
+      "target": "工（然166〜）",
+      "category": "数学"
+    },
+    {
+      "code": "137445",
+      "period": "火4",
+      "name": "線形代数学入門",
+      "semester": "秋～冬",
+      "instructor": "安田　健彦",
+      "department": "理学研究科",
+      "target": "医（看）・外",
+      "category": "数学"
+    },
+    {
+      "code": "137447",
+      "period": "火4",
+      "name": "線形代数学概論",
+      "semester": "秋～冬",
+      "instructor": "金　英子",
+      "department": "全学教育推進機構",
+      "target": "医（放・検）",
+      "category": "数学"
+    },
+    {
+      "code": "137449",
+      "period": "火4",
+      "name": "線形代数学概論",
+      "semester": "秋～冬",
+      "instructor": "渡部　隆夫",
+      "department": "理学研究科",
+      "target": "歯",
+      "category": "数学"
+    },
+    {
+      "code": "137451",
+      "period": "火4",
+      "name": "線形代数学概論",
+      "semester": "秋～冬",
+      "instructor": "小川　裕之",
+      "department": "理学研究科",
+      "target": "薬",
+      "category": "数学"
+    },
+    {
+      "code": "137453",
+      "period": "水3",
+      "name": "線形代数学Ⅱ",
+      "semester": "秋～冬",
+      "instructor": "縄田　紀夫",
+      "department": "情報科学研究科",
+      "target": "工（環）",
+      "category": "数学"
+    },
+    {
+      "code": "137455",
+      "period": "水3",
+      "name": "線形代数学Ⅱ",
+      "semester": "秋～冬",
+      "instructor": "三町　勝久",
+      "department": "情報科学研究科",
+      "target": "工（地1〜60）",
+      "category": "数学"
+    },
+    {
+      "code": "137457",
+      "period": "水3",
+      "name": "線形代数学Ⅱ",
+      "semester": "秋～冬",
+      "instructor": "矢野　祥士",
+      "department": "全学教育推進機構",
+      "target": "工（地61〜）",
+      "category": "数学"
+    },
+    {
+      "code": "137459",
+      "period": "水3～4",
+      "name": "基礎解析学・同演義Ⅱ",
+      "semester": "秋～冬",
+      "instructor": "髙尾　尚武",
+      "department": "全学教育推進機構",
+      "target": "工（電1〜63）",
+      "category": "数学"
+    },
+    {
+      "code": "137461",
+      "period": "水3～4",
+      "name": "基礎解析学・同演義Ⅱ",
+      "semester": "秋～冬",
+      "instructor": "川口　良",
+      "department": "全学教育推進機構",
+      "target": "工（電64〜126）",
+      "category": "数学"
+    },
+    {
+      "code": "137463",
+      "period": "水3～4",
+      "name": "基礎解析学・同演義Ⅱ",
+      "semester": "秋～冬",
+      "instructor": "水谷　治哉",
+      "department": "理学研究科",
+      "target": "工（電127〜）",
+      "category": "数学"
+    },
+    {
+      "code": "137465",
+      "period": "木1",
+      "name": "線形代数学Ⅱ",
+      "semester": "秋～冬",
+      "instructor": "茶碗谷　毅",
+      "department": "情報科学研究科",
+      "target": "基（電1〜52）",
+      "category": "数学"
+    },
+    {
+      "code": "137467",
+      "period": "木1",
+      "name": "線形代数学Ⅱ",
+      "semester": "秋～冬",
+      "instructor": "牛瀧　文宏",
+      "department": "全学教育推進機構",
+      "target": "基（電53〜）",
+      "category": "数学"
+    },
+    {
+      "code": "137469",
+      "period": "木1",
+      "name": "線形代数学Ⅱ",
+      "semester": "秋～冬",
+      "instructor": "若林　泰央",
+      "department": "情報科学研究科",
+      "target": "基（化）",
+      "category": "数学"
+    },
+    {
+      "code": "137471",
+      "period": "木1",
+      "name": "線形代数学Ⅱ",
+      "semester": "秋～冬",
+      "instructor": "関根　順",
+      "department": "基礎工学研究科",
+      "target": "基（情）",
+      "category": "数学"
+    },
+    {
+      "code": "137477",
+      "period": "木2",
+      "name": "線形代数学Ⅱ",
+      "semester": "秋～冬",
+      "instructor": "冨田　直人",
+      "department": "理学研究科",
+      "target": "理（化）",
+      "category": "数学"
+    },
+    {
+      "code": "137479",
+      "period": "木2",
+      "name": "線形代数学Ⅱ",
+      "semester": "秋～冬",
+      "instructor": "石田　政司",
+      "department": "理学研究科",
+      "target": "理（生物・生命（化・生））",
+      "category": "数学"
+    },
+    {
+      "code": "137481",
+      "period": "木2",
+      "name": "線形代数学Ⅱ",
+      "semester": "秋～冬",
+      "instructor": "西井　良徳",
+      "department": "理学研究科",
+      "target": "工（然1〜55）",
+      "category": "数学"
+    },
+    {
+      "code": "137483",
+      "period": "木2",
+      "name": "線形代数学Ⅱ",
+      "semester": "秋～冬",
+      "instructor": "庵原　隆雄",
+      "department": "理学研究科",
+      "target": "工（然56〜110）",
+      "category": "数学"
+    },
+    {
+      "code": "137485",
+      "period": "木2",
+      "name": "線形代数学Ⅱ",
+      "semester": "秋～冬",
+      "instructor": "牛瀧　文宏",
+      "department": "全学教育推進機構",
+      "target": "工（然111〜165）",
+      "category": "数学"
+    },
+    {
+      "code": "137487",
+      "period": "木2",
+      "name": "線形代数学Ⅱ",
+      "semester": "秋～冬",
+      "instructor": "梶原　康史",
+      "department": "全学教育推進機構",
+      "target": "工（然166〜）",
+      "category": "数学"
+    },
+    {
+      "code": "137473",
+      "period": "木2～3",
+      "name": "線形代数学・同演義Ⅱ",
+      "semester": "秋～冬",
+      "instructor": "大場　貴裕",
+      "department": "理学研究科",
+      "target": "理（数）",
+      "category": "数学"
+    },
+    {
+      "code": "137475",
+      "period": "木2～3",
+      "name": "線形代数学・同演義Ⅱ",
+      "semester": "秋～冬",
+      "instructor": "大川　新之介",
+      "department": "理学研究科",
+      "target": "理（物・生命（数・物））",
+      "category": "数学"
+    },
+    {
+      "code": "137509",
+      "period": "木3",
+      "name": "線形代数学入門",
+      "semester": "秋～冬",
+      "instructor": "藤田　健人",
+      "department": "理学研究科",
+      "target": "経（1〜80）",
+      "category": "数学"
+    },
+    {
+      "code": "137511",
+      "period": "木3",
+      "name": "線形代数学入門",
+      "semester": "秋～冬",
+      "instructor": "岩井　雅崇",
+      "department": "理学研究科",
+      "target": "経（81〜160）",
+      "category": "数学"
+    },
+    {
+      "code": "137513",
+      "period": "木3",
+      "name": "線形代数学入門",
+      "semester": "秋～冬",
+      "instructor": "内田　素夫",
+      "department": "理学研究科",
+      "target": "経（161〜）",
+      "category": "数学"
+    },
+    {
+      "code": "137495",
+      "period": "木3～4",
+      "name": "基礎解析学・同演義Ⅱ",
+      "semester": "秋～冬",
+      "instructor": "大久保　範彦",
+      "department": "全学教育推進機構",
+      "target": "工（理1〜62）",
+      "category": "数学"
+    },
+    {
+      "code": "137497",
+      "period": "木3～4",
+      "name": "基礎解析学・同演義Ⅱ",
+      "semester": "秋～冬",
+      "instructor": "杉田　洋",
+      "department": "全学教育推進機構",
+      "target": "工（理63〜123）",
+      "category": "数学"
+    },
+    {
+      "code": "137499",
+      "period": "木3～4",
+      "name": "基礎解析学・同演義Ⅱ",
+      "semester": "秋～冬",
+      "instructor": "德永　裕介",
+      "department": "全学教育推進機構",
+      "target": "工（理124〜186）",
+      "category": "数学"
+    },
+    {
+      "code": "137501",
+      "period": "木3～4",
+      "name": "基礎解析学・同演義Ⅱ",
+      "semester": "秋～冬",
+      "instructor": "原　靖浩",
+      "department": "理学研究科",
+      "target": "工（理187〜）",
+      "category": "数学"
+    },
+    {
+      "code": "137503",
+      "period": "木3～4",
+      "name": "基礎解析学・同演義Ⅱ",
+      "semester": "秋～冬",
+      "instructor": "林　晃平",
+      "department": "理学研究科",
+      "target": "工（環）",
+      "category": "数学"
+    },
+    {
+      "code": "137505",
+      "period": "木3～4",
+      "name": "基礎解析学・同演義Ⅱ",
+      "semester": "秋～冬",
+      "instructor": "澤田　晃一郎",
+      "department": "全学教育推進機構",
+      "target": "工（地1〜60）",
+      "category": "数学"
+    },
+    {
+      "code": "137507",
+      "period": "木3～4",
+      "name": "基礎解析学・同演義Ⅱ",
+      "semester": "秋～冬",
+      "instructor": "武田　好史",
+      "department": "全学教育推進機構",
+      "target": "工（地61〜）",
+      "category": "数学"
+    },
+    {
+      "code": "137489",
+      "period": "金3～4",
+      "name": "線形代数学・同演義Ⅱ",
+      "semester": "秋～冬",
+      "instructor": "田中　晴喜",
+      "department": "全学教育推進機構",
+      "target": "工（電1〜63）",
+      "category": "数学"
+    },
+    {
+      "code": "137491",
+      "period": "金3～4",
+      "name": "線形代数学・同演義Ⅱ",
+      "semester": "秋～冬",
+      "instructor": "日比　孝之",
+      "department": "全学教育推進機構",
+      "target": "工（電64〜126）",
+      "category": "数学"
+    },
+    {
+      "code": "137493",
+      "period": "金3～4",
+      "name": "線形代数学・同演義Ⅱ",
+      "semester": "秋～冬",
+      "instructor": "安井　弘一",
+      "department": "情報科学研究科",
+      "target": "工（電127〜）",
+      "category": "数学"
+    },
+    {
+      "code": "137515",
+      "period": "金3～4",
+      "name": "線形代数学・同演義Ⅱ",
+      "semester": "秋～冬",
+      "instructor": "宇野　勝博",
+      "department": "全学教育推進機構",
+      "target": "基（シ1〜58）",
+      "category": "数学"
+    },
+    {
+      "code": "137517",
+      "period": "金3～4",
+      "name": "線形代数学・同演義Ⅱ",
+      "semester": "秋～冬",
+      "instructor": "真鍋　征秀",
+      "department": "全学教育推進機構",
+      "target": "基（シ59〜116）",
+      "category": "数学"
+    },
+    {
+      "code": "137519",
+      "period": "金3～4",
+      "name": "線形代数学・同演義Ⅱ",
+      "semester": "秋～冬",
+      "instructor": "東谷　章弘",
+      "department": "情報科学研究科",
+      "target": "基（シ117〜）",
+      "category": "数学"
+    }
+  ]
+}

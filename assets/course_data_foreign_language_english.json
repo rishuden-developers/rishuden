@@ -1,0 +1,96 @@
+{
+  "category": "英語",
+  "courses": [
+    {
+      "code": "194001",
+      "period": "月1",
+      "name": "総合英語（Liberal Arts & Sciences）",
+      "semester": "秋～冬",
+      "teacher": "楢和　千春",
+      "department": "マルチリンガル教育センター",
+      "target": "文理（数・物）",
+      "category": "英語"
+    },
+    {
+      "code": "194003",
+      "period": "月1",
+      "name": "総合英語（Content-based English）",
+      "semester": "秋～冬",
+      "teacher": "田畑　智司",
+      "department": "人文学研究科",
+      "target": "文理（数・物）",
+      "category": "英語"
+    },
+    {
+      "code": "194005",
+      "period": "月1",
+      "name": "総合英語（Liberal Arts & Sciences）",
+      "semester": "秋～冬",
+      "teacher": "鈴木　大介",
+      "department": "人文学研究科",
+      "target": "文理（数・物）",
+      "category": "英語"
+    },
+    {
+      "code": "194007",
+      "period": "月1",
+      "name": "総合英語（Liberal Arts & Sciences）",
+      "semester": "秋～冬",
+      "teacher": "西澤　裕一",
+      "department": "マルチリンガル教育センター",
+      "target": "文理（数・物）",
+      "category": "英語"
+    },
+    {
+      "code": "194009",
+      "period": "月1",
+      "name": "総合英語（Performance Workshop）",
+      "semester": "秋～冬",
+      "teacher": "マリク　ルーク",
+      "department": "マルチリンガル教育センター",
+      "target": "文理（数・物）",
+      "category": "英語"
+    },
+    {
+      "code": "194011",
+      "period": "月1",
+      "name": "総合英語（Performance Workshop）",
+      "semester": "秋～冬",
+      "teacher": "サンフォ　モハマドゥ　バシル　ジャン　バティスト",
+      "department": "マルチリンガル教育センター",
+      "target": "文理（数・物）",
+      "category": "英語"
+    },
+    {
+      "code": "194013",
+      "period": "月1",
+      "name": "総合英語（Performance Workshop）",
+      "semester": "秋～冬",
+      "teacher": "ヘンウッド　ジェイソン",
+      "department": "マルチリンガル教育センター",
+      "target": "文理（数・物）",
+      "category": "英語"
+    },
+    {
+      "code": "194015",
+      "period": "月1",
+      "name": "総合英語（Liberal Arts & Sciences）",
+      "semester": "秋～冬",
+      "teacher": "デイヴィス　恵美",
+      "department": "マルチリンガル教育センター",
+      "target": "文理（数・物）",
+      "category": "英語"
+    },
+    {
+      "code": "194017",
+      "period": "月1",
+      "name": "総合英語（Liberal Arts & Sciences）",
+      "semester": "秋～冬",
+      "teacher": "成田　修司",
+      "department": "マルチリンガル教育センター",
+      "target": "文理（数・物）",
+      "category": "英語"
+    }
+    // ... (省略: 他の英語科目も同様の形式で続く)
+  ]
+}

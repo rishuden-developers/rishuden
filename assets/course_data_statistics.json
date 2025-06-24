@@ -1,0 +1,85 @@
+{
+  "category": "統計学",
+  "courses": [
+    {
+      "code": "137389",
+      "period": "月2",
+      "name": "統計学Ｃ-Ⅱ",
+      "semester": "秋～冬",
+      "instructor": "寺田　吉壱",
+      "department": "基礎工学研究科",
+      "target": "工（地）",
+      "category": "統計学"
+    },
+    {
+      "code": "137391",
+      "period": "火4",
+      "name": "統計学Ｃ-Ⅱ",
+      "semester": "秋～冬",
+      "instructor": "鈴木　讓",
+      "department": "基礎工学研究科",
+      "target": "基（情）",
+      "category": "統計学"
+    },
+    {
+      "code": "137387",
+      "period": "水3",
+      "name": "統計学Ｃ-Ⅱ",
+      "semester": "秋～冬",
+      "instructor": "田中　冬彦",
+      "department": "全学教育推進機構",
+      "target": "工（然）・基（シ）",
+      "category": "統計学"
+    },
+    {
+      "code": "137385",
+      "period": "木2",
+      "name": "統計学Ｂ-Ⅱ",
+      "semester": "秋～冬",
+      "instructor": "武田　好史",
+      "department": "全学教育推進機構",
+      "target": "医（医）・医（看）・歯",
+      "category": "統計学"
+    },
+    {
+      "code": "138115",
+      "period": "木2",
+      "name": "統計学Ｂ-Ⅱ",
+      "semester": "秋～冬",
+      "instructor": "野島　陽水",
+      "department": "数理・データ科学教育研究センター",
+      "target": "理（生物・生命（化・生）） ※2年次",
+      "category": "統計学"
+    },
+    {
+      "code": "137381",
+      "period": "金2",
+      "name": "統計学Ａ-Ⅱ",
+      "semester": "秋～冬",
+      "instructor": "山本　倫生",
+      "department": "人間科学研究科",
+      "target": "人",
+      "category": "統計学"
+    },
+    {
+      "code": "137383",
+      "period": "金2",
+      "name": "統計学Ａ-Ⅱ",
+      "semester": "秋～冬",
+      "instructor": "村上　幸史",
+      "department": "全学教育推進機構",
+      "target": "文・外",
+      "category": "統計学"
+    },
+    {
+      "code": "138113",
+      "period": "金3",
+      "name": "統計学Ｃ-Ⅱ",
+      "semester": "秋～冬",
+      "instructor": "高畠　哲也",
+      "department": "基礎工学研究科",
+      "target": "理（物・化・生命（数・物）） ※2年次",
+      "category": "統計学"
+    }
+  ]
+}

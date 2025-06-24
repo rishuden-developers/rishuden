@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'main_page.dart';
 import 'character_question_page.dart';
 import 'package:intl/intl.dart';
+import 'welcome_page.dart';
 
 class UserDataChecker extends StatefulWidget {
   const UserDataChecker({super.key});
@@ -63,8 +64,8 @@ class _UserDataCheckerState extends State<UserDataChecker> {
     final user = FirebaseAuth.instance.currentUser;
 
     if (user == null) {
-      // これは基本的には起こらないはず
-      return const Scaffold(body: Center(child: Text('エラー: ユーザーがいません')));
+      // ユーザーがいない場合はウェルカムページにリダイレクト
+      return const WelcomePage();
     }
 
     // ボーナスチェック中はローディング表示

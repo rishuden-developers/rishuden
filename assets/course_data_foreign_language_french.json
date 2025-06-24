@@ -1,0 +1,26 @@
+{
+  "category": "その他外国語",
+  "courses": [
+    {
+      "code": "192445",
+      "period": "火1",
+      "name": "ドイツ語初級Ⅰ",
+      "semester": "秋～冬",
+      "teacher": "村上　八重子",
+      "department": "マルチリンガル教育センター",
+      "target": "法経",
+      "category": "ドイツ語"
+    },
+    {
+      "code": "192571",
+      "day": "月",
+      "period": "1",
+      "name": "ロシア語初級Ⅰ",
+      "semester": "秋～冬",
+      "instructor": "須佐　多恵",
+      "department": "マルチリンガル教育センター",
+      "faculty": "人文",
+      "category": "その他外国語"
+    }
+  ]
+}

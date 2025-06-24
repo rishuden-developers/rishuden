@@ -1,0 +1,186 @@
+{
+  "category": "アドヴァンスト・セミナー",
+  "semester": "秋・冬学期",
+  "courses": [
+    {
+      "code": "137757",
+      "day": "月",
+      "period": "5",
+      "name": "学術的文章の作法",
+      "instructor": "堀　一成",
+      "department": "全学教育推進機構",
+      "category": "アドヴァンスト・セミナー"
+    },
+    {
+      "code": "137801",
+      "day": "月",
+      "period": "5",
+      "name": "多文化コミュニケーションセミナー II ─科学リテラシーと科学コミュニケーション─",
+      "instructor": "岡本　紗知",
+      "department": "国際教育交流センター",
+      "category": "アドヴァンスト・セミナー"
+    },
+    {
+      "code": "137839",
+      "day": "月",
+      "period": "5",
+      "name": "動物の行動学",
+      "instructor": "山田　一憲",
+      "department": "人間科学研究科",
+      "category": "アドヴァンスト・セミナー"
+    },
+    {
+      "code": "137847",
+      "day": "月",
+      "period": "5",
+      "name": "物理学の名著を読む",
+      "instructor": "浅野　建一",
+      "department": "全学教育推進機構",
+      "category": "アドヴァンスト・セミナー"
+    },
+    {
+      "code": "137803",
+      "day": "火",
+      "period": "5",
+      "name": "多文化コミュニケーションセミナー II ─国際協力と異文化理解　２─",
+      "instructor": "西村　謙一",
+      "department": "国際教育交流センター",
+      "category": "アドヴァンスト・セミナー"
+    },
+    {
+      "code": "137831",
+      "day": "火",
+      "period": "5",
+      "name": "データサイエンスによる課題解決入門",
+      "instructor": "田中　冬彦",
+      "department": "全学教育推進機構",
+      "category": "アドヴァンスト・セミナー"
+    },
+    {
+      "code": "137835",
+      "day": "火",
+      "period": "5",
+      "name": "ソーシャルソリューション未来体験ラボ ～ボード・カードゲームで人と社会を体感・創造～",
+      "instructor": "伊藤　武志",
+      "department": "社会ソリューションイニシアティブ",
+      "category": "アドヴァンスト・セミナー"
+    },
+    {
+      "code": "137811",
+      "day": "水",
+      "period": "2",
+      "name": "Introduction to International Education",
+      "instructor": "Sainbayar Gundsambuu",
+      "department": "インターナショナルカレッジ",
+      "category": "アドヴァンスト・セミナー"
+    },
+    {
+      "code": "137845",
+      "day": "水",
+      "period": "2",
+      "name": "広報の視点で磨く提案力と実践力",
+      "instructor": "坂口　愛沙",
+      "department": "全学教育推進機構",
+      "category": "アドヴァンスト・セミナー"
+    },
+    {
+      "code": "137805",
+      "day": "水",
+      "period": "5",
+      "name": "多文化コミュニケーションセミナー II ─世界の成り立ち、日本の成り立ち ２─",
+      "instructor": "大谷　晋也",
+      "department": "国際教育交流センター",
+      "category": "アドヴァンスト・セミナー"
+    },
+    {
+      "code": "137823",
+      "day": "水",
+      "period": "5",
+      "name": "試してわかる物理学入門",
+      "instructor": "堀　一成",
+      "department": "全学教育推進機構",
+      "category": "アドヴァンスト・セミナー"
+    },
+    {
+      "code": "137843",
+      "day": "木",
+      "period": "2",
+      "name": "キャリアデザインと公共哲学",
+      "instructor": "松尾　哲也",
+      "department": "人文学研究科",
+      "category": "アドヴァンスト・セミナー"
+    },
+    {
+      "code": "137759",
+      "day": "木",
+      "period": "3",
+      "name": "アカデミック・リテラシー入門",
+      "instructor": "浦田　悠",
+      "department": "全学教育推進機構",
+      "category": "アドヴァンスト・セミナー"
+    },
+    {
+      "code": "137813",
+      "day": "木",
+      "period": "4",
+      "name": "経営者と学ぶイノベーション/リーダーシップ",
+      "instructor": "北岡　康夫",
+      "department": "共創機構",
+      "category": "アドヴァンスト・セミナー"
+    },
+    {
+      "code": "137763",
+      "day": "金",
+      "period": "5",
+      "name": "コントラクトブリッジで考える力をつけよう",
+      "instructor": "福本　信次",
+      "department": "工学研究科",
+      "category": "アドヴァンスト・セミナー"
+    },
+    {
+      "code": "137753",
+      "day": "集中講義",
+      "period": "",
+      "name": "「囲碁」で論理的思考を養おう",
+      "instructor": "井元　秀剛",
+      "department": "大学院人文学研究科",
+      "category": "アドヴァンスト・セミナー"
+    },
+    {
+      "code": "137755",
+      "day": "集中講義",
+      "period": "",
+      "name": "オン・キャンパス・インターンシップ：総合商社のビジネス・キャリア・サステナビリティ",
+      "instructor": "松繁　寿和",
+      "department": "国際公共政策研究科",
+      "category": "アドヴァンスト・セミナー"
+    },
+    {
+      "code": "137797",
+      "day": "集中講義",
+      "period": "",
+      "name": "キャンパスデザインプロジェクト",
+      "instructor": "池内　祥見",
+      "department": "サステイナブルキャンパスオフィス",
+      "category": "アドヴァンスト・セミナー"
+    },
+    {
+      "code": "137825",
+      "day": "集中講義",
+      "period": "",
+      "name": "キャリアデザインと社会実装Ⅰ　～問いの創出～",
+      "instructor": "家島　明彦",
+      "department": "キャリアセンター",
+      "category": "アドヴァンスト・セミナー"
+    },
+    {
+      "code": "137841",
+      "day": "集中講義",
+      "period": "",
+      "name": "地域活動と対話２",
+      "instructor": "望月　直人",
+      "department": "キャンパスライフ健康支援・相談センター",
+      "category": "アドヴァンスト・セミナー"
+    }
+  ]
+}

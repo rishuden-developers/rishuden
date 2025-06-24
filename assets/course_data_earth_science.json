@@ -1,0 +1,35 @@
+{
+  "category": "地球科学",
+  "courses": [
+    {
+      "code": "137735",
+      "period": "水3～5",
+      "name": "基礎地学実験",
+      "semester": "秋",
+      "instructor": "福田　航平",
+      "department": "理学研究科",
+      "target": "理（生・数）",
+      "category": "地球科学"
+    },
+    {
+      "code": "137731",
+      "period": "木1",
+      "name": "宇宙地球科学Ⅰ",
+      "semester": "秋",
+      "instructor": "木村　淳",
+      "department": "理学研究科",
+      "target": "基（シ）",
+      "category": "地球科学"
+    },
+    {
+      "code": "137733",
+      "period": "木1",
+      "name": "宇宙地球科学Ⅱ",
+      "semester": "冬",
+      "instructor": "木村　淳",
+      "department": "理学研究科",
+      "target": "基（シ）",
+      "category": "地球科学"
+    }
+  ]
+}

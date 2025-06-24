@@ -1,0 +1,1025 @@
+{
+  "category": "基盤教養教育科目",
+  "semester": "秋・冬学期",
+  "courses": [
+    {
+      "code": "135049",
+      "day": "月",
+      "period": "1",
+      "category": "基盤教養教育科目",
+      "subcategory": "人文",
+      "name": "世界史の考え方",
+      "instructor": "多賀　良寛",
+      "department": "人文学研究科"
+    },
+    {
+      "code": "137063",
+      "day": "月",
+      "period": "1",
+      "category": "基盤教養教育科目",
+      "subcategory": "人文",
+      "name": "欧米の文化と社会を知るC",
+      "instructor": "青木　加奈子",
+      "department": "人文学研究科"
+    },
+    {
+      "code": "137096",
+      "day": "月",
+      "period": "1",
+      "category": "基盤教養教育科目",
+      "subcategory": "人文",
+      "name": "ちがいをたのしむ",
+      "instructor": "虫賀　幹華",
+      "department": "人文学研究科"
+    },
+    {
+      "code": "137157",
+      "day": "月",
+      "period": "1",
+      "category": "基盤教養教育科目",
+      "subcategory": "社会",
+      "name": "経済の世界",
+      "instructor": "生藤　昌子",
+      "department": "国際公共政策研究科"
+    },
+    {
+      "code": "135317",
+      "day": "月",
+      "period": "2",
+      "category": "基盤教養教育科目",
+      "subcategory": "社会",
+      "name": "Introduction to Social Psychology",
+      "instructor": "森尾　博昭",
+      "department": "インタナショナルカレッジ"
+    },
+    {
+      "code": "137009",
+      "day": "月",
+      "period": "2",
+      "category": "基盤教養教育科目",
+      "subcategory": "人文",
+      "name": "音楽学",
+      "instructor": "伊東　信宏",
+      "department": "人文学研究科"
+    },
+    {
+      "code": "137011",
+      "day": "月",
+      "period": "2",
+      "category": "基盤教養教育科目",
+      "subcategory": "人文",
+      "name": "演劇学",
+      "instructor": "中尾　薫",
+      "department": "人文学研究科"
+    },
+    {
+      "code": "137015",
+      "day": "月",
+      "period": "2",
+      "category": "基盤教養教育科目",
+      "subcategory": "人文",
+      "name": "日本文学の名作を読む",
+      "instructor": "北島　紬",
+      "department": "全学教育推進機構"
+    },
+    {
+      "code": "137021",
+      "day": "月",
+      "period": "2",
+      "category": "基盤教養教育科目",
+      "subcategory": "人文",
+      "name": "英米文学入門",
+      "instructor": "馬渕　恵里",
+      "department": "人文学研究科"
+    },
+    {
+      "code": "137049",
+      "day": "月",
+      "period": "2",
+      "category": "基盤教養教育科目",
+      "subcategory": "人文",
+      "name": "日本学の最前線",
+      "instructor": "畑中　小百合",
+      "department": "全学教育推進機構"
+    },
+    {
+      "code": "137079",
+      "day": "月",
+      "period": "2",
+      "category": "基盤教養教育科目",
+      "subcategory": "人文",
+      "name": "中東の文化と社会を知るC",
+      "instructor": "宮下　遼",
+      "department": "人文学研究科"
+    },
+    {
+      "code": "137129",
+      "day": "月",
+      "period": "2",
+      "category": "基盤教養教育科目",
+      "subcategory": "社会",
+      "name": "知的財産モラル",
+      "instructor": "岡本　健太郎",
+      "department": "法学研究科"
+    },
+    {
+      "code": "137155",
+      "day": "月",
+      "period": "2",
+      "category": "基盤教養教育科目",
+      "subcategory": "社会",
+      "name": "マクロ経済学の考え方",
+      "instructor": "生藤　昌子",
+      "department": "国際公共政策研究科"
+    },
+    {
+      "code": "135313",
+      "day": "月",
+      "period": "3",
+      "category": "基盤教養教育科目",
+      "subcategory": "人文",
+      "name": "Cross Cultural Psychology",
+      "instructor": "森尾　博昭",
+      "department": "インタナショナルカレッジ"
+    },
+    {
+      "code": "137024",
+      "day": "月",
+      "period": "3",
+      "category": "基盤教養教育科目",
+      "subcategory": "人文",
+      "name": "フランス文学入門",
+      "instructor": "山上　浩嗣",
+      "department": "人文学研究科"
+    },
+    {
+      "code": "137039",
+      "day": "月",
+      "period": "3",
+      "category": "基盤教養教育科目",
+      "subcategory": "人文",
+      "name": "中国古典入門",
+      "instructor": "草野　友子",
+      "department": "全学教育推進機構"
+    },
+    {
+      "code": "137145",
+      "day": "月",
+      "period": "3",
+      "category": "基盤教養教育科目",
+      "subcategory": "社会",
+      "name": "マクロ経済学の考え方",
+      "instructor": "祝迫　達郎",
+      "department": "経済学研究科"
+    },
+    {
+      "code": "137191",
+      "day": "月",
+      "period": "3",
+      "category": "基盤教養教育科目",
+      "subcategory": "総合",
+      "name": "現代文化を読み解く",
+      "instructor": "福島　可奈子",
+      "department": "人文学研究科"
+    },
+    {
+      "code": "137053",
+      "day": "月",
+      "period": "4",
+      "category": "基盤教養教育科目",
+      "subcategory": "人文",
+      "name": "アジアの文化と社会を知るC",
+      "instructor": "劉　文兵",
+      "department": "人文学研究科"
+    },
+    {
+      "code": "137059",
+      "day": "月",
+      "period": "4",
+      "category": "基盤教養教育科目",
+      "subcategory": "人文",
+      "name": "アフリカ言語文化研究入門",
+      "instructor": "未定",
+      "department": "人文学研究科"
+    },
+    {
+      "code": "137067",
+      "day": "月",
+      "period": "5",
+      "category": "基盤教養教育科目",
+      "subcategory": "人文",
+      "name": "欧米の文化と社会を知るE",
+      "instructor": "進藤　修一",
+      "department": "人文学研究科"
+    },
+    {
+      "code": "137077",
+      "day": "月",
+      "period": "5",
+      "category": "基盤教養教育科目",
+      "subcategory": "人文",
+      "name": "中東の文化と社会を知るB",
+      "instructor": "竹原　新",
+      "department": "人文学研究科"
+    },
+    {
+      "code": "137042",
+      "day": "火",
+      "period": "1",
+      "category": "基盤教養教育科目",
+      "subcategory": "人文",
+      "name": "世界史の考え方",
+      "instructor": "河上　麻由子",
+      "department": "人文学研究科"
+    },
+    {
+      "code": "137131",
+      "day": "火",
+      "period": "2",
+      "category": "基盤教養教育科目",
+      "subcategory": "社会",
+      "name": "知的財産モラル",
+      "instructor": "申　賢哲",
+      "department": "知的基盤総合センター"
+    },
+    {
+      "code": "135133",
+      "day": "火",
+      "period": "3",
+      "category": "社会",
+      "name": "法の世界",
+      "instructor": "林　智良",
+      "department": "法学研究科"
+    },
+    {
+      "code": "137135",
+      "day": "火",
+      "period": "3",
+      "category": "社会",
+      "name": "政治の世界",
+      "instructor": "中嶋　啓雄",
+      "department": "国際公共政策研究科"
+    },
+    {
+      "code": "137195",
+      "day": "火",
+      "period": "3",
+      "category": "総合",
+      "name": "遊牧民の文化と社会を知る",
+      "instructor": "今岡　良子",
+      "department": "人文学研究科"
+    },
+    {
+      "code": "135245",
+      "day": "火",
+      "period": "4",
+      "category": "総合",
+      "name": "共生学の話題",
+      "instructor": "佐伯　いく代",
+      "department": "人間科学研究科"
+    },
+    {
+      "code": "137147",
+      "day": "火",
+      "period": "4",
+      "category": "社会",
+      "name": "ミクロ経済学の考え方",
+      "instructor": "石黒　真吾",
+      "department": "経済学研究科"
+    },
+    {
+      "code": "137161",
+      "day": "火",
+      "period": "4",
+      "category": "社会",
+      "name": "経済現象を読み解く",
+      "instructor": "TSERENKHUU TSELMUUN",
+      "department": "社会経済研究所"
+    },
+    {
+      "code": "137253",
+      "day": "火",
+      "period": "5",
+      "category": "総合",
+      "name": "震災の知・復興の知",
+      "instructor": "中村　征樹",
+      "department": "全学教育推進機構"
+    },
+    {
+      "code": "137262",
+      "day": "火",
+      "period": "5",
+      "category": "総合",
+      "name": "放射線の自然科学、社会学、人文学",
+      "instructor": "藤原　智子",
+      "department": "放射線科学基盤機構"
+    },
+    {
+      "code": "137055",
+      "day": "火",
+      "period": "5",
+      "category": "基盤教養教育科目",
+      "subcategory": "人文",
+      "name": "アジアの文化と社会を知るD",
+      "instructor": "宮脇　聡史",
+      "department": "人文学研究科"
+    },
+    {
+      "code": "137061",
+      "day": "火",
+      "period": "5",
+      "category": "基盤教養教育科目",
+      "subcategory": "人文",
+      "name": "ユーラシアの文化と社会を知るB",
+      "instructor": "大澤　孝",
+      "department": "人文学研究科"
+    },
+    {
+      "code": "137167",
+      "day": "火",
+      "period": "5",
+      "category": "自然",
+      "name": "現代数学の基礎",
+      "instructor": "森山　知則",
+      "department": "理学研究科"
+    },
+    {
+      "code": "137197",
+      "day": "火",
+      "period": "5",
+      "category": "総合",
+      "name": "課題から考える知と社会のコミュニケーションデザイン",
+      "instructor": "ほんま　なほ",
+      "department": "ＣＯデザインセンター"
+    },
+    {
+      "code": "137199",
+      "day": "火",
+      "period": "6",
+      "category": "総合",
+      "name": "震災の知・復興の知",
+      "instructor": "中村　征樹",
+      "department": "全学教育推進機構"
+    },
+    {
+      "code": "137201",
+      "day": "火",
+      "period": "6",
+      "category": "総合",
+      "name": "放射線の自然科学、社会学、人文学",
+      "instructor": "藤原　智子",
+      "department": "放射線科学基盤機構"
+    },
+    {
+      "code": "137203",
+      "day": "火",
+      "period": "6",
+      "category": "総合",
+      "name": "課題から考える知と社会のコミュニケーションデザイン",
+      "instructor": "ほんま　なほ",
+      "department": "ＣＯデザインセンター"
+    },
+    {
+      "code": "137205",
+      "day": "水",
+      "period": "1",
+      "category": "基盤教養教育科目",
+      "subcategory": "人文",
+      "name": "世界史の考え方",
+      "instructor": "河上　麻由子",
+      "department": "人文学研究科"
+    },
+    {
+      "code": "137207",
+      "day": "水",
+      "period": "1",
+      "category": "基盤教養教育科目",
+      "subcategory": "人文",
+      "name": "欧米の文化と社会を知るC",
+      "instructor": "青木　加奈子",
+      "department": "人文学研究科"
+    },
+    {
+      "code": "137209",
+      "day": "水",
+      "period": "1",
+      "category": "基盤教養教育科目",
+      "subcategory": "人文",
+      "name": "ちがいをたのしむ",
+      "instructor": "虫賀　幹華",
+      "department": "人文学研究科"
+    },
+    {
+      "code": "137211",
+      "day": "水",
+      "period": "1",
+      "category": "社会",
+      "name": "経済の世界",
+      "instructor": "生藤　昌子",
+      "department": "国際公共政策研究科"
+    },
+    {
+      "code": "137213",
+      "day": "水",
+      "period": "2",
+      "category": "社会",
+      "name": "Introduction to Social Psychology",
+      "instructor": "森尾　博昭",
+      "department": "インタナショナルカレッジ"
+    },
+    {
+      "code": "137215",
+      "day": "水",
+      "period": "2",
+      "category": "基盤教養教育科目",
+      "subcategory": "人文",
+      "name": "音楽学",
+      "instructor": "伊東　信宏",
+      "department": "人文学研究科"
+    },
+    {
+      "code": "137217",
+      "day": "水",
+      "period": "2",
+      "category": "基盤教養教育科目",
+      "subcategory": "人文",
+      "name": "演劇学",
+      "instructor": "中尾　薫",
+      "department": "人文学研究科"
+    },
+    {
+      "code": "137219",
+      "day": "水",
+      "period": "2",
+      "category": "基盤教養教育科目",
+      "subcategory": "人文",
+      "name": "日本文学の名作を読む",
+      "instructor": "北島　紬",
+      "department": "全学教育推進機構"
+    },
+    {
+      "code": "137221",
+      "day": "水",
+      "period": "2",
+      "category": "基盤教養教育科目",
+      "subcategory": "人文",
+      "name": "英米文学入門",
+      "instructor": "馬渕　恵里",
+      "department": "人文学研究科"
+    },
+    {
+      "code": "137223",
+      "day": "水",
+      "period": "2",
+      "category": "基盤教養教育科目",
+      "subcategory": "人文",
+      "name": "日本学の最前線",
+      "instructor": "畑中　小百合",
+      "department": "全学教育推進機構"
+    },
+    {
+      "code": "137225",
+      "day": "水",
+      "period": "2",
+      "category": "基盤教養教育科目",
+      "subcategory": "人文",
+      "name": "中東の文化と社会を知るC",
+      "instructor": "宮下　遼",
+      "department": "人文学研究科"
+    },
+    {
+      "code": "137227",
+      "day": "水",
+      "period": "2",
+      "category": "社会",
+      "name": "知的財産モラル",
+      "instructor": "岡本　健太郎",
+      "department": "法学研究科"
+    },
+    {
+      "code": "137229",
+      "day": "水",
+      "period": "2",
+      "category": "社会",
+      "name": "マクロ経済学の考え方",
+      "instructor": "生藤　昌子",
+      "department": "国際公共政策研究科"
+    },
+    {
+      "code": "137231",
+      "day": "水",
+      "period": "3",
+      "category": "基盤教養教育科目",
+      "subcategory": "人文",
+      "name": "Cross Cultural Psychology",
+      "instructor": "森尾　博昭",
+      "department": "インタナショナルカレッジ"
+    },
+    {
+      "code": "137233",
+      "day": "水",
+      "period": "3",
+      "category": "基盤教養教育科目",
+      "subcategory": "人文",
+      "name": "フランス文学入門",
+      "instructor": "山上　浩嗣",
+      "department": "人文学研究科"
+    },
+    {
+      "code": "137235",
+      "day": "水",
+      "period": "3",
+      "category": "基盤教養教育科目",
+      "subcategory": "人文",
+      "name": "中国古典入門",
+      "instructor": "草野　友子",
+      "department": "全学教育推進機構"
+    },
+    {
+      "code": "137237",
+      "day": "水",
+      "period": "3",
+      "category": "社会",
+      "name": "マクロ経済学の考え方",
+      "instructor": "祝迫　達郎",
+      "department": "経済学研究科"
+    },
+    {
+      "code": "137239",
+      "day": "水",
+      "period": "3",
+      "category": "総合",
+      "name": "現代文化を読み解く",
+      "instructor": "福島　可奈子",
+      "department": "人文学研究科"
+    },
+    {
+      "code": "137241",
+      "day": "水",
+      "period": "4",
+      "category": "基盤教養教育科目",
+      "subcategory": "人文",
+      "name": "アジアの文化と社会を知るC",
+      "instructor": "劉　文兵",
+      "department": "人文学研究科"
+    },
+    {
+      "code": "137243",
+      "day": "水",
+      "period": "4",
+      "category": "基盤教養教育科目",
+      "subcategory": "人文",
+      "name": "アフリカ言語文化研究入門",
+      "instructor": "未定",
+      "department": "人文学研究科"
+    },
+    {
+      "code": "137245",
+      "day": "水",
+      "period": "5",
+      "category": "基盤教養教育科目",
+      "subcategory": "人文",
+      "name": "欧米の文化と社会を知るE",
+      "instructor": "進藤　修一",
+      "department": "人文学研究科"
+    },
+    {
+      "code": "137247",
+      "day": "水",
+      "period": "5",
+      "category": "基盤教養教育科目",
+      "subcategory": "人文",
+      "name": "中東の文化と社会を知るB",
+      "instructor": "竹原　新",
+      "department": "人文学研究科"
+    },
+    {
+      "code": "137249",
+      "day": "木",
+      "period": "1",
+      "category": "基盤教養教育科目",
+      "subcategory": "人文",
+      "name": "世界史の考え方",
+      "instructor": "河上　麻由子",
+      "department": "人文学研究科"
+    },
+    {
+      "code": "137251",
+      "day": "木",
+      "period": "1",
+      "category": "基盤教養教育科目",
+      "subcategory": "人文",
+      "name": "欧米の文化と社会を知るC",
+      "instructor": "青木　加奈子",
+      "department": "人文学研究科"
+    },
+    {
+      "code": "137253",
+      "day": "木",
+      "period": "1",
+      "category": "基盤教養教育科目",
+      "subcategory": "人文",
+      "name": "ちがいをたのしむ",
+      "instructor": "虫賀　幹華",
+      "department": "人文学研究科"
+    },
+    {
+      "code": "137255",
+      "day": "木",
+      "period": "1",
+      "category": "社会",
+      "name": "経済の世界",
+      "instructor": "生藤　昌子",
+      "department": "国際公共政策研究科"
+    },
+    {
+      "code": "137257",
+      "day": "木",
+      "period": "2",
+      "category": "社会",
+      "name": "Introduction to Social Psychology",
+      "instructor": "森尾　博昭",
+      "department": "インタナショナルカレッジ"
+    },
+    {
+      "code": "137259",
+      "day": "木",
+      "period": "2",
+      "category": "基盤教養教育科目",
+      "subcategory": "人文",
+      "name": "音楽学",
+      "instructor": "伊東　信宏",
+      "department": "人文学研究科"
+    },
+    {
+      "code": "137261",
+      "day": "木",
+      "period": "2",
+      "category": "基盤教養教育科目",
+      "subcategory": "人文",
+      "name": "演劇学",
+      "instructor": "中尾　薫",
+      "department": "人文学研究科"
+    },
+    {
+      "code": "137263",
+      "day": "木",
+      "period": "2",
+      "category": "基盤教養教育科目",
+      "subcategory": "人文",
+      "name": "日本文学の名作を読む",
+      "instructor": "北島　紬",
+      "department": "全学教育推進機構"
+    },
+    {
+      "code": "137265",
+      "day": "木",
+      "period": "2",
+      "category": "基盤教養教育科目",
+      "subcategory": "人文",
+      "name": "英米文学入門",
+      "instructor": "馬渕　恵里",
+      "department": "人文学研究科"
+    },
+    {
+      "code": "137267",
+      "day": "木",
+      "period": "2",
+      "category": "基盤教養教育科目",
+      "subcategory": "人文",
+      "name": "日本学の最前線",
+      "instructor": "畑中　小百合",
+      "department": "全学教育推進機構"
+    },
+    {
+      "code": "137269",
+      "day": "木",
+      "period": "2",
+      "category": "基盤教養教育科目",
+      "subcategory": "人文",
+      "name": "中東の文化と社会を知るC",
+      "instructor": "宮下　遼",
+      "department": "人文学研究科"
+    },
+    {
+      "code": "137271",
+      "day": "木",
+      "period": "2",
+      "category": "社会",
+      "name": "知的財産モラル",
+      "instructor": "岡本　健太郎",
+      "department": "法学研究科"
+    },
+    {
+      "code": "137273",
+      "day": "木",
+      "period": "2",
+      "category": "社会",
+      "name": "マクロ経済学の考え方",
+      "instructor": "生藤　昌子",
+      "department": "国際公共政策研究科"
+    },
+    {
+      "code": "137275",
+      "day": "木",
+      "period": "3",
+      "category": "基盤教養教育科目",
+      "subcategory": "人文",
+      "name": "Cross Cultural Psychology",
+      "instructor": "森尾　博昭",
+      "department": "インタナショナルカレッジ"
+    },
+    {
+      "code": "137277",
+      "day": "木",
+      "period": "3",
+      "category": "基盤教養教育科目",
+      "subcategory": "人文",
+      "name": "フランス文学入門",
+      "instructor": "山上　浩嗣",
+      "department": "人文学研究科"
+    },
+    {
+      "code": "137279",
+      "day": "木",
+      "period": "3",
+      "category": "基盤教養教育科目",
+      "subcategory": "人文",
+      "name": "中国古典入門",
+      "instructor": "草野　友子",
+      "department": "全学教育推進機構"
+    },
+    {
+      "code": "137281",
+      "day": "木",
+      "period": "3",
+      "category": "社会",
+      "name": "マクロ経済学の考え方",
+      "instructor": "祝迫　達郎",
+      "department": "経済学研究科"
+    },
+    {
+      "code": "137283",
+      "day": "木",
+      "period": "3",
+      "category": "総合",
+      "name": "現代文化を読み解く",
+      "instructor": "福島　可奈子",
+      "department": "人文学研究科"
+    },
+    {
+      "code": "137285",
+      "day": "木",
+      "period": "4",
+      "category": "基盤教養教育科目",
+      "subcategory": "人文",
+      "name": "アジアの文化と社会を知るC",
+      "instructor": "劉　文兵",
+      "department": "人文学研究科"
+    },
+    {
+      "code": "137287",
+      "day": "木",
+      "period": "4",
+      "category": "基盤教養教育科目",
+      "subcategory": "人文",
+      "name": "アフリカ言語文化研究入門",
+      "instructor": "未定",
+      "department": "人文学研究科"
+    },
+    {
+      "code": "137289",
+      "day": "木",
+      "period": "5",
+      "category": "基盤教養教育科目",
+      "subcategory": "人文",
+      "name": "欧米の文化と社会を知るE",
+      "instructor": "進藤　修一",
+      "department": "人文学研究科"
+    },
+    {
+      "code": "137291",
+      "day": "木",
+      "period": "5",
+      "category": "基盤教養教育科目",
+      "subcategory": "人文",
+      "name": "中東の文化と社会を知るB",
+      "instructor": "竹原　新",
+      "department": "人文学研究科"
+    },
+    {
+      "code": "137293",
+      "day": "金",
+      "period": "1",
+      "category": "基盤教養教育科目",
+      "subcategory": "人文",
+      "name": "世界史の考え方",
+      "instructor": "河上　麻由子",
+      "department": "人文学研究科"
+    },
+    {
+      "code": "137295",
+      "day": "金",
+      "period": "1",
+      "category": "基盤教養教育科目",
+      "subcategory": "人文",
+      "name": "欧米の文化と社会を知るC",
+      "instructor": "青木　加奈子",
+      "department": "人文学研究科"
+    },
+    {
+      "code": "137297",
+      "day": "金",
+      "period": "1",
+      "category": "基盤教養教育科目",
+      "subcategory": "人文",
+      "name": "ちがいをたのしむ",
+      "instructor": "虫賀　幹華",
+      "department": "人文学研究科"
+    },
+    {
+      "code": "137299",
+      "day": "金",
+      "period": "1",
+      "category": "社会",
+      "name": "経済の世界",
+      "instructor": "生藤　昌子",
+      "department": "国際公共政策研究科"
+    },
+    {
+      "code": "137301",
+      "day": "金",
+      "period": "2",
+      "category": "社会",
+      "name": "Introduction to Social Psychology",
+      "instructor": "森尾　博昭",
+      "department": "インタナショナルカレッジ"
+    },
+    {
+      "code": "137303",
+      "day": "金",
+      "period": "2",
+      "category": "基盤教養教育科目",
+      "subcategory": "人文",
+      "name": "音楽学",
+      "instructor": "伊東　信宏",
+      "department": "人文学研究科"
+    },
+    {
+      "code": "137305",
+      "day": "金",
+      "period": "2",
+      "category": "基盤教養教育科目",
+      "subcategory": "人文",
+      "name": "演劇学",
+      "instructor": "中尾　薫",
+      "department": "人文学研究科"
+    },
+    {
+      "code": "137307",
+      "day": "金",
+      "period": "2",
+      "category": "基盤教養教育科目",
+      "subcategory": "人文",
+      "name": "日本文学の名作を読む",
+      "instructor": "北島　紬",
+      "department": "全学教育推進機構"
+    },
+    {
+      "code": "137309",
+      "day": "金",
+      "period": "2",
+      "category": "基盤教養教育科目",
+      "subcategory": "人文",
+      "name": "英米文学入門",
+      "instructor": "馬渕　恵里",
+      "department": "人文学研究科"
+    },
+    {
+      "code": "137311",
+      "day": "金",
+      "period": "2",
+      "category": "基盤教養教育科目",
+      "subcategory": "人文",
+      "name": "日本学の最前線",
+      "instructor": "畑中　小百合",
+      "department": "全学教育推進機構"
+    },
+    {
+      "code": "137313",
+      "day": "金",
+      "period": "2",
+      "category": "基盤教養教育科目",
+      "subcategory": "人文",
+      "name": "中東の文化と社会を知るC",
+      "instructor": "宮下　遼",
+      "department": "人文学研究科"
+    },
+    {
+      "code": "137315",
+      "day": "金",
+      "period": "2",
+      "category": "社会",
+      "name": "知的財産モラル",
+      "instructor": "岡本　健太郎",
+      "department": "法学研究科"
+    },
+    {
+      "code": "137317",
+      "day": "金",
+      "period": "2",
+      "category": "社会",
+      "name": "マクロ経済学の考え方",
+      "instructor": "生藤　昌子",
+      "department": "国際公共政策研究科"
+    },
+    {
+      "code": "137319",
+      "day": "金",
+      "period": "3",
+      "category": "基盤教養教育科目",
+      "subcategory": "人文",
+      "name": "Cross Cultural Psychology",
+      "instructor": "森尾　博昭",
+      "department": "インタナショナルカレッジ"
+    },
+    {
+      "code": "137321",
+      "day": "金",
+      "period": "3",
+      "category": "基盤教養教育科目",
+      "subcategory": "人文",
+      "name": "フランス文学入門",
+      "instructor": "山上　浩嗣",
+      "department": "人文学研究科"
+    },
+    {
+      "code": "137323",
+      "day": "金",
+      "period": "3",
+      "category": "基盤教養教育科目",
+      "subcategory": "人文",
+      "name": "中国古典入門",
+      "instructor": "草野　友子",
+      "department": "全学教育推進機構"
+    },
+    {
+      "code": "137325",
+      "day": "金",
+      "period": "3",
+      "category": "社会",
+      "name": "マクロ経済学の考え方",
+      "instructor": "祝迫　達郎",
+      "department": "経済学研究科"
+    },
+    {
+      "code": "137327",
+      "day": "金",
+      "period": "3",
+      "category": "総合",
+      "name": "現代文化を読み解く",
+      "instructor": "福島　可奈子",
+      "department": "人文学研究科"
+    },
+    {
+      "code": "137329",
+      "day": "金",
+      "period": "4",
+      "category": "基盤教養教育科目",
+      "subcategory": "人文",
+      "name": "アジアの文化と社会を知るC",
+      "instructor": "劉　文兵",
+      "department": "人文学研究科"
+    },
+    {
+      "code": "137331",
+      "day": "金",
+      "period": "4",
+      "category": "基盤教養教育科目",
+      "subcategory": "人文",
+      "name": "アフリカ言語文化研究入門",
+      "instructor": "未定",
+      "department": "人文学研究科"
+    },
+    {
+      "code": "137333",
+      "day": "金",
+      "period": "5",
+      "category": "基盤教養教育科目",
+      "subcategory": "人文",
+      "name": "欧米の文化と社会を知るE",
+      "instructor": "進藤　修一",
+      "department": "人文学研究科"
+    },
+    {
+      "code": "137335",
+      "day": "金",
+      "period": "5",
+      "category": "基盤教養教育科目",
+      "subcategory": "人文",
+      "name": "中東の文化と社会を知るB",
+      "instructor": "竹原　新",
+      "department": "人文学研究科"
+    }
+  ]
+}

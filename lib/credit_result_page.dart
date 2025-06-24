@@ -57,18 +57,12 @@ class CreditResultPage extends ConsumerStatefulWidget {
 }
 
 class _CreditResultPageState extends ConsumerState<CreditResultPage> {
-  StreamSubscription? _reviewsSubscription;
+  String? _selectedCategory;
+  List<String> _categories = [];
 
   @override
   void initState() {
     super.initState();
-    // _performSearch() is no longer needed here.
-  }
-
-  @override
-  void dispose() {
-    _reviewsSubscription?.cancel();
-    super.dispose();
   }
 
   String _getPageTitle() {
@@ -89,11 +83,6 @@ class _CreditResultPageState extends ConsumerState<CreditResultPage> {
 
   @override
   Widget build(BuildContext context) {
-    // Providersからマスターデータを読み込む
-    final allCourses = ref.watch(globalCourseMappingProvider);
-    // teacherNamesはリビルドのたびに読み込む必要があるかもしれない
-    // final teacherNames = ref.watch(timetableProvider.select((t) => t['teacherNames']));
-
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -121,10 +110,12 @@ class _CreditResultPageState extends ConsumerState<CreditResultPage> {
           ),
         ),
         child: StreamBuilder<QuerySnapshot>(
-          stream: FirebaseFirestore.instance.collection('reviews').snapshots(),
+          stream:
+              FirebaseFirestore.instance
+                  .collection('master_courses')
+                  .snapshots(),
           builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting &&
-                allCourses.isEmpty) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(
                 child: CircularProgressIndicator(color: Colors.white),
               );
@@ -137,200 +128,156 @@ class _CreditResultPageState extends ConsumerState<CreditResultPage> {
                 ),
               );
             }
-
-            // 1. 全ての講義をベースにリストを作成
-            Map<String, LectureSearchResult> resultsMap = {};
-            final reviewMapping = ref.watch(globalReviewMappingProvider);
-
-            allCourses.forEach((lectureName, courseId) {
-              // まずはレビューがない状態として全講義を追加
-              final tempTeacherName = '教員未設定';
-              final key = '${lectureName}_$tempTeacherName';
-              resultsMap[key] = LectureSearchResult(
-                lectureName: lectureName,
-                teacherName: tempTeacherName,
-                // reviewIdはここでは設定しない (null)
+            if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+              return const Center(
+                child: Text(
+                  '講義データがありません',
+                  style: TextStyle(color: Colors.white70),
+                ),
               );
-            });
-
-            // 2. レビューのある講義情報を上書き
-            reviewMapping.forEach((key, reviewId) {
-              final parts = key.split('_');
-              final lectureName = parts.first;
-              final teacherName = parts.length > 1 ? parts.last : '教員未設定';
-
-              resultsMap[key] = LectureSearchResult(
-                lectureName: lectureName,
-                teacherName: teacherName,
-                reviewId: reviewId,
-              );
-            });
-
-            // 3. 評価を計算
-            final reviewsByReviewId = <String, List<DocumentSnapshot>>{};
-            if (snapshot.hasData) {
-              for (var doc in snapshot.data!.docs) {
-                final data = doc.data() as Map<String, dynamic>;
-                final reviewId = data['reviewId'] as String?;
-                if (reviewId != null) {
-                  reviewsByReviewId.putIfAbsent(reviewId, () => []).add(doc);
-                }
-              }
             }
 
-            List<LectureSearchResult> allResults = resultsMap.values.toList();
-            for (var result in allResults) {
-              if (result.reviewId == null) continue; // レビューがなければスキップ
-              final reviews = reviewsByReviewId[result.reviewId!] ?? [];
-              if (reviews.isNotEmpty) {
-                result.reviewCount = reviews.length;
-                result.avgSatisfaction =
-                    reviews
-                        .map(
-                          (r) =>
-                              ((r.data()
-                                          as Map<
-                                            String,
-                                            dynamic
-                                          >)['overallSatisfaction']
-                                      as num)
-                                  .toDouble(),
-                        )
-                        .reduce((a, b) => a + b) /
-                    reviews.length;
-                final easinessReviews =
-                    reviews
-                        .where(
-                          (r) =>
-                              (r.data() as Map<String, dynamic>)['easiness'] !=
-                              null,
-                        )
-                        .toList();
-                if (easinessReviews.isNotEmpty) {
-                  result.avgEasiness =
-                      easinessReviews
-                          .map(
-                            (r) =>
-                                ((r.data() as Map<String, dynamic>)['easiness']
-                                        as num)
-                                    .toDouble(),
-                          )
-                          .reduce((a, b) => a + b) /
-                      easinessReviews.length;
-                }
+            // カテゴリ一覧を抽出
+            final allCategoriesRaw =
+                snapshot.data!.docs.map((doc) {
+                  final data = doc.data() as Map<String, dynamic>?;
+                  return data != null && data.containsKey('category')
+                      ? data['category'] as String? ?? ''
+                      : '';
+                }).toList();
+            final categorySet = allCategoriesRaw.toSet();
+            final categories =
+                categorySet.where((c) => c.isNotEmpty).toList()..sort();
+            if (allCategoriesRaw.any((c) => c.isEmpty)) {
+              categories.insert(0, '未分類');
+            }
+            _categories = categories;
+
+            // 絞り込み
+            var filteredDocs = snapshot.data!.docs;
+            if (_selectedCategory != null && _selectedCategory!.isNotEmpty) {
+              if (_selectedCategory == '未分類') {
+                filteredDocs =
+                    filteredDocs.where((doc) {
+                      final data = doc.data() as Map<String, dynamic>?;
+                      return data == null ||
+                          !data.containsKey('category') ||
+                          (data['category'] ?? '') == '';
+                    }).toList();
+              } else {
+                filteredDocs =
+                    filteredDocs.where((doc) {
+                      final data = doc.data() as Map<String, dynamic>?;
+                      return data != null &&
+                          data.containsKey('category') &&
+                          data['category'] == _selectedCategory;
+                    }).toList();
               }
             }
-
-            // 4. 検索クエリでフィルタリング
             if (widget.searchQuery != null && widget.searchQuery!.isNotEmpty) {
-              allResults =
-                  allResults.where((r) {
-                    return r.lectureName.toLowerCase().contains(
-                          widget.searchQuery!.toLowerCase(),
-                        ) ||
-                        r.teacherName.toLowerCase().contains(
-                          widget.searchQuery!.toLowerCase(),
-                        );
+              filteredDocs =
+                  filteredDocs.where((doc) {
+                    final name = (doc['name'] ?? '').toString().toLowerCase();
+                    final teacher =
+                        (doc['instructor'] ?? '').toString().toLowerCase();
+                    return name.contains(widget.searchQuery!.toLowerCase()) ||
+                        teacher.contains(widget.searchQuery!.toLowerCase());
                   }).toList();
             }
 
-            if (allResults.isEmpty) {
-              return const Center(
-                child: Text(
-                  '該当する講義が見つかりませんでした。',
-                  style: TextStyle(color: Colors.white70, fontSize: 16),
+            return Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: DropdownButton<String>(
+                    value: _selectedCategory,
+                    hint: const Text('教科で絞り込む'),
+                    items:
+                        _categories
+                            .map(
+                              (cat) => DropdownMenuItem(
+                                value: cat,
+                                child: Text(cat),
+                              ),
+                            )
+                            .toList(),
+                    onChanged: (val) {
+                      setState(() {
+                        _selectedCategory = val;
+                      });
+                    },
+                  ),
                 ),
-              );
-            }
-
-            return ListView.builder(
-              padding: const EdgeInsets.all(8.0),
-              itemCount: allResults.length,
-              itemBuilder: (context, index) {
-                final result = allResults[index];
-                return _buildResultCard(result);
-              },
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: filteredDocs.length,
+                    itemBuilder: (context, index) {
+                      final doc = filteredDocs[index];
+                      return Card(
+                        margin: const EdgeInsets.symmetric(
+                          vertical: 8.0,
+                          horizontal: 4.0,
+                        ),
+                        elevation: 4.0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(15),
+                        ),
+                        child: InkWell(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder:
+                                    (context) => CreditReviewPage(
+                                      lectureName: doc['name'] ?? '',
+                                      teacherName: doc['instructor'] ?? '',
+                                    ),
+                              ),
+                            );
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  doc['name'] ?? '',
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    fontFamily: 'NotoSansJP',
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  doc['instructor'] ?? '',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.grey[700],
+                                    fontFamily: 'NotoSansJP',
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  '教科: ${(doc.data() as Map<String, dynamic>?) != null && (doc.data() as Map<String, dynamic>).containsKey('category') ? (doc['category'] ?? '未分類') : '未分類'}',
+                                  style: const TextStyle(fontSize: 14),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  '曜日: ${((doc.data() as Map<String, dynamic>?)?['day'] ?? '')}  時限: ${((doc.data() as Map<String, dynamic>?)?['period'] ?? '')}',
+                                  style: const TextStyle(fontSize: 14),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
             );
           },
-        ),
-      ),
-    );
-  }
-
-  Widget _buildResultCard(LectureSearchResult result) {
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
-      elevation: 4.0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-      child: InkWell(
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder:
-                  (context) => CreditReviewPage(
-                    lectureName: result.lectureName,
-                    teacherName: result.teacherName,
-                  ),
-            ),
-          );
-        },
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                result.lectureName,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  fontFamily: 'NotoSansJP',
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                result.teacherName,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey[700],
-                  fontFamily: 'NotoSansJP',
-                ),
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  RatingBarIndicator(
-                    rating: result.avgSatisfaction,
-                    itemBuilder:
-                        (context, index) =>
-                            const Icon(Icons.star, color: Colors.amber),
-                    itemCount: 5,
-                    itemSize: 20.0,
-                    direction: Axis.horizontal,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    result.avgSatisfaction.toStringAsFixed(1),
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.deepOrange,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 4),
-              // TODO: 楽単度も表示
-              Align(
-                alignment: Alignment.centerRight,
-                child: Text(
-                  'レビュー数: ${result.reviewCount}件',
-                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                ),
-              ),
-            ],
-          ),
         ),
       ),
     );

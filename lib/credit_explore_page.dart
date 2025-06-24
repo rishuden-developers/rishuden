@@ -1,12 +1,9 @@
 // credit_explore_page.dart
 import 'package:flutter/material.dart';
-import 'credit_result_page.dart'; // 検索結果を表示するページ
-import 'common_bottom_navigation.dart'; // 共通フッターウィジェット
-import 'park_page.dart';
-import 'time_schedule_page.dart';
-import 'ranking_page.dart';
-import 'item_page.dart';
-import 'my_reviews_page.dart'; // ★ 作成したページをインポート
+import 'current_semester_reviews_page.dart';
+import 'autumn_winter_category_page.dart';
+import 'my_reviews_page.dart';
+import 'credit_result_page.dart';
 
 class CreditExplorePage extends StatefulWidget {
   const CreditExplorePage({super.key});
@@ -33,7 +30,6 @@ class _CreditExplorePageState extends State<CreditExplorePage> {
   ];
   final List<String> _categories = ['必修', '選択', 'その他'];
   final List<String> _daysOfWeek = ['月', '火', '水', '木', '金', '土', '日'];
-  // ★タグ検索候補 (ダミー)
   final List<String> _tags = [
     'レポート多め',
     'グループワークあり',
@@ -75,106 +71,153 @@ class _CreditExplorePageState extends State<CreditExplorePage> {
         ),
       ),
       child: SafeArea(
-        child: LayoutBuilder(
-          builder:
-              (context, constraints) => SingleChildScrollView(
-                padding: const EdgeInsets.all(16.0),
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                  child: IntrinsicHeight(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        // Googleのような検索バー
-                        _buildSearchBar(),
-                        const SizedBox(height: 20),
-
-                        // 検索フィルターのドロップダウン
-                        _buildFilterDropdown(
-                          '学部で絞り込む',
-                          _selectedFaculty,
-                          _faculties,
-                          (String? newValue) {
-                            setState(() {
-                              _selectedFaculty = newValue;
-                            });
-                          },
-                        ),
-                        const SizedBox(height: 10),
-                        _buildFilterDropdown(
-                          '種類で絞り込む (必修/選択)',
-                          _selectedCategory,
-                          _categories,
-                          (String? newValue) {
-                            setState(() {
-                              _selectedCategory = newValue;
-                            });
-                          },
-                        ),
-                        const SizedBox(height: 10),
-                        _buildFilterDropdown(
-                          '曜日で絞り込む',
-                          _selectedDayOfWeek,
-                          _daysOfWeek,
-                          (String? newValue) {
-                            setState(() {
-                              _selectedDayOfWeek = newValue;
-                            });
-                          },
-                        ),
-                        const SizedBox(height: 10),
-                        _buildFilterDropdown('タグで絞り込む', _selectedTag, _tags, (
-                          String? newValue,
-                        ) {
-                          setState(() {
-                            _selectedTag = newValue;
-                          });
-                        }),
-                        const SizedBox(height: 30),
-
-                        // 検索ボタン
-                        _buildSearchButton(),
-                        const SizedBox(height: 40),
-
-                        // ★ レビュー管理セクションを先に表示
-                        _buildSectionTitle('レビューを管理', Icons.edit),
-                        const SizedBox(height: 10),
-                        _buildFeatureCard(
-                          context,
-                          title: '自分の授業をレビューする',
-                          icon: Icons.edit,
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const MyReviewsPage(),
-                              ),
-                            );
-                          },
-                        ),
-
-                        const SizedBox(height: 20), // ★ スペースを追加
-                        // ランキング表示へのボタン
-                        _buildSectionTitle('人気ランキング', Icons.bar_chart),
-                        const SizedBox(height: 10),
-                        _buildRankingButton(context, '楽単ランキング', 'easiness'),
-                        _buildRankingButton(
-                          context,
-                          '総合満足度ランキング',
-                          'satisfaction',
-                        ),
-                        _buildRankingButton(
-                          context,
-                          '学部別注目授業',
-                          'faculty_specific',
-                        ),
-
-                        const Spacer(), // 下部のナビゲーションバーのためのスペース
-                      ],
-                    ),
-                  ),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            children: [
+              // タイトル
+              const Text(
+                '単位探索',
+                style: TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                  fontFamily: 'NotoSansJP',
                 ),
               ),
+              const SizedBox(height: 30),
+
+              // 検索バー
+              _buildSearchBar(),
+              const SizedBox(height: 20),
+
+              // 検索フィルターのドロップダウン
+              _buildFilterDropdown('学部で絞り込む', _selectedFaculty, _faculties, (
+                String? newValue,
+              ) {
+                setState(() {
+                  _selectedFaculty = newValue;
+                });
+              }),
+              const SizedBox(height: 10),
+              _buildFilterDropdown(
+                '種類で絞り込む (必修/選択)',
+                _selectedCategory,
+                _categories,
+                (String? newValue) {
+                  setState(() {
+                    _selectedCategory = newValue;
+                  });
+                },
+              ),
+              const SizedBox(height: 10),
+              _buildFilterDropdown('曜日で絞り込む', _selectedDayOfWeek, _daysOfWeek, (
+                String? newValue,
+              ) {
+                setState(() {
+                  _selectedDayOfWeek = newValue;
+                });
+              }),
+              const SizedBox(height: 10),
+              _buildFilterDropdown('タグで絞り込む', _selectedTag, _tags, (
+                String? newValue,
+              ) {
+                setState(() {
+                  _selectedTag = newValue;
+                });
+              }),
+              const SizedBox(height: 20),
+
+              // 検索ボタン
+              _buildSearchButton(),
+              const SizedBox(height: 30),
+
+              // 横並びの2つのボタン
+              Row(
+                children: [
+                  // 左ボタン：今学期のレビュー確認
+                  Expanded(
+                    child: _buildMainButton(
+                      title: '今の履修の\nレビューを確認！',
+                      subtitle: '春夏学期',
+                      icon: Icons.rate_review,
+                      color: Colors.orange[700]!,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder:
+                                (context) => const CurrentSemesterReviewsPage(),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 20),
+
+                  // 右ボタン：後期の履修準備
+                  Expanded(
+                    child: _buildMainButton(
+                      title: '後期の履修の\n準備をする！',
+                      subtitle: '秋冬学期',
+                      icon: Icons.school,
+                      color: Colors.green[700]!,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder:
+                                (context) => const AutumnWinterCategoryPage(),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 20),
+
+              // 自分のレビューを書くボタン（横長）
+              _buildMyReviewButton(),
+
+              const SizedBox(height: 30),
+
+              // 説明文
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.white.withOpacity(0.2)),
+                ),
+                child: const Column(
+                  children: [
+                    Text(
+                      '使い方',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        fontFamily: 'NotoSansJP',
+                      ),
+                    ),
+                    SizedBox(height: 12),
+                    Text(
+                      '上：講義名や教員名で検索できます\n左：今学期の履修授業のレビューを確認・投稿できます\n右：後期の履修準備として秋冬学期の授業を探せます\n下：自分のレビューを管理できます',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.white,
+                        fontFamily: 'NotoSansJP',
+                        height: 1.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -191,7 +234,7 @@ class _CreditExplorePageState extends State<CreditExplorePage> {
             color: Colors.black.withOpacity(0.2),
             spreadRadius: 1,
             blurRadius: 5,
-            offset: const Offset(0, 3), // changes position of shadow
+            offset: const Offset(0, 3),
           ),
         ],
       ),
@@ -208,13 +251,13 @@ class _CreditExplorePageState extends State<CreditExplorePage> {
                     icon: Icon(Icons.clear, color: Colors.grey[600]),
                     onPressed: () {
                       _searchController.clear();
-                      setState(() {}); // 更新してクリアボタンを非表示にする
+                      setState(() {});
                     },
                   )
                   : null,
         ),
         onChanged: (text) {
-          setState(() {}); // 入力内容に応じてクリアボタンの表示/非表示を更新
+          setState(() {});
         },
         onSubmitted: (text) => _performSearch(),
       ),
@@ -264,95 +307,6 @@ class _CreditExplorePageState extends State<CreditExplorePage> {
     );
   }
 
-  Widget _buildSectionTitle(String title, IconData icon) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, color: Colors.white, size: 28),
-          const SizedBox(width: 10),
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-              fontFamily: 'NotoSansJP',
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRankingButton(
-    BuildContext context,
-    String label,
-    String rankingType,
-  ) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: ElevatedButton(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder:
-                  (context) => CreditResultPage(
-                    rankingType: rankingType,
-                    filterFaculty:
-                        rankingType == 'faculty_specific'
-                            ? _selectedFaculty // 学部別ランキングの場合は選択中の学部を渡す
-                            : null,
-                  ),
-            ),
-          );
-        },
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.indigo[700],
-          foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-            side: BorderSide(color: Colors.blueAccent[100]!, width: 1.5),
-          ),
-          elevation: 4,
-          textStyle: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            fontFamily: 'NotoSansJP',
-          ),
-        ),
-        child: Text(label),
-      ),
-    );
-  }
-
-  Widget _buildFeatureCard(
-    BuildContext context, {
-    required String title,
-    required IconData icon,
-    required VoidCallback onTap,
-  }) {
-    return Card(
-      elevation: 4.0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: ListTile(
-        leading: Icon(icon, color: Colors.indigo[700]),
-        title: Text(
-          title,
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontFamily: 'NotoSansJP',
-          ),
-        ),
-        trailing: const Icon(Icons.arrow_forward_ios),
-        onTap: onTap,
-      ),
-    );
-  }
-
   Widget _buildSearchButton() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -373,20 +327,103 @@ class _CreditExplorePageState extends State<CreditExplorePage> {
             borderRadius: BorderRadius.circular(10),
           ),
         ),
+        onPressed: _performSearch,
+      ),
+    );
+  }
+
+  Widget _buildMyReviewButton() {
+    return Container(
+      width: double.infinity,
+      height: 60,
+      child: ElevatedButton.icon(
+        icon: const Icon(Icons.edit, color: Colors.white, size: 28),
+        label: const Text(
+          '自分のレビューを書く',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+            fontFamily: 'NotoSansJP',
+          ),
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.purple[700],
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15),
+            side: BorderSide(color: Colors.white.withOpacity(0.3), width: 2),
+          ),
+          elevation: 8,
+        ),
         onPressed: () {
-          // ★★★ CreditResultPageに遷移 ★★★
           Navigator.push(
             context,
-            MaterialPageRoute(
-              builder:
-                  (context) => CreditResultPage(
-                    searchQuery: _searchController.text,
-                    filterFaculty: _selectedFaculty,
-                    // TODO: 他のフィルターも渡す
-                  ),
-            ),
+            MaterialPageRoute(builder: (context) => const MyReviewsPage()),
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildMainButton({
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return Container(
+      height: 200,
+      child: Card(
+        elevation: 12.0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(color: Colors.white.withOpacity(0.3), width: 2),
+        ),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: onTap,
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [color, color.withOpacity(0.8)],
+              ),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(icon, size: 48, color: Colors.white),
+                  const SizedBox(height: 16),
+                  Text(
+                    title,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                      fontFamily: 'NotoSansJP',
+                      height: 1.3,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.white.withOpacity(0.9),
+                      fontFamily: 'NotoSansJP',
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

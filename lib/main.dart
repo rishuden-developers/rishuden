@@ -7,6 +7,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'welcome_page.dart';
 import 'user_data_checker.dart';
+import 'data_upload_page.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+// import 'json_paste_upload_page.dart'; // ← もう不要なら削除してOK
 
 void main() async {
   try {
@@ -32,25 +35,84 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: '履修伝説',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
-        fontFamily: 'NotoSansJP',
-      ),
+      title: 'Rishuden',
+      theme: ThemeData(primarySwatch: Colors.blue),
       debugShowCheckedModeBanner: false,
-      home: StreamBuilder<User?>(
-        stream: FirebaseAuth.instance.authStateChanges(),
+      home: MainPage(), // ← ホーム画面をMainPageに戻す
+    );
+  }
+}
+
+Future<List<Map<String, dynamic>>> fetchCoursesByCategory(
+  String category,
+) async {
+  final query =
+      await FirebaseFirestore.instance
+          .collection('courses')
+          .where('category', isEqualTo: category)
+          .get();
+
+  return query.docs.map((doc) => doc.data()).toList();
+}
+
+Future<List<Map<String, dynamic>>> fetchCoursesBySubcategory(
+  String category,
+  String subcategory,
+) async {
+  final query =
+      await FirebaseFirestore.instance
+          .collection('courses')
+          .where('category', isEqualTo: category)
+          .where('subcategory', isEqualTo: subcategory)
+          .get();
+
+  return query.docs.map((doc) => doc.data()).toList();
+}
+
+class CourseListPage extends StatefulWidget {
+  final String category;
+  CourseListPage({required this.category});
+
+  @override
+  _CourseListPageState createState() => _CourseListPageState();
+}
+
+class _CourseListPageState extends State<CourseListPage> {
+  late Future<List<Map<String, dynamic>>> _coursesFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _coursesFuture = fetchCoursesByCategory(widget.category);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text(widget.category)),
+      body: FutureBuilder<List<Map<String, dynamic>>>(
+        future: _coursesFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Scaffold(
-              body: Center(child: CircularProgressIndicator()),
-            );
+            return Center(child: CircularProgressIndicator());
           }
-          if (snapshot.hasData) {
-            return const UserDataChecker();
+          if (!snapshot.hasData || snapshot.data!.isEmpty) {
+            return Center(child: Text('データがありません'));
           }
-          return const WelcomePage();
+          final courses = snapshot.data!;
+          return ListView(
+            children:
+                courses
+                    .map(
+                      (course) => ListTile(
+                        title: Text(course['name'] ?? ''),
+                        subtitle: Text(
+                          course['instructor'] ?? course['teacher'] ?? '',
+                        ),
+                      ),
+                    )
+                    .toList(),
+          );
         },
       ),
     );

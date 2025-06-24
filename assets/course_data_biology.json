@@ -1,0 +1,95 @@
+{
+  "category": "専門基礎科目（生物学）",
+  "courses": [
+    {
+      "code": "137701",
+      "period": "月4",
+      "name": "生物学序論",
+      "semester": "秋～冬",
+      "instructor": "淺川　東彦",
+      "department": "生命機能研究科",
+      "target": "工（環）",
+      "category": "専門基礎科目（生物学）"
+    },
+    {
+      "code": "137703",
+      "period": "月4",
+      "name": "生物学序論",
+      "semester": "秋～冬",
+      "instructor": "今井　薫",
+      "department": "理学研究科",
+      "target": "工（地）",
+      "category": "専門基礎科目（生物学）"
+    },
+    {
+      "code": "137705",
+      "period": "月4",
+      "name": "生物学序論",
+      "semester": "秋～冬",
+      "instructor": "村松　史隆",
+      "department": "微生物病研究所",
+      "target": "基（化）",
+      "category": "専門基礎科目（生物学）"
+    },
+    {
+      "code": "137707",
+      "period": "火4",
+      "name": "生物学詳論",
+      "semester": "秋～冬",
+      "instructor": "石原　直忠",
+      "department": "理学研究科",
+      "target": "理",
+      "category": "専門基礎科目（生物学）"
+    },
+    {
+      "code": "137715",
+      "period": "水3～5",
+      "name": "基礎生物学実験",
+      "semester": "秋",
+      "instructor": "浅田　哲弘",
+      "department": "理学研究科",
+      "target": "理（化）",
+      "category": "専門基礎科目（生物学）"
+    },
+    {
+      "code": "137719",
+      "period": "水3～5",
+      "name": "基礎生物学実験",
+      "semester": "冬",
+      "instructor": "浅田　哲弘",
+      "department": "理学研究科",
+      "target": "理（物）",
+      "category": "専門基礎科目（生物学）"
+    },
+    {
+      "code": "137717",
+      "period": "木3～5",
+      "name": "基礎生物学実験",
+      "semester": "秋",
+      "instructor": "浅田　哲弘",
+      "department": "理学研究科",
+      "target": "医（検）・歯",
+      "category": "専門基礎科目（生物学）"
+    },
+    {
+      "code": "137709",
+      "period": "木4",
+      "name": "生物学詳論",
+      "semester": "秋～冬",
+      "instructor": "藪田　紀一",
+      "department": "微生物病研究所",
+      "target": "工（然）・基（電・情）",
+      "category": "専門基礎科目（生物学）"
+    },
+    {
+      "code": "137711",
+      "period": "木4",
+      "name": "生物学詳論",
+      "semester": "秋～冬",
+      "instructor": "青木　航",
+      "department": "生物工学専攻",
+      "target": "工（然）・基（電・情）",
+      "category": "専門基礎科目（生物学）"
+    }
+  ]
+}

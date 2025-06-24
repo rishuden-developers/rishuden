@@ -1,0 +1,352 @@
+{
+  "category": "英語",
+  "courses": [
+    {
+      "code": "192409",
+      "day": "月",
+      "period": "1",
+      "name": "総合英語Ⅳ",
+      "semester": "秋～冬",
+      "instructor": "スミス ベンジャミン ニール",
+      "department": "マルチリンガル教育センター",
+      "faculty": "外",
+      "category": "英語"
+    },
+    {
+      "code": "192423",
+      "day": "月",
+      "period": "2",
+      "name": "総合英語Ⅳ",
+      "semester": "秋～冬",
+      "instructor": "スミス ベンジャミン ニール",
+      "department": "マルチリンガル教育センター",
+      "faculty": "外",
+      "category": "英語"
+    },
+    {
+      "code": "192385",
+      "day": "月",
+      "period": "3",
+      "name": "総合英語Ⅱ",
+      "semester": "秋～冬",
+      "instructor": "服部　拓哉",
+      "department": "マルチリンガル教育センター",
+      "faculty": "外",
+      "category": "英語"
+    },
+    {
+      "code": "192371",
+      "day": "月",
+      "period": "4",
+      "name": "総合英語Ⅱ",
+      "semester": "秋～冬",
+      "instructor": "金山　亮太",
+      "department": "マルチリンガル教育センター",
+      "faculty": "外",
+      "category": "英語"
+    },
+    {
+      "code": "192389",
+      "day": "月",
+      "period": "4",
+      "name": "総合英語Ⅱ",
+      "semester": "秋～冬",
+      "instructor": "服部　拓哉",
+      "department": "マルチリンガル教育センター",
+      "faculty": "外"
+    },
+    {
+      "code": "192373",
+      "day": "月",
+      "period": "5",
+      "name": "総合英語Ⅱ",
+      "semester": "秋～冬",
+      "instructor": "金山　亮太",
+      "department": "マルチリンガル教育センター",
+      "faculty": "外",
+      "category": "英語"
+    },
+    {
+      "code": "192393",
+      "day": "月",
+      "period": "5",
+      "name": "総合英語Ⅳ",
+      "semester": "秋～冬",
+      "instructor": "アイルス ロウエル アモリー アイルマー",
+      "department": "マルチリンガル教育センター",
+      "faculty": "外"
+    },
+    {
+      "code": "192413",
+      "day": "月",
+      "period": "5",
+      "name": "総合英語Ⅳ",
+      "semester": "秋～冬",
+      "instructor": "ワフネンコ ユージン",
+      "department": "マルチリンガル教育センター",
+      "faculty": "外",
+      "category": "英語"
+    },
+    {
+      "code": "192403",
+      "day": "火",
+      "period": "1",
+      "name": "総合英語Ⅳ",
+      "semester": "秋～冬",
+      "instructor": "ビリシ ハリカ バシャク",
+      "department": "マルチリンガル教育センター",
+      "faculty": "外",
+      "category": "英語"
+    },
+    {
+      "code": "192401",
+      "day": "火",
+      "period": "2",
+      "name": "総合英語Ⅳ",
+      "semester": "秋～冬",
+      "instructor": "ビリシ ハリカ バシャク",
+      "department": "マルチリンガル教育センター",
+      "faculty": "外",
+      "category": "英語"
+    },
+    {
+      "code": "192407",
+      "day": "火",
+      "period": "3",
+      "name": "総合英語Ⅳ",
+      "semester": "秋～冬",
+      "instructor": "ビリシ ハリカ バシャク",
+      "department": "マルチリンガル教育センター",
+      "faculty": "外"
+    },
+    {
+      "code": "192405",
+      "day": "火",
+      "period": "3",
+      "name": "総合英語Ⅳ",
+      "semester": "秋～冬",
+      "instructor": "マシュー セバスチャン クーパー",
+      "department": "マルチリンガル教育センター",
+      "faculty": "外",
+      "category": "英語"
+    },
+    {
+      "code": "192399",
+      "day": "火",
+      "period": "4",
+      "name": "総合英語Ⅳ",
+      "semester": "秋～冬",
+      "instructor": "ｱｲﾙｽ ﾛｳｴﾙ ｱﾓﾘｰ ｱｲﾙﾏｰ",
+      "department": "マルチリンガル教育センター",
+      "faculty": "外",
+      "category": "英語"
+    },
+    {
+      "code": "192411",
+      "day": "火",
+      "period": "4",
+      "name": "総合英語Ⅳ",
+      "semester": "秋～冬",
+      "instructor": "マシュー セバスチャン クーパー",
+      "department": "マルチリンガル教育センター",
+      "faculty": "外",
+      "category": "英語"
+    },
+    {
+      "code": "192415",
+      "day": "火",
+      "period": "5",
+      "name": "総合英語Ⅳ",
+      "semester": "秋～冬",
+      "instructor": "マシュー セバスチャン クーパー",
+      "department": "マルチリンガル教育センター",
+      "faculty": "外",
+      "category": "英語"
+    },
+    {
+      "code": "192383",
+      "day": "水",
+      "period": "2",
+      "name": "総合英語Ⅱ（上級）",
+      "semester": "秋～冬",
+      "instructor": "岡本　太助",
+      "department": "人文学研究科",
+      "faculty": "外",
+      "category": "英語"
+    },
+    {
+      "code": "192417",
+      "day": "水",
+      "period": "3",
+      "name": "総合英語Ⅳ（上級）",
+      "semester": "秋～冬",
+      "instructor": "ワフネンコ ユージン",
+      "department": "マルチリンガル教育センター",
+      "faculty": "外",
+      "category": "英語"
+    },
+    {
+      "code": "192419",
+      "day": "水",
+      "period": "4",
+      "name": "総合英語Ⅳ（上級）",
+      "semester": "秋～冬",
+      "instructor": "ワフネンコ ユージン",
+      "department": "マルチリンガル教育センター",
+      "faculty": "外",
+      "category": "英語"
+    },
+    {
+      "code": "192395",
+      "day": "水",
+      "period": "5",
+      "name": "総合英語Ⅳ",
+      "semester": "秋～冬",
+      "instructor": "アイルス ロウエル アモリー アイルマー",
+      "department": "マルチリンガル教育センター",
+      "faculty": "外",
+      "category": "英語"
+    },
+    {
+      "code": "192421",
+      "day": "水",
+      "period": "5",
+      "name": "総合英語Ⅳ（上級）",
+      "semester": "秋～冬",
+      "instructor": "ワフネンコ ユージン",
+      "department": "マルチリンガル教育センター",
+      "faculty": "外"
+    },
+    {
+      "code": "192379",
+      "day": "木",
+      "period": "1",
+      "name": "総合英語Ⅱ",
+      "semester": "秋～冬",
+      "instructor": "脇坂　美和子",
+      "department": "マルチリンガル教育センター",
+      "faculty": "外",
+      "category": "英語"
+    },
+    {
+      "code": "192397",
+      "day": "木",
+      "period": "1",
+      "name": "総合英語Ⅳ",
+      "semester": "秋～冬",
+      "instructor": "アイルス ロウエル アモリー アイルマー",
+      "department": "マルチリンガル教育センター",
+      "faculty": "外",
+      "category": "英語"
+    },
+    {
+      "code": "192381",
+      "day": "木",
+      "period": "2",
+      "name": "総合英語Ⅱ",
+      "semester": "秋～冬",
+      "instructor": "脇坂　美和子",
+      "department": "マルチリンガル教育センター",
+      "faculty": "外",
+      "category": "英語"
+    },
+    {
+      "code": "192363",
+      "day": "木",
+      "period": "3",
+      "name": "総合英語Ⅱ",
+      "semester": "秋～冬",
+      "instructor": "藤本　恵子",
+      "department": "マルチリンガル教育センター",
+      "faculty": "外",
+      "category": "英語"
+    },
+    {
+      "code": "192391",
+      "day": "木",
+      "period": "3",
+      "name": "総合英語Ⅱ",
+      "semester": "秋～冬",
+      "instructor": "脇坂　美和子",
+      "department": "マルチリンガル教育センター",
+      "faculty": "外",
+      "category": "英語"
+    },
+    {
+      "code": "192367",
+      "day": "木",
+      "period": "4",
+      "name": "総合英語Ⅱ",
+      "semester": "秋～冬",
+      "instructor": "藤本　恵子",
+      "department": "マルチリンガル教育センター",
+      "faculty": "外"
+    },
+    {
+      "code": "192365",
+      "day": "金",
+      "period": "1",
+      "name": "総合英語Ⅱ",
+      "semester": "秋～冬",
+      "instructor": "岡本　恵美",
+      "department": "マルチリンガル教育センター",
+      "faculty": "外",
+      "category": "英語"
+    },
+    {
+      "code": "192369",
+      "day": "金",
+      "period": "2",
+      "name": "総合英語Ⅱ",
+      "semester": "秋～冬",
+      "instructor": "藤本　恵子",
+      "department": "マルチリンガル教育センター",
+      "faculty": "外",
+      "category": "英語"
+    },
+    {
+      "code": "192387",
+      "day": "金",
+      "period": "2",
+      "name": "総合英語Ⅱ（上級）",
+      "semester": "秋～冬",
+      "instructor": "岡本　恵美",
+      "department": "マルチリンガル教育センター",
+      "faculty": "外",
+      "category": "英語"
+    },
+    {
+      "code": "192361",
+      "day": "金",
+      "period": "3",
+      "name": "総合英語Ⅱ（上級）",
+      "semester": "秋～冬",
+      "instructor": "近藤　佑樹",
+      "department": "人文学研究科",
+      "faculty": "外",
+      "category": "英語"
+    },
+    {
+      "code": "192375",
+      "day": "金",
+      "period": "3",
+      "name": "総合英語Ⅱ",
+      "semester": "秋～冬",
+      "instructor": "藤本　恵子",
+      "department": "マルチリンガル教育センター",
+      "faculty": "外",
+      "category": "英語"
+    },
+    {
+      "code": "192377",
+      "day": "金",
+      "period": "4",
+      "name": "総合英語Ⅱ",
+      "semester": "秋～冬",
+      "instructor": "藤本　恵子",
+      "department": "マルチリンガル教育センター",
+      "faculty": "外",
+      "category": "英語"
+    }
+  ]
+}

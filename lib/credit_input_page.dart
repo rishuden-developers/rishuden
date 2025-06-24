@@ -22,8 +22,14 @@ import 'credit_review_page.dart'
 class CreditInputPage extends ConsumerStatefulWidget {
   final String? lectureName;
   final String? teacherName;
+  final String? courseId;
 
-  const CreditInputPage({super.key, this.lectureName, this.teacherName});
+  const CreditInputPage({
+    super.key,
+    this.lectureName,
+    this.teacherName,
+    this.courseId,
+  });
 
   @override
   ConsumerState<CreditInputPage> createState() => _CreditInputPageState();
