@@ -114,48 +114,52 @@ class _CreditExplorePageState extends State<CreditExplorePage> {
               const SizedBox(height: 30),
 
               // 横並びの2つのボタン
-              Row(
-                children: [
-                  // 左ボタン：今学期のレビュー確認
-                  Expanded(
-                    child: _buildMainButton(
-                      title: '今の履修の\nレビューを確認！',
-                      subtitle: '春夏学期',
-                      icon: Icons.rate_review,
-                      color: Colors.orange[700]!,
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder:
-                                (context) => const CurrentSemesterReviewsPage(),
-                          ),
-                        );
-                      },
+              SizedBox(
+                height: 190, // ボタンの高さを明示的に制限
+                child: Row(
+                  children: [
+                    // 左ボタン：今学期のレビュー確認
+                    Expanded(
+                      child: _buildMainButton(
+                        title: '今の履修を\n確認！',
+                        subtitle: '春夏学期',
+                        icon: Icons.rate_review,
+                        color: Colors.orange[700]!,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder:
+                                  (context) =>
+                                      const CurrentSemesterReviewsPage(),
+                            ),
+                          );
+                        },
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 20),
+                    const SizedBox(width: 20),
 
-                  // 右ボタン：後期の履修準備
-                  Expanded(
-                    child: _buildMainButton(
-                      title: '後期の履修の\n準備をする！',
-                      subtitle: '秋冬学期',
-                      icon: Icons.school,
-                      color: Colors.green[700]!,
-                      isDisabled: true,
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder:
-                                (context) => const AutumnWinterCategoryPage(),
-                          ),
-                        );
-                      },
+                    // 右ボタン：後期の履修準備
+                    Expanded(
+                      child: _buildMainButton(
+                        title: '後期の履修の\n準備をする！',
+                        subtitle: '秋冬学期',
+                        icon: Icons.school,
+                        color: Colors.green[700]!,
+                        isDisabled: true,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder:
+                                  (context) => const AutumnWinterCategoryPage(),
+                            ),
+                          );
+                        },
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
 
               const SizedBox(height: 20),
@@ -369,71 +373,73 @@ class _CreditExplorePageState extends State<CreditExplorePage> {
           child: Container(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(20),
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [color, color.withOpacity(0.8)],
-              ),
+              color: isDisabled ? Colors.grey[200] : null,
+              gradient:
+                  isDisabled
+                      ? null
+                      : LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [color, color.withOpacity(0.8)],
+                      ),
             ),
             child: Stack(
               children: [
-                Padding(
-                  padding: const EdgeInsets.all(20.0),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(icon, size: 48, color: Colors.white),
-                      const SizedBox(height: 16),
-                      Text(
-                        title,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                          fontFamily: 'NotoSansJP',
-                          height: 1.3,
+                Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(20.0),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Icon(icon, size: 48, color: Colors.white),
+                        const SizedBox(height: 16),
+                        Text(
+                          title,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                            fontFamily: 'NotoSansJP',
+                            height: 1.3,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        subtitle,
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.white.withOpacity(0.9),
-                          fontFamily: 'NotoSansJP',
+                        const SizedBox(height: 8),
+                        Text(
+                          subtitle,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.white.withOpacity(0.9),
+                            fontFamily: 'NotoSansJP',
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
                 if (isDisabled)
-                  Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(20),
-                      color: Colors.black.withOpacity(0.6),
-                    ),
-                    child: Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.hourglass_empty,
-                            size: 32,
-                            color: Colors.white,
+                  Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.hourglass_empty,
+                          size: 32,
+                          color: Colors.grey[700],
+                        ),
+                        const SizedBox(height: 8),
+                        const Text(
+                          '準備中',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey,
+                            fontFamily: 'NotoSansJP',
                           ),
-                          const SizedBox(height: 8),
-                          const Text(
-                            '準備中',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                              fontFamily: 'NotoSansJP',
-                            ),
-                          ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ),
               ],

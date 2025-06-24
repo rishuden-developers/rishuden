@@ -70,64 +70,55 @@ class _CurrentSemesterReviewsPageState
 
       print('User courses from timetable: $userCourses');
 
-      // reviewsコレクションからcourseIdを持つレビューを取得
-      final reviewsSnapshot =
-          await FirebaseFirestore.instance.collection('reviews').get();
-
-      print('Found ${reviewsSnapshot.docs.length} reviews');
-
+      // courses/{courseId}/reviewsからレビューを取得
       final List<Map<String, dynamic>> reviews = [];
-      for (int i = 0; i < reviewsSnapshot.docs.length; i++) {
-        final doc = reviewsSnapshot.docs[i];
-        final data = doc.data();
-        print('Review $i (${doc.id}): $data');
 
-        // courseIdが存在するレビューのみを追加
-        final courseId = data['courseId'];
-        if (courseId == null || courseId.toString().isEmpty) {
-          print('Skipping review $i without courseId: ${doc.id}');
-          continue;
-        }
+      for (final courseId in userCourses) {
+        try {
+          final reviewsSnapshot =
+              await FirebaseFirestore.instance
+                  .collection('courses')
+                  .doc(courseId)
+                  .collection('reviews')
+                  .get();
 
-        print('Review $i has courseId: $courseId');
-        print(
-          'User courses contains $courseId: ${userCourses.contains(courseId)}',
-        );
-
-        // ユーザーが取っている授業のcourseIdと一致するレビューのみを追加
-        if (!userCourses.contains(courseId)) {
           print(
-            'Skipping review $i with courseId not in user courses: $courseId',
+            'Found ${reviewsSnapshot.docs.length} reviews for courseId: $courseId',
           );
-          continue;
-        }
 
-        print('Adding review $i with courseId: $courseId');
-        reviews.add({
-          'reviewId': doc.id,
-          'courseId': courseId,
-          'lectureName': data['lectureName'] ?? '',
-          'teacherName': data['teacherName'] ?? '',
-          'semester': data['semester'] ?? '',
-          'category': data['category'] ?? '',
-          'overallSatisfaction': data['satisfaction'] ?? 0.0,
-          'easiness': data['ease'] ?? 0.0,
-          'lectureFormat': data['classFormat'] ?? '',
-          'attendanceStrictness': data['attendance'] ?? '',
-          'examType': data['examType'] ?? '',
-          'teacherFeature':
-              data['teacherTraits'] != null &&
-                      (data['teacherTraits'] as List).isNotEmpty
-                  ? (data['teacherTraits'] as List).join(', ')
-                  : '',
-          'comment': data['comment'] ?? '',
-          'tags': data['tags'] ?? [],
-          'createdAt': data['createdAt'],
-          'userId': data['userId'] ?? '',
-          'userCharacter': data['userCharacter'] ?? 'adventurer',
-          'takoyakiCount': data['takoyakiCount'] ?? 0,
-          'likedBy': data['likedBy'] ?? [],
-        });
+          for (final doc in reviewsSnapshot.docs) {
+            final data = doc.data();
+            print('Review (${doc.id}) for courseId $courseId: $data');
+
+            reviews.add({
+              'reviewId': doc.id,
+              'courseId': courseId,
+              'lectureName': data['lectureName'] ?? '',
+              'teacherName': data['teacherName'] ?? '',
+              'semester': data['semester'] ?? '',
+              'category': data['category'] ?? '',
+              'overallSatisfaction': data['satisfaction'] ?? 0.0,
+              'easiness': data['ease'] ?? 0.0,
+              'lectureFormat': data['classFormat'] ?? '',
+              'attendanceStrictness': data['attendance'] ?? '',
+              'examType': data['examType'] ?? '',
+              'teacherFeature':
+                  data['teacherTraits'] != null &&
+                          (data['teacherTraits'] as List).isNotEmpty
+                      ? (data['teacherTraits'] as List).join(', ')
+                      : '',
+              'comment': data['comment'] ?? '',
+              'tags': data['tags'] ?? [],
+              'createdAt': data['createdAt'],
+              'userId': data['userId'] ?? '',
+              'userCharacter': data['userCharacter'] ?? 'adventurer',
+              'takoyakiCount': data['takoyakiCount'] ?? 0,
+              'likedBy': data['likedBy'] ?? [],
+            });
+          }
+        } catch (e) {
+          print('Error fetching reviews for courseId $courseId: $e');
+        }
       }
 
       print('Processed ${reviews.length} reviews for user courses');
@@ -154,43 +145,35 @@ class _CurrentSemesterReviewsPageState
             colors: [Colors.indigo[800]!, Colors.indigo[600]!],
           ),
         ),
-        child: FutureBuilder<List<Map<String, dynamic>>>(
-          future: _reviewsFuture,
-          builder: (context, snapshot) {
-            print('FutureBuilder state: ${snapshot.connectionState}');
-            print('FutureBuilder hasData: ${snapshot.hasData}');
-            print('FutureBuilder data length: ${snapshot.data?.length ?? 0}');
-            if (snapshot.hasError) {
-              print('FutureBuilder error: ${snapshot.error}');
-            }
-
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(
-                child: CircularProgressIndicator(color: Colors.white),
-              );
-            }
-
-            if (!snapshot.hasData || snapshot.data!.isEmpty) {
-              return const Center(
-                child: Text(
-                  '今学期のレビューがありません',
-                  style: TextStyle(color: Colors.white, fontSize: 18),
+        child: SafeArea(
+          child: FutureBuilder<List<Map<String, dynamic>>>(
+            future: _reviewsFuture,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(
+                  child: CircularProgressIndicator(color: Colors.white),
+                );
+              }
+              if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                return const Center(
+                  child: Text(
+                    '今学期のレビューがありません',
+                    style: TextStyle(color: Colors.white, fontSize: 18),
+                  ),
+                );
+              }
+              final reviews = snapshot.data!;
+              return Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: ListView.builder(
+                  itemCount: reviews.length,
+                  itemBuilder: (context, index) {
+                    return _ReviewCard(review: reviews[index]);
+                  },
                 ),
               );
-            }
-
-            final reviews = snapshot.data!;
-            print('Building list with ${reviews.length} reviews');
-            return ListView.builder(
-              padding: const EdgeInsets.all(16.0),
-              itemCount: reviews.length,
-              itemBuilder: (context, index) {
-                final review = reviews[index];
-                print('Building review card for: ${review['lectureName']}');
-                return _ReviewCard(review: review);
-              },
-            );
-          },
+            },
+          ),
         ),
       ),
     );
