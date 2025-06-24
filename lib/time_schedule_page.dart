@@ -681,6 +681,24 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
 
     final double rowHeight = totalHeight / 8.0;
 
+    // === 現在時刻の授業判定 ===
+    final now = DateTime.now();
+    final int todayWeekday = (now.weekday - 1) % 7; // Dart: 月曜=1, 日曜=7→0
+    final int nowHour = now.hour;
+    final int nowMinute = now.minute;
+    int? currentPeriod;
+    for (int i = 0; i < _periodTimes.length; i++) {
+      final start = _parseTime(_periodTimes[i][0]);
+      final end = _parseTime(_periodTimes[i][1]);
+      final startMinutes = start.hour * 60 + start.minute;
+      final endMinutes = end.hour * 60 + end.minute;
+      final nowMinutes = nowHour * 60 + nowMinute;
+      if (nowMinutes >= startMinutes && nowMinutes <= endMinutes) {
+        currentPeriod = i + 1;
+        break;
+      }
+    }
+
     for (
       int periodIndex = 0;
       periodIndex < _timetableGrid[dayIndex].length;
@@ -796,10 +814,20 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
         periodIndex: periodIndex,
       );
 
+      // === 今あっている授業だけ枠を追加 ===
+      final bool isNowClass =
+          dayIndex == todayWeekday && entry.period == currentPeriod;
+      final BoxDecoration finalDecoration =
+          isNowClass
+              ? decoration.copyWith(
+                border: Border.all(color: Colors.amber, width: 3),
+              )
+              : decoration;
+
       final classWidget = Container(
         margin: const EdgeInsets.all(0.5),
         padding: const EdgeInsets.fromLTRB(6, 5, 4, 3),
-        decoration: decoration,
+        decoration: finalDecoration,
         child: Stack(
           clipBehavior: Clip.none,
           children: [
