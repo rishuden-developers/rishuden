@@ -86,7 +86,7 @@ class _UserPageState extends State<UserPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '名前: ${_userName ?? "未設定"}',
+                      'ユーザー名: ${_userName ?? "未設定"}',
                       style: const TextStyle(fontSize: 18),
                     ),
                     const SizedBox(height: 8),

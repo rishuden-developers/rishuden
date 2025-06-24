@@ -1119,115 +1119,119 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                   fontFamily: 'misaki',
                 ),
               ),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    controller: titleController,
-                    style: const TextStyle(color: Colors.white, fontSize: 14),
-                    decoration: InputDecoration(
-                      hintText: '予定のタイトル',
-                      hintStyle: TextStyle(color: Colors.grey[600]),
-                      focusedBorder: const UnderlineInputBorder(
-                        borderSide: BorderSide(color: Colors.amberAccent),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      InkWell(
-                        onTap: () async {
-                          await showModalBottomSheet(
-                            context: context,
-                            builder: (BuildContext builder) {
-                              return Container(
-                                height: 250,
-                                child: CupertinoDatePicker(
-                                  mode: CupertinoDatePickerMode.time,
-                                  initialDateTime: DateTime(
-                                    2023,
-                                    1,
-                                    1,
-                                    startTime.hour,
-                                    startTime.minute,
-                                  ),
-                                  onDateTimeChanged: (DateTime newTime) {
-                                    setDialogState(() {
-                                      startTime = TimeOfDay.fromDateTime(
-                                        newTime,
-                                      );
-                                    });
-                                  },
-                                ),
-                              );
-                            },
-                          );
-                        },
-                        child: Text(
-                          "開始: ${startTime.format(context)}",
-                          style: const TextStyle(
-                            color: Colors.amberAccent,
-                            fontWeight: FontWeight.bold,
-                          ),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: titleController,
+                      style: const TextStyle(color: Colors.white, fontSize: 14),
+                      decoration: InputDecoration(
+                        hintText: '予定のタイトル',
+                        hintStyle: TextStyle(color: Colors.grey[600]),
+                        focusedBorder: const UnderlineInputBorder(
+                          borderSide: BorderSide(color: Colors.amberAccent),
                         ),
                       ),
-                      InkWell(
-                        onTap: () async {
-                          await showModalBottomSheet(
-                            context: context,
-                            builder: (BuildContext builder) {
-                              return Container(
-                                height: 250,
-                                child: CupertinoDatePicker(
-                                  mode: CupertinoDatePickerMode.time,
-                                  initialDateTime: DateTime(
-                                    2023,
-                                    1,
-                                    1,
-                                    endTime.hour,
-                                    endTime.minute,
+                    ),
+                    const SizedBox(height: 20),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        InkWell(
+                          onTap: () async {
+                            await showModalBottomSheet(
+                              context: context,
+                              builder: (BuildContext builder) {
+                                return Container(
+                                  height: 250,
+                                  child: CupertinoDatePicker(
+                                    mode: CupertinoDatePickerMode.time,
+                                    initialDateTime: DateTime(
+                                      2023,
+                                      1,
+                                      1,
+                                      startTime.hour,
+                                      startTime.minute,
+                                    ),
+                                    onDateTimeChanged: (DateTime newTime) {
+                                      setDialogState(() {
+                                        startTime = TimeOfDay.fromDateTime(
+                                          newTime,
+                                        );
+                                      });
+                                    },
                                   ),
-                                  onDateTimeChanged: (DateTime newTime) {
-                                    setDialogState(() {
-                                      endTime = TimeOfDay.fromDateTime(newTime);
-                                    });
-                                  },
-                                ),
-                              );
-                            },
-                          );
-                        },
-                        child: Text(
-                          "終了: ${endTime.format(context)}",
-                          style: const TextStyle(
-                            color: Colors.amberAccent,
-                            fontWeight: FontWeight.bold,
+                                );
+                              },
+                            );
+                          },
+                          child: Text(
+                            "開始: ${startTime.format(context)}",
+                            style: const TextStyle(
+                              color: Colors.amberAccent,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                  CheckboxListTile(
-                    title: const Text(
-                      "毎週の予定にする",
-                      style: TextStyle(
-                        fontFamily: 'misaki',
-                        fontSize: 13,
-                        color: Colors.white,
-                      ),
+                        InkWell(
+                          onTap: () async {
+                            await showModalBottomSheet(
+                              context: context,
+                              builder: (BuildContext builder) {
+                                return Container(
+                                  height: 250,
+                                  child: CupertinoDatePicker(
+                                    mode: CupertinoDatePickerMode.time,
+                                    initialDateTime: DateTime(
+                                      2023,
+                                      1,
+                                      1,
+                                      endTime.hour,
+                                      endTime.minute,
+                                    ),
+                                    onDateTimeChanged: (DateTime newTime) {
+                                      setDialogState(() {
+                                        endTime = TimeOfDay.fromDateTime(
+                                          newTime,
+                                        );
+                                      });
+                                    },
+                                  ),
+                                );
+                              },
+                            );
+                          },
+                          child: Text(
+                            "終了: ${endTime.format(context)}",
+                            style: const TextStyle(
+                              color: Colors.amberAccent,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                    value: isWeekly,
-                    activeColor: Colors.amberAccent,
-                    checkColor: Colors.black,
-                    onChanged:
-                        (bool? value) =>
-                            setDialogState(() => isWeekly = value ?? false),
-                    controlAffinity: ListTileControlAffinity.leading,
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                ],
+                    CheckboxListTile(
+                      title: const Text(
+                        "毎週の予定にする",
+                        style: TextStyle(
+                          fontFamily: 'misaki',
+                          fontSize: 13,
+                          color: Colors.white,
+                        ),
+                      ),
+                      value: isWeekly,
+                      activeColor: Colors.amberAccent,
+                      checkColor: Colors.black,
+                      onChanged:
+                          (bool? value) =>
+                              setDialogState(() => isWeekly = value ?? false),
+                      controlAffinity: ListTileControlAffinity.leading,
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ],
+                ),
               ),
               actions: [
                 if (eventIndex != -1)
@@ -1507,83 +1511,85 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    controller: titleController,
-                    style: const TextStyle(color: Colors.white),
-                    decoration: const InputDecoration(
-                      hintText: '予定のタイトル',
-                      hintStyle: TextStyle(color: Colors.white54),
-                      enabledBorder: UnderlineInputBorder(
-                        borderSide: BorderSide(color: Colors.white54),
-                      ),
-                      focusedBorder: UnderlineInputBorder(
-                        borderSide: BorderSide(color: Colors.tealAccent),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      InkWell(
-                        onTap: () async {
-                          final TimeOfDay? picked = await showTimePicker(
-                            context: context,
-                            initialTime: startTime ?? TimeOfDay.now(),
-                          );
-                          if (picked != null)
-                            setDialogState(() => startTime = picked);
-                        },
-                        child: Text(
-                          "開始: ${startTime?.format(context) ?? '未選択'}",
-                          style: const TextStyle(
-                            color: Colors.tealAccent,
-                            fontWeight: FontWeight.bold,
-                          ),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: titleController,
+                      style: const TextStyle(color: Colors.white),
+                      decoration: const InputDecoration(
+                        hintText: '予定のタイトル',
+                        hintStyle: TextStyle(color: Colors.white54),
+                        enabledBorder: UnderlineInputBorder(
+                          borderSide: BorderSide(color: Colors.white54),
+                        ),
+                        focusedBorder: UnderlineInputBorder(
+                          borderSide: BorderSide(color: Colors.tealAccent),
                         ),
                       ),
-                      InkWell(
-                        onTap: () async {
-                          final TimeOfDay? picked = await showTimePicker(
-                            context: context,
-                            initialTime:
-                                endTime ?? startTime ?? TimeOfDay.now(),
-                          );
-                          if (picked != null)
-                            setDialogState(() => endTime = picked);
-                        },
-                        child: Text(
-                          "終了: ${endTime?.format(context) ?? '未選択'}",
-                          style: const TextStyle(
-                            color: Colors.tealAccent,
-                            fontWeight: FontWeight.bold,
+                    ),
+                    const SizedBox(height: 20),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        InkWell(
+                          onTap: () async {
+                            final TimeOfDay? picked = await showTimePicker(
+                              context: context,
+                              initialTime: startTime ?? TimeOfDay.now(),
+                            );
+                            if (picked != null)
+                              setDialogState(() => startTime = picked);
+                          },
+                          child: Text(
+                            "開始: ${startTime?.format(context) ?? '未選択'}",
+                            style: const TextStyle(
+                              color: Colors.tealAccent,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                  CheckboxListTile(
-                    title: const Text(
-                      "毎週の予定にする",
-                      style: TextStyle(
-                        fontFamily: 'misaki',
-                        fontSize: 13,
-                        color: Colors.white,
-                      ),
+                        InkWell(
+                          onTap: () async {
+                            final TimeOfDay? picked = await showTimePicker(
+                              context: context,
+                              initialTime:
+                                  endTime ?? startTime ?? TimeOfDay.now(),
+                            );
+                            if (picked != null)
+                              setDialogState(() => endTime = picked);
+                          },
+                          child: Text(
+                            "終了: ${endTime?.format(context) ?? '未選択'}",
+                            style: const TextStyle(
+                              color: Colors.tealAccent,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                    value: isWeekly,
-                    activeColor: Colors.tealAccent,
-                    checkColor: Colors.black,
-                    onChanged:
-                        (bool? value) =>
-                            setDialogState(() => isWeekly = value ?? false),
-                    controlAffinity: ListTileControlAffinity.leading,
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                ],
+                    CheckboxListTile(
+                      title: const Text(
+                        "毎週の予定にする",
+                        style: TextStyle(
+                          fontFamily: 'misaki',
+                          fontSize: 13,
+                          color: Colors.white,
+                        ),
+                      ),
+                      value: isWeekly,
+                      activeColor: Colors.tealAccent,
+                      checkColor: Colors.black,
+                      onChanged:
+                          (bool? value) =>
+                              setDialogState(() => isWeekly = value ?? false),
+                      controlAffinity: ListTileControlAffinity.leading,
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ],
+                ),
               ),
               actions: [
                 TextButton(
@@ -1674,115 +1680,119 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                 '日曜の予定',
                 style: TextStyle(color: Colors.white, fontFamily: 'misaki'),
               ),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    controller: titleController,
-                    style: const TextStyle(color: Colors.white, fontSize: 14),
-                    decoration: InputDecoration(
-                      hintText: '予定のタイトル',
-                      hintStyle: TextStyle(color: Colors.grey[600]),
-                      focusedBorder: const UnderlineInputBorder(
-                        borderSide: BorderSide(color: Colors.amberAccent),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      InkWell(
-                        onTap: () async {
-                          await showModalBottomSheet(
-                            context: context,
-                            builder: (BuildContext builder) {
-                              return Container(
-                                height: 250,
-                                child: CupertinoDatePicker(
-                                  mode: CupertinoDatePickerMode.time,
-                                  initialDateTime: DateTime(
-                                    2023,
-                                    1,
-                                    1,
-                                    startTime?.hour ?? 10,
-                                    startTime?.minute ?? 0,
-                                  ),
-                                  onDateTimeChanged: (DateTime newTime) {
-                                    setDialogState(() {
-                                      startTime = TimeOfDay.fromDateTime(
-                                        newTime,
-                                      );
-                                    });
-                                  },
-                                ),
-                              );
-                            },
-                          );
-                        },
-                        child: Text(
-                          "開始: ${startTime?.format(context) ?? '未選択'}",
-                          style: const TextStyle(
-                            color: Colors.amberAccent,
-                            fontWeight: FontWeight.bold,
-                          ),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: titleController,
+                      style: const TextStyle(color: Colors.white, fontSize: 14),
+                      decoration: InputDecoration(
+                        hintText: '予定のタイトル',
+                        hintStyle: TextStyle(color: Colors.grey[600]),
+                        focusedBorder: const UnderlineInputBorder(
+                          borderSide: BorderSide(color: Colors.amberAccent),
                         ),
                       ),
-                      InkWell(
-                        onTap: () async {
-                          await showModalBottomSheet(
-                            context: context,
-                            builder: (BuildContext builder) {
-                              return Container(
-                                height: 250,
-                                child: CupertinoDatePicker(
-                                  mode: CupertinoDatePickerMode.time,
-                                  initialDateTime: DateTime(
-                                    2023,
-                                    1,
-                                    1,
-                                    endTime?.hour ?? 12,
-                                    endTime?.minute ?? 0,
+                    ),
+                    const SizedBox(height: 20),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        InkWell(
+                          onTap: () async {
+                            await showModalBottomSheet(
+                              context: context,
+                              builder: (BuildContext builder) {
+                                return Container(
+                                  height: 250,
+                                  child: CupertinoDatePicker(
+                                    mode: CupertinoDatePickerMode.time,
+                                    initialDateTime: DateTime(
+                                      2023,
+                                      1,
+                                      1,
+                                      startTime?.hour ?? 10,
+                                      startTime?.minute ?? 0,
+                                    ),
+                                    onDateTimeChanged: (DateTime newTime) {
+                                      setDialogState(() {
+                                        startTime = TimeOfDay.fromDateTime(
+                                          newTime,
+                                        );
+                                      });
+                                    },
                                   ),
-                                  onDateTimeChanged: (DateTime newTime) {
-                                    setDialogState(() {
-                                      endTime = TimeOfDay.fromDateTime(newTime);
-                                    });
-                                  },
-                                ),
-                              );
-                            },
-                          );
-                        },
-                        child: Text(
-                          "終了: ${endTime?.format(context) ?? '未選択'}",
-                          style: const TextStyle(
-                            color: Colors.amberAccent,
-                            fontWeight: FontWeight.bold,
+                                );
+                              },
+                            );
+                          },
+                          child: Text(
+                            "開始: ${startTime?.format(context) ?? '未選択'}",
+                            style: const TextStyle(
+                              color: Colors.amberAccent,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                  CheckboxListTile(
-                    title: const Text(
-                      "毎週の予定にする",
-                      style: TextStyle(
-                        fontFamily: 'misaki',
-                        fontSize: 13,
-                        color: Colors.white,
-                      ),
+                        InkWell(
+                          onTap: () async {
+                            await showModalBottomSheet(
+                              context: context,
+                              builder: (BuildContext builder) {
+                                return Container(
+                                  height: 250,
+                                  child: CupertinoDatePicker(
+                                    mode: CupertinoDatePickerMode.time,
+                                    initialDateTime: DateTime(
+                                      2023,
+                                      1,
+                                      1,
+                                      endTime?.hour ?? 12,
+                                      endTime?.minute ?? 0,
+                                    ),
+                                    onDateTimeChanged: (DateTime newTime) {
+                                      setDialogState(() {
+                                        endTime = TimeOfDay.fromDateTime(
+                                          newTime,
+                                        );
+                                      });
+                                    },
+                                  ),
+                                );
+                              },
+                            );
+                          },
+                          child: Text(
+                            "終了: ${endTime?.format(context) ?? '未選択'}",
+                            style: const TextStyle(
+                              color: Colors.amberAccent,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                    value: isWeekly,
-                    activeColor: Colors.amberAccent,
-                    checkColor: Colors.black,
-                    onChanged:
-                        (bool? value) =>
-                            setDialogState(() => isWeekly = value ?? false),
-                    controlAffinity: ListTileControlAffinity.leading,
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                ],
+                    CheckboxListTile(
+                      title: const Text(
+                        "毎週の予定にする",
+                        style: TextStyle(
+                          fontFamily: 'misaki',
+                          fontSize: 13,
+                          color: Colors.white,
+                        ),
+                      ),
+                      value: isWeekly,
+                      activeColor: Colors.amberAccent,
+                      checkColor: Colors.black,
+                      onChanged:
+                          (bool? value) =>
+                              setDialogState(() => isWeekly = value ?? false),
+                      controlAffinity: ListTileControlAffinity.leading,
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ],
+                ),
               ),
               actions: [
                 TextButton(

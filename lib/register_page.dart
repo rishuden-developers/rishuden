@@ -94,7 +94,7 @@ class _RegisterPageState extends State<RegisterPage> {
           children: [
             TextField(
               controller: _emailController,
-              decoration: InputDecoration(labelText: 'メールアドレス'),
+              decoration: InputDecoration(labelText: '大学のメールアドレス'),
             ),
             TextField(
               controller: _passwordController,
@@ -125,7 +125,10 @@ class _RegisterPageState extends State<RegisterPage> {
               Text(_error!, style: TextStyle(color: Colors.red)),
             ],
             SizedBox(height: 24),
-            ElevatedButton(child: Text('同意して仮登録'), onPressed: _register),
+            ElevatedButton(
+              child: Text('同意して仮登録（メールに2段階認証完了通知が送られます）'),
+              onPressed: _register,
+            ),
           ],
         ),
       ),
