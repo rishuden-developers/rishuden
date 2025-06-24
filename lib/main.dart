@@ -9,11 +9,13 @@ import 'welcome_page.dart';
 import 'user_data_checker.dart';
 import 'data_upload_page.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/services.dart';
 // import 'json_paste_upload_page.dart'; // ← もう不要なら削除してOK
 
 void main() async {
   try {
     WidgetsFlutterBinding.ensureInitialized();
+    await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
