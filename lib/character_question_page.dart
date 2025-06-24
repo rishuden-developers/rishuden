@@ -745,16 +745,28 @@ class _CharacterQuestionPageState extends State<CharacterQuestionPage> {
             ),
             dropdownColor: Colors.brown[700],
             isExpanded: true,
-            items:
-                options.asMap().entries.map((entry) {
-                  return DropdownMenuItem<int>(
-                    value: entry.key,
-                    child: Text(
-                      entry.value,
-                      style: TextStyle(fontSize: 14, color: Colors.white),
-                    ),
-                  );
-                }).toList(),
+            items: [
+              DropdownMenuItem<int?>(
+                value: null,
+                child: Text(
+                  '未選択',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.white54,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ),
+              ...options.asMap().entries.map((entry) {
+                return DropdownMenuItem<int>(
+                  value: entry.key,
+                  child: Text(
+                    entry.value,
+                    style: TextStyle(fontSize: 14, color: Colors.white),
+                  ),
+                );
+              }).toList(),
+            ],
             onChanged: (int? newValue) {
               setState(() {
                 answers[index] = newValue;

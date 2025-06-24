@@ -1147,6 +1147,7 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                                   height: 250,
                                   child: CupertinoDatePicker(
                                     mode: CupertinoDatePickerMode.time,
+                                    use24hFormat: true,
                                     initialDateTime: DateTime(
                                       2023,
                                       1,
@@ -1183,6 +1184,7 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                                   height: 250,
                                   child: CupertinoDatePicker(
                                     mode: CupertinoDatePickerMode.time,
+                                    use24hFormat: true,
                                     initialDateTime: DateTime(
                                       2023,
                                       1,
@@ -1708,6 +1710,7 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                                   height: 250,
                                   child: CupertinoDatePicker(
                                     mode: CupertinoDatePickerMode.time,
+                                    use24hFormat: true,
                                     initialDateTime: DateTime(
                                       2023,
                                       1,
@@ -1744,6 +1747,7 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                                   height: 250,
                                   child: CupertinoDatePicker(
                                     mode: CupertinoDatePickerMode.time,
+                                    use24hFormat: true,
                                     initialDateTime: DateTime(
                                       2023,
                                       1,

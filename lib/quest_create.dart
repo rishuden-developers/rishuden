@@ -201,6 +201,7 @@ class _QuestCreationWidgetState extends ConsumerState<QuestCreationWidget> {
               Expanded(
                 child: CupertinoDatePicker(
                   mode: CupertinoDatePickerMode.dateAndTime,
+                  use24hFormat: true,
                   initialDateTime: selectedDateTime,
                   onDateTimeChanged: (DateTime newDateTime) {
                     selectedDateTime = newDateTime;
@@ -267,6 +268,7 @@ class _QuestCreationWidgetState extends ConsumerState<QuestCreationWidget> {
                           Expanded(
                             child: CupertinoDatePicker(
                               mode: CupertinoDatePickerMode.dateAndTime,
+                              use24hFormat: true,
                               initialDateTime: selectedDateTime,
                               onDateTimeChanged: (DateTime newDateTime) {
                                 selectedDateTime = newDateTime;

@@ -81,6 +81,7 @@ class _TimeScheduleAddPageState extends State<TimeScheduleAddPage> {
               Expanded(
                 child: CupertinoDatePicker(
                   mode: CupertinoDatePickerMode.dateAndTime,
+                  use24hFormat: true,
                   initialDateTime: selectedDateTime,
                   onDateTimeChanged: (DateTime newDateTime) {
                     selectedDateTime = newDateTime;
@@ -137,6 +138,7 @@ class _TimeScheduleAddPageState extends State<TimeScheduleAddPage> {
               Expanded(
                 child: CupertinoDatePicker(
                   mode: CupertinoDatePickerMode.dateAndTime,
+                  use24hFormat: true,
                   initialDateTime: selectedDateTime,
                   onDateTimeChanged: (DateTime newDateTime) {
                     selectedDateTime = newDateTime;
