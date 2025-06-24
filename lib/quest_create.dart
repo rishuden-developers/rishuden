@@ -10,6 +10,7 @@ import 'providers/timetable_provider.dart';
 import 'providers/global_course_mapping_provider.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class QuestCreationWidget extends ConsumerStatefulWidget {
   final void Function() onCancel;
@@ -566,7 +567,8 @@ class _QuestCreationWidgetState extends ConsumerState<QuestCreationWidget> {
 
                             return Expanded(
                               child: InkWell(
-                                onTap: () {
+                                onTap: () async {
+                                  // 授業情報を更新
                                   ref
                                       .read(timetableProvider.notifier)
                                       .updateQuestSelectedClass({
@@ -579,31 +581,54 @@ class _QuestCreationWidgetState extends ConsumerState<QuestCreationWidget> {
                                         'courseId': entry.courseId,
                                       });
 
-                                  if (selectedTaskType != null &&
-                                      selectedDeadline != null) {
-                                    print(
-                                      'Quest Create - Showing dialog with existing data for ${entry.subjectName}',
-                                    );
+                                  // 最新クエストを検索（courseIdがnullの場合は従来の手動入力）
+                                  if (entry.courseId != null) {
+                                    final latestQuest =
+                                        await _getLatestQuestForCourse(
+                                          entry.courseId!,
+                                        );
+
+                                    if (latestQuest != null) {
+                                      // 最新クエストがある場合は今週版作成の確認ダイアログを表示
+                                      _showWeeklyQuestConfirmationDialog(
+                                        latestQuest,
+                                      );
+                                    } else {
+                                      // 最新クエストがない場合は従来の手動入力画面
+                                      if (selectedTaskType != null &&
+                                          selectedDeadline != null) {
+                                        print(
+                                          'Quest Create - Showing dialog with existing data for ${entry.subjectName}',
+                                        );
+                                      } else {
+                                        print(
+                                          'Quest Create - Showing dialog for new quest for ${entry.subjectName}',
+                                        );
+                                      }
+                                      _showTaskDetailsDialog();
+                                    }
                                   } else {
-                                    print(
-                                      'Quest Create - Showing dialog for new quest for ${entry.subjectName}',
-                                    );
+                                    // courseIdがnullの場合は従来の手動入力画面
+                                    if (selectedTaskType != null &&
+                                        selectedDeadline != null) {
+                                      print(
+                                        'Quest Create - Showing dialog with existing data for ${entry.subjectName}',
+                                      );
+                                    } else {
+                                      print(
+                                        'Quest Create - Showing dialog for new quest for ${entry.subjectName}',
+                                      );
+                                    }
+                                    _showTaskDetailsDialog();
                                   }
-                                  _showTaskDetailsDialog();
                                 },
                                 child: Container(
                                   height: 60,
                                   decoration: BoxDecoration(
-                                    color:
-                                        isSelected
-                                            ? courseColor.withOpacity(0.3)
-                                            : courseColor.withOpacity(0.1),
+                                    color: Colors.white,
                                     border: Border.all(
-                                      color:
-                                          isSelected
-                                              ? courseColor
-                                              : Colors.grey[300]!,
-                                      width: isSelected ? 2 : 1,
+                                      color: Colors.grey[300]!,
+                                      width: 1,
                                     ),
                                   ),
                                   child: Padding(
@@ -617,7 +642,7 @@ class _QuestCreationWidgetState extends ConsumerState<QuestCreationWidget> {
                                           style: TextStyle(
                                             fontSize: 10,
                                             fontWeight: FontWeight.bold,
-                                            color: courseColor,
+                                            color: Colors.black,
                                           ),
                                           textAlign: TextAlign.center,
                                           maxLines: 2,
@@ -688,5 +713,148 @@ class _QuestCreationWidgetState extends ConsumerState<QuestCreationWidget> {
             .collection('quests')
             .get();
     return snapshot.docs.map((doc) => doc.data()).toList();
+  }
+
+  // 最新クエストを取得
+  Future<Map<String, dynamic>?> _getLatestQuestForCourse(
+    String courseId,
+  ) async {
+    try {
+      final snapshot =
+          await FirebaseFirestore.instance
+              .collection('quests')
+              .where('courseId', isEqualTo: courseId)
+              .orderBy('createdAt', descending: true)
+              .limit(1)
+              .get();
+
+      if (snapshot.docs.isNotEmpty) {
+        final questData = snapshot.docs.first.data();
+        return {'id': snapshot.docs.first.id, ...questData};
+      }
+      return null;
+    } catch (e) {
+      print('Error getting latest quest: $e');
+      return null;
+    }
+  }
+
+  // 今週版クエスト作成の確認ダイアログ
+  void _showWeeklyQuestConfirmationDialog(Map<String, dynamic> latestQuest) {
+    final subjectName = latestQuest['name'] as String? ?? '不明な授業';
+    final taskType = latestQuest['taskType'] as String? ?? '課題';
+    final description = latestQuest['description'] as String? ?? '';
+    final deadline = latestQuest['deadline'] as Timestamp?;
+
+    // 今週の期限を計算（7日後）
+    final newDeadline =
+        deadline != null
+            ? DateTime.now().add(const Duration(days: 7))
+            : DateTime.now().add(const Duration(days: 7));
+
+    showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('今週版クエスト作成'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('授業: $subjectName'),
+                const SizedBox(height: 8),
+                Text('課題種類: $taskType'),
+                if (description.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text('詳細: $description'),
+                ],
+                const SizedBox(height: 8),
+                Text('期限: ${DateFormat('MM/dd HH:mm').format(newDeadline)}'),
+                const SizedBox(height: 16),
+                const Text(
+                  'この課題の今週版を作成しますか？\n（期限を7日後に設定）',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  // キャンセル時は従来の手動入力画面を表示
+                  _showTaskDetailsDialog();
+                },
+                child: const Text('キャンセル'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  // 今週版クエストを作成
+                  _createWeeklyQuest(latestQuest, newDeadline);
+                },
+                child: const Text('作成'),
+              ),
+            ],
+          ),
+    );
+  }
+
+  // 今週版クエストを作成
+  Future<void> _createWeeklyQuest(
+    Map<String, dynamic> baseQuest,
+    DateTime newDeadline,
+  ) async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+
+      final courseId = baseQuest['courseId'] as String?;
+      if (courseId == null) return;
+
+      // その授業を取っているユーザーIDを取得
+      final enrolledUsersSnapshot =
+          await FirebaseFirestore.instance
+              .collection('users')
+              .where('timetable.entries', arrayContains: {'courseId': courseId})
+              .get();
+
+      final enrolledUserIds =
+          enrolledUsersSnapshot.docs.map((doc) => doc.id).toList();
+
+      // 今週版クエストを作成
+      await FirebaseFirestore.instance.collection('quests').add({
+        'name': baseQuest['name'],
+        'courseId': courseId,
+        'taskType': baseQuest['taskType'],
+        'deadline': Timestamp.fromDate(newDeadline),
+        'description': baseQuest['description'],
+        'createdAt': FieldValue.serverTimestamp(),
+        'createdBy': user.uid,
+        'completedUserIds': [],
+        'enrolledUserIds': enrolledUserIds,
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('今週版クエスト「${baseQuest['name']}」を作成しました！'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+
+      // クエスト作成完了後、画面を閉じる
+      widget.onCancel();
+    } catch (e) {
+      print('Error creating weekly quest: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('クエストの作成に失敗しました'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 }
