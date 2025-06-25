@@ -1036,12 +1036,8 @@ class _ParkPageState extends ConsumerState<ParkPage> {
     final deadline = taskData['deadline'] as Timestamp?;
     final bool isExpired =
         deadline != null && deadline.toDate().isBefore(DateTime.now());
-    final textColor =
-        isExpired ? Colors.red : Colors.lightBlue[100]!.withOpacity(0.95);
-    final detailTextColor =
-        isExpired
-            ? Colors.red.withOpacity(0.8)
-            : Colors.grey[100]!.withOpacity(0.95);
+    final textColor = const Color(0xFF00FFF7); // 蛍光水色
+    final detailTextColor = const Color(0xFF00FFF7); // 蛍光水色
     final deadlineText =
         deadline != null
             ? DateFormat('MM/dd HH:mm').format(deadline.toDate())
@@ -1114,6 +1110,16 @@ class _ParkPageState extends ConsumerState<ParkPage> {
               child: Image.asset('assets/countdown.png', fit: BoxFit.contain),
             ),
           ),
+          if (isCracking)
+            Positioned.fill(
+              child: Opacity(
+                opacity: 0.7,
+                child: Image.asset(
+                  'assets/crack_overlay.png',
+                  fit: BoxFit.contain,
+                ),
+              ),
+            ),
           Positioned(
             top: screenHeight * 0.135,
             left: 0,
@@ -1142,11 +1148,8 @@ class _ParkPageState extends ConsumerState<ParkPage> {
                       fontFamily: 'misaki',
                       shadows: [
                         BoxShadow(
-                          color:
-                              isExpired
-                                  ? Colors.red.withOpacity(0.5)
-                                  : Colors.black54,
-                          blurRadius: 2,
+                          color: textColor.withOpacity(0.7),
+                          blurRadius: 6,
                           offset: Offset(1, 1),
                         ),
                       ],
@@ -1172,6 +1175,12 @@ class _ParkPageState extends ConsumerState<ParkPage> {
                           fontSize: screenHeight * 0.020,
                           color: detailTextColor,
                           height: 1.4,
+                          shadows: [
+                            Shadow(
+                              color: detailTextColor.withOpacity(0.5),
+                              blurRadius: 4,
+                            ),
+                          ],
                         ),
                       ),
                     ),
@@ -1211,16 +1220,41 @@ class _ParkPageState extends ConsumerState<ParkPage> {
             right: screenWidth * 0.13,
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.cyanAccent.withOpacity(0.9),
+                backgroundColor: Colors.black.withOpacity(0.9),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14),
                 ),
                 padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                 minimumSize: Size(screenWidth * 0.06, screenHeight * 0.035),
                 elevation: 8,
-                shadowColor: Colors.cyanAccent.withOpacity(0.6),
+                shadowColor: Colors.black.withOpacity(0.6),
               ),
-              onPressed: () => _submitTask(questId, taskData),
+              onPressed: () async {
+                final result = await showDialog<bool>(
+                  context: context,
+                  builder: (context) {
+                    return AlertDialog(
+                      title: const Text('討伐の確認'),
+                      content: const Text(
+                        '本当に討伐しますか？\n（間違って押した場合は「いいえ」でキャンセルできます）',
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(false),
+                          child: const Text('いいえ'),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(true),
+                          child: const Text('はい'),
+                        ),
+                      ],
+                    );
+                  },
+                );
+                if (result == true) {
+                  _submitTask(questId, taskData);
+                }
+              },
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -1230,7 +1264,13 @@ class _ParkPageState extends ConsumerState<ParkPage> {
                     height: 24,
                   ),
                   const SizedBox(width: 8),
-                  Text('討伐'),
+                  Text(
+                    '討伐',
+                    style: TextStyle(
+                      color: Color(0xFF00FFF7),
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -1240,7 +1280,7 @@ class _ParkPageState extends ConsumerState<ParkPage> {
               top: screenHeight * 0.14,
               right: screenWidth * 0.05,
               child: IconButton(
-                icon: Icon(Icons.edit, color: Colors.white, size: 20),
+                icon: Icon(Icons.edit, color: Color(0xFF00FFF7), size: 20),
                 onPressed: () {
                   _showEditQuestDialog(context, taskData);
                 },
@@ -2072,11 +2112,11 @@ class _CountdownWidgetState extends State<_CountdownWidget>
         style: TextStyle(
           fontSize: screenHeight * 0.035,
           fontWeight: FontWeight.bold,
-          color: Colors.red,
+          color: Colors.redAccent,
           fontFamily: 'display_free_tfb',
           shadows: [
             Shadow(
-              color: Colors.red.withOpacity(0.8),
+              color: Colors.redAccent.withOpacity(0.8),
               blurRadius: 8,
               offset: const Offset(0, 0),
             ),
@@ -2090,9 +2130,18 @@ class _CountdownWidgetState extends State<_CountdownWidget>
     final minutes = _remaining.inMinutes % 60;
     final seconds = _remaining.inSeconds % 60;
 
-    Color timeColor = const Color.fromARGB(255, 0, 255, 255); // Default: cyan
-    if (_remaining.inHours < 1 && _remaining.inSeconds > 0) {
-      timeColor = Colors.redAccent;
+    // デフォルトは水色
+    Color numberColor = const Color(0xFF00FFF7);
+    Color labelColor = Colors.white;
+    bool blink = false;
+
+    if (_remaining.inMinutes < 60) {
+      // 1時間未満で赤文字、30分未満で点滅
+      numberColor = Colors.redAccent;
+      labelColor = Colors.redAccent;
+      if (_remaining.inMinutes < 30) {
+        blink = true;
+      }
     }
 
     Widget textWidget = RichText(
@@ -2101,7 +2150,7 @@ class _CountdownWidgetState extends State<_CountdownWidget>
         style: TextStyle(
           fontSize: screenHeight * 0.035,
           fontWeight: FontWeight.bold,
-          color: const Color.fromRGBO(255, 255, 255, 0.9),
+          color: Colors.white,
           fontFamily: 'display_free_tfb',
           shadows: [
             Shadow(
@@ -2115,9 +2164,11 @@ class _CountdownWidgetState extends State<_CountdownWidget>
           TextSpan(
             text: days.toString(),
             style: TextStyle(
-              color: timeColor,
+              color: numberColor,
               shadows: [
-                Shadow(color: timeColor.withOpacity(0.8), blurRadius: 10),
+                Shadow(color: numberColor.withOpacity(0.9), blurRadius: 24),
+                Shadow(color: numberColor.withOpacity(0.7), blurRadius: 12),
+                Shadow(color: Colors.white.withOpacity(0.5), blurRadius: 8),
               ],
             ),
           ),
@@ -2126,16 +2177,18 @@ class _CountdownWidgetState extends State<_CountdownWidget>
             style: TextStyle(
               fontFamily: 'misaki',
               fontSize: screenHeight * 0.02,
-              color: Colors.white,
+              color: labelColor,
             ),
           ),
           const WidgetSpan(child: SizedBox(width: 8)),
           TextSpan(
             text: hours.toString().padLeft(2, '0'),
             style: TextStyle(
-              color: timeColor,
+              color: numberColor,
               shadows: [
-                Shadow(color: timeColor.withOpacity(0.8), blurRadius: 10),
+                Shadow(color: numberColor.withOpacity(0.9), blurRadius: 24),
+                Shadow(color: numberColor.withOpacity(0.7), blurRadius: 12),
+                Shadow(color: Colors.white.withOpacity(0.5), blurRadius: 8),
               ],
             ),
           ),
@@ -2144,16 +2197,18 @@ class _CountdownWidgetState extends State<_CountdownWidget>
             style: TextStyle(
               fontFamily: 'misaki',
               fontSize: screenHeight * 0.02,
-              color: Colors.white,
+              color: labelColor,
             ),
           ),
           const WidgetSpan(child: SizedBox(width: 8)),
           TextSpan(
             text: minutes.toString().padLeft(2, '0'),
             style: TextStyle(
-              color: timeColor,
+              color: numberColor,
               shadows: [
-                Shadow(color: timeColor.withOpacity(0.8), blurRadius: 10),
+                Shadow(color: numberColor.withOpacity(0.9), blurRadius: 24),
+                Shadow(color: numberColor.withOpacity(0.7), blurRadius: 12),
+                Shadow(color: Colors.white.withOpacity(0.5), blurRadius: 8),
               ],
             ),
           ),
@@ -2162,16 +2217,18 @@ class _CountdownWidgetState extends State<_CountdownWidget>
             style: TextStyle(
               fontFamily: 'misaki',
               fontSize: screenHeight * 0.02,
-              color: Colors.white,
+              color: labelColor,
             ),
           ),
           const WidgetSpan(child: SizedBox(width: 8)),
           TextSpan(
             text: seconds.toString().padLeft(2, '0'),
             style: TextStyle(
-              color: timeColor,
+              color: numberColor,
               shadows: [
-                Shadow(color: timeColor.withOpacity(0.8), blurRadius: 10),
+                Shadow(color: numberColor.withOpacity(0.9), blurRadius: 24),
+                Shadow(color: numberColor.withOpacity(0.7), blurRadius: 12),
+                Shadow(color: Colors.white.withOpacity(0.5), blurRadius: 8),
               ],
             ),
           ),
@@ -2180,17 +2237,16 @@ class _CountdownWidgetState extends State<_CountdownWidget>
             style: TextStyle(
               fontFamily: 'misaki',
               fontSize: screenHeight * 0.02,
-              color: Colors.white,
+              color: labelColor,
             ),
           ),
         ],
       ),
     );
 
-    if (_animationController != null) {
+    if (blink && _animationController != null) {
       return FadeTransition(opacity: _animationController!, child: textWidget);
     }
-
     return textWidget;
   }
 }
