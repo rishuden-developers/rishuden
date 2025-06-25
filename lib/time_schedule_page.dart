@@ -968,16 +968,24 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
     double totalHeight,
   ) {
     List<Widget> positionedWidgets = [];
-    final double totalMinutes = (20 * 60 + 0) - (8 * 60 + 50);
+    
+    // 時間帯の定義
+    const int classStartMinutes = 8 * 60 + 50; // 8:50
+    const int classEndMinutes = 20 * 60 + 0;   // 20:00
+    const int dayEndMinutes = 24 * 60 + 0;     // 24:00
+    
+    // 授業時間と放課後時間の高さ配分
+    final double classTimeHeight = totalHeight * 0.85; // 授業時間は85%
+    final double afterSchoolHeight = totalHeight * 0.15; // 放課後は15%
 
     if (!_weekdayEvents.containsKey(dayIndex)) {
       return positionedWidgets;
     }
 
-    // ★★★ 表示する週の日付を取得 ★★★
+    // 表示する週の日付を取得
     final DateTime currentDay = _displayedMonday.add(Duration(days: dayIndex));
 
-    // ★★★ 毎週の予定と、今週の予定のみをフィルタリング ★★★
+    // 毎週の予定と、今週の予定のみをフィルタリング
     final List<Map<String, dynamic>> eventsToShow =
         _weekdayEvents[dayIndex]!.where((event) {
           if (event['isWeekly'] == true) {
@@ -995,11 +1003,27 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
       final TimeOfDay endTime = event['end'];
       final String title = event['title'];
 
-      final startMinutes =
-          (startTime.hour * 60 + startTime.minute) - (8 * 60 + 50);
-      final endMinutes = (endTime.hour * 60 + endTime.minute) - (8 * 60 + 50);
-      final top = (startMinutes / totalMinutes) * totalHeight;
-      final height = ((endMinutes - startMinutes) / totalMinutes) * totalHeight;
+      final int startMinutes = startTime.hour * 60 + startTime.minute;
+      final int endMinutes = endTime.hour * 60 + endTime.minute;
+      
+      double top, height;
+      
+      if (startMinutes < classEndMinutes) {
+        // 授業時間内の予定
+        final double classStartMinutesFromBase = (startMinutes - classStartMinutes).toDouble();
+        final double classEndMinutesFromBase = (endMinutes - classStartMinutes).toDouble();
+        
+        top = (classStartMinutesFromBase / (classEndMinutes - classStartMinutes)) * classTimeHeight;
+        height = ((classEndMinutesFromBase - classStartMinutesFromBase) / (classEndMinutes - classStartMinutes)) * classTimeHeight;
+      } else {
+        // 放課後の予定
+        final double afterSchoolStartMinutesFromBase = (startMinutes - classEndMinutes).toDouble();
+        final double afterSchoolEndMinutesFromBase = (endMinutes - classEndMinutes).toDouble();
+        
+        top = classTimeHeight + (afterSchoolStartMinutesFromBase / (dayEndMinutes - classEndMinutes)) * afterSchoolHeight;
+        height = ((afterSchoolEndMinutesFromBase - afterSchoolStartMinutesFromBase) / (dayEndMinutes - classEndMinutes)) * afterSchoolHeight;
+      }
+      
       if (height <= 0) continue;
 
       const eventColor = Colors.amberAccent;
@@ -1032,12 +1056,10 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
           right: 0,
           height: height,
           child: InkWell(
-            // ★ InkWellで囲んでタップできるようにする
             onTap: () {
-              // 新しい編集ダイアログを呼び出す
-              _showEditWeekdayEventDialog(
-                dayIndex,
-                eventsToShow.indexOf(event),
+              _showEventDialog(
+                dayIndex: dayIndex,
+                eventIndex: eventsToShow.indexOf(event),
               );
             },
             child: eventWidget,
@@ -1049,13 +1071,15 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
   }
   // ★★★ このメソッドをクラス内に丸ごと追加してください ★★★
 
-  Future<void> _showEditWeekdayEventDialog(
-    int dayIndex,
-    int eventIndex, {
+  // 汎用イベントダイアログ関数（日曜・平日共通）
+  Future<void> _showEventDialog({
+    required int dayIndex,
     TimeOfDay? newEventStartTime,
+    int eventIndex = -1,
   }) async {
-    final eventToEdit =
-        eventIndex != -1 ? _weekdayEvents[dayIndex]![eventIndex] : null;
+    final eventToEdit = eventIndex != -1 && _weekdayEvents[dayIndex] != null 
+        ? _weekdayEvents[dayIndex]![eventIndex] 
+        : null;
 
     final titleController = TextEditingController(
       text: eventToEdit?['title'] ?? '',
@@ -1066,7 +1090,7 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
 
     if (eventIndex == -1) {
       // 新規作成
-      startTime = newEventStartTime ?? TimeOfDay.now();
+      startTime = newEventStartTime ?? const TimeOfDay(hour: 10, minute: 0);
       final endHour = startTime.hour + 1;
       endTime = TimeOfDay(
         hour: endHour > 23 ? 23 : endHour,
@@ -1091,19 +1115,19 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setDialogState) {
-            // ★★★ 変更検知ロジック ★★★
+            // 変更検知ロジック
             final isTitleValid = titleController.text.isNotEmpty;
             final isTimeValid =
                 (endTime.hour * 60 + endTime.minute) >
                 (startTime.hour * 60 + startTime.minute);
-            final hasChanged =
+            final hasChanged = eventIndex == -1 || 
                 titleController.text != initialTitle ||
                 startTime != initialStartTime ||
                 endTime != initialEndTime ||
                 isWeekly != initialIsWeekly;
             final canSave = isTitleValid && isTimeValid && hasChanged;
 
-            // ★★★ テキスト変更時にUIを更新 ★★★
+            // テキスト変更時にUIを更新
             titleController.addListener(() {
               setDialogState(() {});
             });
@@ -1272,31 +1296,42 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
 
     if (result == 'update') {
       setState(() {
-        if (_weekdayEvents[dayIndex] == null) {
-          _weekdayEvents[dayIndex] = [];
-        }
-        if (eventIndex == -1) {
-          _weekdayEvents[dayIndex]!.add({
-            'title': titleController.text,
-            'start': startTime,
-            'end': endTime,
-            'isWeekly': isWeekly,
-            'date': _displayedMonday.add(Duration(days: dayIndex)),
-          });
+        final newEvent = {
+          'title': titleController.text,
+          'start': startTime,
+          'end': endTime,
+          'isWeekly': isWeekly,
+          'date': _displayedMonday.add(Duration(days: dayIndex)),
+        };
+
+        if (dayIndex == 6) {
+          // 日曜の場合
+          if (eventIndex == -1) {
+            _sundayEvents.add(newEvent);
+          } else {
+            _sundayEvents[eventIndex] = newEvent;
+          }
+          _sundayEvents.sort(
+            (a, b) => (a['start'] as TimeOfDay).hour.compareTo(
+              (b['start'] as TimeOfDay).hour,
+            ),
+          );
         } else {
-          _weekdayEvents[dayIndex]![eventIndex] = {
-            'title': titleController.text,
-            'start': startTime,
-            'end': endTime,
-            'isWeekly': isWeekly,
-            'date': _weekdayEvents[dayIndex]![eventIndex]['date'],
-          };
+          // 平日の場合
+          if (_weekdayEvents[dayIndex] == null) {
+            _weekdayEvents[dayIndex] = [];
+          }
+          if (eventIndex == -1) {
+            _weekdayEvents[dayIndex]!.add(newEvent);
+          } else {
+            _weekdayEvents[dayIndex]![eventIndex] = newEvent;
+          }
+          _weekdayEvents[dayIndex]!.sort(
+            (a, b) => (a['start'] as TimeOfDay).hour.compareTo(
+              (b['start'] as TimeOfDay).hour,
+            ),
+          );
         }
-        _weekdayEvents[dayIndex]!.sort(
-          (a, b) => (a['start'] as TimeOfDay).hour.compareTo(
-            (b['start'] as TimeOfDay).hour,
-          ),
-        );
       });
     } else if (result == 'delete') {
       bool? confirmDelete = await showDialog<bool>(
@@ -1319,7 +1354,11 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
       );
       if (confirmDelete == true) {
         setState(() {
-          _weekdayEvents[dayIndex]!.removeAt(eventIndex);
+          if (dayIndex == 6) {
+            _sundayEvents.removeAt(eventIndex);
+          } else {
+            _weekdayEvents[dayIndex]!.removeAt(eventIndex);
+          }
         });
       }
     }
@@ -1361,25 +1400,40 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
           behavior: HitTestBehavior.opaque,
           onTapDown: (details) {
             final double tappedY = details.localPosition.dy;
-            const double timetableStartInMinutes = 8 * 60 + 50;
-            const double timetableEndInMinutes = 20 * 60 + 0;
-            const double totalMinutesInTimetable =
-                timetableEndInMinutes - timetableStartInMinutes;
-            final double minutesFromTop =
-                (tappedY / totalHeight) * totalMinutesInTimetable;
-            double totalMinutesFromMidnight =
-                minutesFromTop + timetableStartInMinutes;
-            if (totalMinutesFromMidnight > timetableEndInMinutes - 60) {
-              totalMinutesFromMidnight = timetableEndInMinutes - 60;
+            const double classStartMinutes = 8 * 60 + 50; // 8:50
+            const double classEndMinutes = 20 * 60 + 0;   // 20:00
+            const double dayEndMinutes = 24 * 60 + 0;     // 24:00
+            
+            // 授業時間と放課後時間の高さ配分
+            final double classTimeHeight = totalHeight * 0.85; // 授業時間は85%
+            final double afterSchoolHeight = totalHeight * 0.15; // 放課後は15%
+            
+            double totalMinutesFromMidnight;
+            
+            if (tappedY < classTimeHeight) {
+              // 授業時間エリアのタップ
+              final double classTimeRatio = tappedY / classTimeHeight;
+              totalMinutesFromMidnight = classStartMinutes + (classTimeRatio * (classEndMinutes - classStartMinutes));
+            } else {
+              // 放課後エリアのタップ
+              final double afterSchoolRatio = (tappedY - classTimeHeight) / afterSchoolHeight;
+              totalMinutesFromMidnight = classEndMinutes + (afterSchoolRatio * (dayEndMinutes - classEndMinutes));
             }
-            // ★★★ 開始時刻を一番近い30分単位に丸める ★★★
+            
+            if (totalMinutesFromMidnight > dayEndMinutes - 60) {
+              totalMinutesFromMidnight = dayEndMinutes - 60;
+            }
+            // 開始時刻を一番近い30分単位に丸める
             final double roundedTotalMinutes =
                 (totalMinutesFromMidnight / 30).round() * 30.0;
             int hour = roundedTotalMinutes.toInt() ~/ 60;
             int minute = roundedTotalMinutes.toInt() % 60;
 
             final startTime = TimeOfDay(hour: hour, minute: minute);
-            _showSundayEventDialog(newEventStartTime: startTime);
+            _showEventDialog(
+              dayIndex: 6,
+              newEventStartTime: startTime,
+            );
           },
           child: SizedBox(
             height: totalHeight,
@@ -1409,9 +1463,9 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                 // 昼休みの場合、12:30をデフォルトにする
                 const double totalMinutesFromMidnight = 12 * 60 + 30;
                 final startTime = TimeOfDay(hour: 12, minute: 30);
-                _showEditWeekdayEventDialog(
-                  dayIndex,
-                  -1,
+                _showEventDialog(
+                  dayIndex: dayIndex,
+                  eventIndex: -1,
                   newEventStartTime: startTime,
                 );
                 return;
@@ -1440,28 +1494,39 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
               );
 
               // 授業コマが存在しない場合のみ、予定追加ダイアログを表示
-              const double timetableStartInMinutes = 8 * 60 + 50;
-              const double timetableEndInMinutes = 20 * 60 + 0;
-              const double totalMinutesInTimetable =
-                  timetableEndInMinutes - timetableStartInMinutes;
-              final double minutesFromTop =
-                  (tappedY / totalHeight) * totalMinutesInTimetable;
-              double totalMinutesFromMidnight =
-                  minutesFromTop + timetableStartInMinutes;
-
-              if (totalMinutesFromMidnight > timetableEndInMinutes - 60) {
-                totalMinutesFromMidnight = timetableEndInMinutes - 60;
+              const double classStartMinutes = 8 * 60 + 50; // 8:50
+              const double classEndMinutes = 20 * 60 + 0;   // 20:00
+              const double dayEndMinutes = 24 * 60 + 0;     // 24:00
+              
+              // 授業時間と放課後時間の高さ配分
+              final double classTimeHeight = totalHeight * 0.85; // 授業時間は85%
+              final double afterSchoolHeight = totalHeight * 0.15; // 放課後は15%
+              
+              double totalMinutesFromMidnight;
+              
+              if (tappedY < classTimeHeight) {
+                // 授業時間エリアのタップ
+                final double classTimeRatio = tappedY / classTimeHeight;
+                totalMinutesFromMidnight = classStartMinutes + (classTimeRatio * (classEndMinutes - classStartMinutes));
+              } else {
+                // 放課後エリアのタップ
+                final double afterSchoolRatio = (tappedY - classTimeHeight) / afterSchoolHeight;
+                totalMinutesFromMidnight = classEndMinutes + (afterSchoolRatio * (dayEndMinutes - classEndMinutes));
               }
-              // ★★★ 開始時刻を一番近い30分単位に丸める ★★★
+
+              if (totalMinutesFromMidnight > dayEndMinutes - 60) {
+                totalMinutesFromMidnight = dayEndMinutes - 60;
+              }
+              // 開始時刻を一番近い30分単位に丸める
               final double roundedTotalMinutes =
                   (totalMinutesFromMidnight / 30).round() * 30.0;
               int hour = roundedTotalMinutes.toInt() ~/ 60;
               int minute = roundedTotalMinutes.toInt() % 60;
 
               final startTime = TimeOfDay(hour: hour, minute: minute);
-              _showEditWeekdayEventDialog(
-                dayIndex,
-                -1,
+              _showEventDialog(
+                dayIndex: dayIndex,
+                eventIndex: -1,
                 newEventStartTime: startTime,
               );
             },
@@ -1634,204 +1699,6 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
         if (_weekdayEvents[dayIndex] == null) _weekdayEvents[dayIndex] = [];
         _weekdayEvents[dayIndex]!.add(newEvent);
         _weekdayEvents[dayIndex]!.sort(
-          (a, b) => (a['start'] as TimeOfDay).hour.compareTo(
-            (b['start'] as TimeOfDay).hour,
-          ),
-        );
-      });
-    }
-  }
-
-  Future<void> _showSundayEventDialog({TimeOfDay? newEventStartTime}) async {
-    final titleController = TextEditingController();
-    TimeOfDay? startTime = newEventStartTime;
-    TimeOfDay? endTime;
-    if (newEventStartTime != null) {
-      final endHour = newEventStartTime.hour + 1;
-      endTime = TimeOfDay(
-        hour: endHour > 23 ? 23 : endHour,
-        minute: endHour > 23 ? 59 : newEventStartTime.minute,
-      );
-    }
-    bool isWeekly = false;
-
-    bool? shouldSave = await showDialog<bool>(
-      context: context,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            // ★★★ 変更を検知するためのロジックを追加 ★★★
-            final bool isTitleValid = titleController.text.isNotEmpty;
-            final bool isTimeValid =
-                startTime != null &&
-                endTime != null &&
-                (endTime!.hour * 60 + endTime!.minute) >
-                    (startTime!.hour * 60 + startTime!.minute);
-            final bool canSave = isTitleValid && isTimeValid;
-
-            // ★★★ テキストが変更されたときにUIを更新 ★★★
-            titleController.addListener(() {
-              setDialogState(() {});
-            });
-
-            return AlertDialog(
-              backgroundColor: const Color.fromARGB(255, 22, 22, 22),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(15.0),
-              ),
-              title: const Text(
-                '日曜の予定',
-                style: TextStyle(color: Colors.white, fontFamily: 'misaki'),
-              ),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextField(
-                      controller: titleController,
-                      style: const TextStyle(color: Colors.white, fontSize: 14),
-                      decoration: InputDecoration(
-                        hintText: '予定のタイトル',
-                        hintStyle: TextStyle(color: Colors.grey[600]),
-                        focusedBorder: const UnderlineInputBorder(
-                          borderSide: BorderSide(color: Colors.amberAccent),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: [
-                        InkWell(
-                          onTap: () async {
-                            await showModalBottomSheet(
-                              context: context,
-                              builder: (BuildContext builder) {
-                                return Container(
-                                  height: 250,
-                                  child: CupertinoDatePicker(
-                                    mode: CupertinoDatePickerMode.time,
-                                    use24hFormat: true,
-                                    initialDateTime: DateTime(
-                                      2023,
-                                      1,
-                                      1,
-                                      startTime?.hour ?? 10,
-                                      startTime?.minute ?? 0,
-                                    ),
-                                    onDateTimeChanged: (DateTime newTime) {
-                                      setDialogState(() {
-                                        startTime = TimeOfDay.fromDateTime(
-                                          newTime,
-                                        );
-                                      });
-                                    },
-                                  ),
-                                );
-                              },
-                            );
-                          },
-                          child: Text(
-                            "開始: ${startTime?.format(context) ?? '未選択'}",
-                            style: const TextStyle(
-                              color: Colors.amberAccent,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                        InkWell(
-                          onTap: () async {
-                            await showModalBottomSheet(
-                              context: context,
-                              builder: (BuildContext builder) {
-                                return Container(
-                                  height: 250,
-                                  child: CupertinoDatePicker(
-                                    mode: CupertinoDatePickerMode.time,
-                                    use24hFormat: true,
-                                    initialDateTime: DateTime(
-                                      2023,
-                                      1,
-                                      1,
-                                      endTime?.hour ?? 12,
-                                      endTime?.minute ?? 0,
-                                    ),
-                                    onDateTimeChanged: (DateTime newTime) {
-                                      setDialogState(() {
-                                        endTime = TimeOfDay.fromDateTime(
-                                          newTime,
-                                        );
-                                      });
-                                    },
-                                  ),
-                                );
-                              },
-                            );
-                          },
-                          child: Text(
-                            "終了: ${endTime?.format(context) ?? '未選択'}",
-                            style: const TextStyle(
-                              color: Colors.amberAccent,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    CheckboxListTile(
-                      title: const Text(
-                        "毎週の予定にする",
-                        style: TextStyle(
-                          fontFamily: 'misaki',
-                          fontSize: 13,
-                          color: Colors.white,
-                        ),
-                      ),
-                      value: isWeekly,
-                      activeColor: Colors.amberAccent,
-                      checkColor: Colors.black,
-                      onChanged:
-                          (bool? value) =>
-                              setDialogState(() => isWeekly = value ?? false),
-                      controlAffinity: ListTileControlAffinity.leading,
-                      contentPadding: EdgeInsets.zero,
-                    ),
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(false),
-                  child: const Text(
-                    'キャンセル',
-                    style: TextStyle(color: Colors.white70),
-                  ),
-                ),
-                TextButton(
-                  onPressed:
-                      canSave ? () => Navigator.of(context).pop(true) : null,
-                  child: const Text(
-                    '保存',
-                    style: TextStyle(color: Colors.amberAccent),
-                  ),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-
-    if (shouldSave == true) {
-      setState(() {
-        _sundayEvents.add({
-          'title': titleController.text,
-          'start': startTime!,
-          'end': endTime!,
-          'isWeekly': isWeekly,
-          'date': _displayedMonday.add(const Duration(days: 6)),
-        });
-        _sundayEvents.sort(
           (a, b) => (a['start'] as TimeOfDay).hour.compareTo(
             (b['start'] as TimeOfDay).hour,
           ),
@@ -2381,7 +2248,16 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
 
   List<Widget> _buildSundayEventCells(double totalHeight) {
     List<Widget> eventCells = [];
-    final int totalMinutes = (20 * 60 + 0) - (8 * 60 + 50);
+    
+    // 時間帯の定義
+    const int classStartMinutes = 8 * 60 + 50; // 8:50
+    const int classEndMinutes = 20 * 60 + 0;   // 20:00
+    const int dayEndMinutes = 24 * 60 + 0;     // 24:00
+    
+    // 授業時間と放課後時間の高さ配分
+    final double classTimeHeight = totalHeight * 0.85; // 授業時間は85%
+    final double afterSchoolHeight = totalHeight * 0.15; // 放課後は15%
+    
     final DateTime currentSunday = _displayedMonday.add(
       const Duration(days: 6),
     );
@@ -2398,15 +2274,30 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
       final TimeOfDay startTime = event['start'];
       final TimeOfDay endTime = event['end'];
       final String title = event['title'];
-      final double startMinutes =
-          (startTime.hour * 60 + startTime.minute) - (8 * 60 + 50);
-      final double endMinutes =
-          (endTime.hour * 60 + endTime.minute) - (8 * 60 + 50);
-      if (startMinutes < 0 || endMinutes > totalMinutes) continue;
-      final double top = (startMinutes / totalMinutes) * totalHeight;
-      final double height =
-          ((endMinutes - startMinutes) / totalMinutes) * totalHeight;
+      
+      final int startMinutes = startTime.hour * 60 + startTime.minute;
+      final int endMinutes = endTime.hour * 60 + endTime.minute;
+      
+      double top, height;
+      
+      if (startMinutes < classEndMinutes) {
+        // 授業時間内の予定
+        final double classStartMinutesFromBase = (startMinutes - classStartMinutes).toDouble();
+        final double classEndMinutesFromBase = (endMinutes - classStartMinutes).toDouble();
+        
+        top = (classStartMinutesFromBase / (classEndMinutes - classStartMinutes)) * classTimeHeight;
+        height = ((classEndMinutesFromBase - classStartMinutesFromBase) / (classEndMinutes - classStartMinutes)) * classTimeHeight;
+      } else {
+        // 放課後の予定
+        final double afterSchoolStartMinutesFromBase = (startMinutes - classEndMinutes).toDouble();
+        final double afterSchoolEndMinutesFromBase = (endMinutes - classEndMinutes).toDouble();
+        
+        top = classTimeHeight + (afterSchoolStartMinutesFromBase / (dayEndMinutes - classEndMinutes)) * afterSchoolHeight;
+        height = ((afterSchoolEndMinutesFromBase - afterSchoolStartMinutesFromBase) / (dayEndMinutes - classEndMinutes)) * afterSchoolHeight;
+      }
+      
       if (height <= 0) continue;
+      
       const eventColor = Colors.pinkAccent;
       eventCells.add(
         Positioned(
