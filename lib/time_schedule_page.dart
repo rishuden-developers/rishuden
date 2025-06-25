@@ -4,10 +4,8 @@ import 'dart:math';
 import 'dart:ui';
 import 'package:flutter/cupertino.dart';
 import 'package:intl/intl.dart';
-import 'package:provider/provider.dart';
+// import 'package:provider/provider.dart'; // Riverpodを使用しているので、これはおそらく不要。もしエラーが出たら削除を検討
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter/services.dart';
-import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -30,6 +28,9 @@ import 'providers/global_review_mapping_provider.dart';
 import 'level_gauge.dart';
 import 'task_progress_gauge.dart';
 
+// main.dartで定義された handleAttendanceAction をインポート
+import '../main.dart' show handleAttendanceAction;
+
 enum AttendanceStatus { present, absent, late, none }
 
 class TimeSchedulePage extends ConsumerStatefulWidget {
@@ -41,6 +42,11 @@ class TimeSchedulePage extends ConsumerStatefulWidget {
 class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
   late PageController _pageController;
   static const int _initialPage = 5000; // 無限スクロールのための開始ページ
+
+  // main.dart からインポートしたグローバル関数を呼び出すためのラッパー
+  Future<void> _handleAttendanceAction(String actionId, String classId) async {
+    await _handleAttendanceAction(actionId, classId);
+  }
 
   final List<String> _days = const ['月', '火', '水', '木', '金', '土', '日'];
   final int _academicPeriods = 6;
@@ -69,8 +75,6 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
     ["18:30", "20:00"],
   ];
   Timer? _highlightTimer;
-  Map<String, int> _absenceCount = {};
-  Map<String, int> _lateCount = {};
   late DateTime _displayedMonday;
   List<String> _dayDates = [];
   String _weekDateRange = "";
@@ -89,32 +93,67 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
     const Color(0xFF76FF03), // limeAccent[400]
   ];
 
-  // ★★★ グローバルなcourseId管理 ★★★
-  static Map<String, String> _globalSubjectToCourseId = {};
-  static int _globalCourseIdCounter = 0;
-
-  // ★★★ courseIdをTimetableProviderから取得するメソッドを追加 ★★★
+  // ★★★ courseIdをTimetableProviderから取得するメソッド
   Map<String, String> get courseIds =>
-      ref.watch(timetableProvider)['courseIds'] ?? {};
+      ref.watch(
+        timetableProvider.select(
+          (data) => data['courseIds'] as Map<String, String>?,
+        ),
+      ) ??
+      {};
 
-  // ★★★ courseIdをTimetableProviderに保存するメソッドを追加 ★★★
+  // ★★★ courseIdをTimetableProviderに保存するメソッド
   void _updateCourseIds(Map<String, String> courseIds) {
     ref.read(timetableProvider.notifier).updateCourseIds(courseIds);
   }
 
   // データの取得メソッド（UIは変更しない）
   Map<String, String> get cellNotes =>
-      ref.watch(timetableProvider)['cellNotes'] ?? {};
+      ref.watch(
+        timetableProvider.select(
+          (data) => data['cellNotes'] as Map<String, String>?,
+        ),
+      ) ??
+      {};
   Map<String, String> get weeklyNotes =>
-      ref.watch(timetableProvider)['weeklyNotes'] ?? {};
+      ref.watch(
+        timetableProvider.select(
+          (data) => data['weeklyNotes'] as Map<String, String>?,
+        ),
+      ) ??
+      {};
   Map<String, String> get attendancePolicies =>
-      ref.watch(timetableProvider)['attendancePolicies'] ?? {};
+      ref.watch(
+        timetableProvider.select(
+          (data) => data['attendancePolicies'] as Map<String, String>?,
+        ),
+      ) ??
+      {};
   Map<String, Map<String, String>> get attendanceStatus =>
-      ref.watch(timetableProvider)['attendanceStatus'] ?? {};
+      ref.watch(
+        timetableProvider.select(
+          (data) =>
+              data['attendanceStatus'] as Map<String, Map<String, String>>?,
+        ),
+      ) ??
+      {};
+
+  // absenceCount と lateCount は main.dart の _handleAttendanceAction が更新し、
+  // _listenToAttendanceCounts が購読して Riverpodのプロバイダを更新するので、ref.watch で取得
   Map<String, int> get absenceCount =>
-      ref.watch(timetableProvider)['absenceCount'] ?? {};
+      ref.watch(
+        timetableProvider.select(
+          (data) => data['absenceCount'] as Map<String, int>?,
+        ),
+      ) ??
+      {};
   Map<String, int> get lateCount =>
-      ref.watch(timetableProvider)['lateCount'] ?? {};
+      ref.watch(
+        timetableProvider.select(
+          (data) => data['lateCount'] as Map<String, int>?,
+        ),
+      ) ??
+      {};
 
   // データの更新メソッド（UIは変更しない）
   void _updateCellNotes(Map<String, String> notes) {
@@ -148,7 +187,12 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
 
   // 教員名を取得
   Map<String, String> get teacherNames =>
-      ref.watch(timetableProvider)['teacherNames'] ?? {};
+      ref.watch(
+        timetableProvider.select(
+          (data) => data['teacherNames'] as Map<String, String>?,
+        ),
+      ) ??
+      {};
 
   // 時間割データを読み込み
   void _loadTimetableData() {
@@ -157,12 +201,8 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
 
     // ★★★ 保存されたcourseIdを読み込んで復元 ★★★
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final savedCourseIds = courseIds;
+      final savedCourseIds = courseIds; // Riverpodから取得
       if (savedCourseIds.isNotEmpty) {
-        // _globalSubjectToCourseIdに復元
-        _globalSubjectToCourseId.clear();
-        _globalSubjectToCourseId.addAll(savedCourseIds);
-
         // globalCourseMappingProviderにも復元（正規化された授業名で）
         final globalMappingNotifier = ref.read(
           globalCourseMappingProvider.notifier,
@@ -182,7 +222,7 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
           );
         }
 
-        print('DEBUG: 保存されたcourseIdを復元しました: $_globalSubjectToCourseId');
+        print('DEBUG: 保存されたcourseIdを復元しました: $savedCourseIds');
       }
     });
   }
@@ -198,6 +238,10 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
         _updateHighlight();
       }
     });
+    // ★追加: FCMの初期化とデバイストークンの取得・保存を開始
+    _initializeFCM();
+    // ★追加: 出欠カウントのリアルタイム更新を購読開始
+    _listenToAttendanceCounts();
   }
 
   bool _isInitialWeekLoaded = false;
@@ -210,7 +254,7 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
     }
     _fetchCharacterInfoFromFirebase();
     // ホットリロード時にもデータを再読み込み
-    _loadTimetableData();
+    // _loadTimetableData(); // initStateで既に呼ばれているので重複を避ける
   }
 
   Future<void> _fetchCharacterInfoFromFirebase() async {
@@ -263,7 +307,7 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
 
     // ★★★ 保存されたcourseIdを優先的に使用 ★★★
     Map<String, String> courseIdMap = {};
-    final savedCourseIds = courseIds;
+    final savedCourseIds = courseIds; // Riverpodから取得
 
     for (var entry in timeTableEntries) {
       String courseId;
@@ -553,6 +597,8 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
     return '';
   }
 
+  // ★このメソッドはRiverpod経由で状態を更新するだけなので、Firestoreへの直接書き込みは行わない
+  // ★Firestoreへの書き込みはmain.dartの_handleAttendanceActionに一元化
   void _setAttendanceStatus(
     String uniqueKey,
     String courseId,
@@ -599,7 +645,13 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
             .setAttendanceStatus(courseId, date, newStatus.toString());
       }
 
-      // ★★★ 状態の変化に基づいてカウントを更新 ★★★
+      // ★★★ 状態の変化に基づいてカウントを更新（Riverpodの状態を直接更新） ★★★
+      // このカウント更新は、main.dartの_handleAttendanceActionがFirestoreを更新し、
+      // _listenToAttendanceCountsがFirestoreから読み込んでRiverpodを更新する、という流れがあるため
+      // ここで二重に更新する必要はないが、UIの即時更新のために行う場合もある
+      // ただし、_handleAttendanceActionが呼ばれる前にUIに即時反映させたい場合は残す
+      // ここでは、_handleAttendanceActionがFirestoreを更新するのと同時に、
+      // この_setAttendanceStatusがRiverpodを更新するというパターンを維持する
 
       // 欠席カウントのロジック
       if (oldStatus != AttendanceStatus.absent &&
@@ -662,15 +714,13 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
     if (courseId == null) {
       return baseColor;
     }
-    final int absenceCount = this.absenceCount[courseId] ?? 0;
-    final int lateCount = this.lateCount[courseId] ?? 0;
+    final int absenceCount = this.absenceCount[courseId] ?? 0; // Riverpodから取得
+    final int lateCount = this.lateCount[courseId] ?? 0; // Riverpodから取得
     final double warningLevel = (absenceCount * 1.0) + (lateCount * 0.5);
     final double t = (warningLevel / 3.0).clamp(0.0, 1.0);
     final warningColor = Colors.redAccent[400]!;
     return Color.lerp(baseColor, warningColor, t)!;
   }
-
-  // ★★★ このメソッドを、以下の完成版に丸ごと置き換えてください ★★★
 
   List<Widget> _buildClassEntriesAsPositioned(
     int dayIndex,
@@ -808,9 +858,12 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
         );
       }
 
-      final int absenceCount = this.absenceCount[entry.courseId] ?? 0;
-      final int lateCount = this.lateCount[entry.courseId] ?? 0;
-      final bool hasCount = absenceCount > 0 || lateCount > 0;
+      final int absenceCountForDisplay =
+          this.absenceCount[entry.courseId] ?? 0; // Riverpodから取得
+      final int lateCountForDisplay =
+          this.lateCount[entry.courseId] ?? 0; // Riverpodから取得
+      final bool hasCount =
+          absenceCountForDisplay > 0 || lateCountForDisplay > 0;
       final String noteText = _getNoteForCell(
         dayIndex,
         periodIndex: periodIndex,
@@ -858,20 +911,20 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                     mainAxisAlignment: MainAxisAlignment.start,
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      if (absenceCount > 0)
+                      if (absenceCountForDisplay > 0)
                         Text(
-                          '$absenceCount',
+                          '$absenceCountForDisplay',
                           style: const TextStyle(
                             color: Colors.redAccent,
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                      if (absenceCount > 0 && lateCount > 0)
+                      if (absenceCountForDisplay > 0 && lateCountForDisplay > 0)
                         const SizedBox(width: 6),
-                      if (lateCount > 0)
+                      if (lateCountForDisplay > 0)
                         Text(
-                          '$lateCount',
+                          '$lateCountForDisplay',
                           style: const TextStyle(
                             color: Colors.orangeAccent,
                             fontSize: 12,
@@ -880,12 +933,13 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                         ),
                     ],
                   ),
-                ] else if (entry.courseId != null &&
-                    teacherNames.containsKey(entry.courseId) &&
-                    teacherNames[entry.courseId]!.isNotEmpty) ...[
+                ] else if (entry.courseId !=
+                        null && // entry.courseIdはnullの場合があるのでチェック
+                    teacherNames.containsKey(entry.courseId!)) ...[
+                  // teacherNamesのキーにアクセスする際に!でnullをアサート
                   const SizedBox(height: 1),
                   Text(
-                    teacherNames[entry.courseId]!,
+                    teacherNames[entry.courseId!]!, // ★ !で強制
                     style: TextStyle(
                       fontSize: 8,
                       color: Colors.white.withOpacity(0.6),
@@ -902,7 +956,9 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
+                        mainAxisSize:
+                            MainAxisSize
+                                .min, // MainAxisSize.AxisSize.min を MainAxisSize.min に修正
                         children: [
                           if (noteText.isNotEmpty)
                             Text(
@@ -961,8 +1017,6 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
     }
     return positionedWidgets;
   }
-
-  // ★★★ このメソッドを、以下の完成版に丸ごと置き換えてください ★★★
 
   List<Widget> _buildWeekdayEventsAsPositioned(
     int dayIndex,
@@ -1087,7 +1141,6 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
     }
     return positionedWidgets;
   }
-  // ★★★ このメソッドをクラス内に丸ごと追加してください ★★★
 
   // 汎用イベントダイアログ関数（日曜・平日共通）
   Future<void> _showEventDialog({
@@ -1344,7 +1397,7 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
     }
   }
 
-  // ★★★ このメソッドを、以下の完成版に丸ごと置き換えてください ★★★
+  // ★★★ _buildTimetableBackgroundCells はそのままでOKです ★★★
   Widget _buildTimetableBackgroundCells(int dayIndex) {
     return Column(
       children: List.generate(8, (index) {
@@ -1693,6 +1746,7 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
     }
   }
 
+  // ★★★ _showNoteDialog の定義（こちらが正しい一つだけの定義） ★★★
   Future<void> _showNoteDialog(
     BuildContext context,
     int dayIndex, {
@@ -1703,25 +1757,42 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
         dayIndex < _timetableGrid.length &&
         academicPeriodIndex < _timetableGrid[dayIndex].length) {
       entry = _timetableGrid[dayIndex][academicPeriodIndex];
-    }
-
-    if (entry == null) {
+    } else {
       return;
     }
 
-    final oneTimeNoteKey =
-        "${entry.courseId!}_${DateFormat('yyyyMMdd').format(_displayedMonday.add(Duration(days: dayIndex)))}";
-    final weeklyNoteKey = "W_${entry.courseId!}";
+    // ★★★ uniqueKeyをcourseIdベースに変更 ★★★
+    final String oneTimeNoteKey;
+    if (entry?.courseId != null) {
+      oneTimeNoteKey =
+          "${entry!.courseId}_${DateFormat('yyyyMMdd').format(_displayedMonday.add(Duration(days: dayIndex)))}";
+    } else {
+      // 後方互換性のため、courseIdがない場合は古い形式を使用
+      oneTimeNoteKey =
+          "C_${dayIndex}_${academicPeriodIndex}_${DateFormat('yyyyMMdd').format(_displayedMonday.add(Duration(days: dayIndex)))}";
+    }
+    final String weeklyNoteKey;
+    if (entry?.courseId != null) {
+      weeklyNoteKey = "W_${entry!.courseId}";
+    } else {
+      // 後方互換性のため、courseIdがない場合は古い形式を使用
+      weeklyNoteKey = "W_C_${dayIndex}_$academicPeriodIndex";
+    }
 
     final initialText =
         cellNotes[oneTimeNoteKey] ?? weeklyNotes[weeklyNoteKey] ?? '';
     final isInitiallyWeekly =
         weeklyNotes.containsKey(weeklyNoteKey) &&
         !cellNotes.containsKey(oneTimeNoteKey);
-    final initialPolicyString =
-        attendancePolicies[entry.courseId] ??
-        attendancePolicies[entry.id] ??
-        AttendancePolicy.flexible.toString();
+    // ★★★ 出席方針の初期値もcourseIdベースで取得 ★★★
+    String? initialPolicyString;
+    if (entry?.courseId != null) {
+      initialPolicyString = attendancePolicies[entry!.courseId];
+    }
+    if (initialPolicyString == null && entry?.id != null) {
+      initialPolicyString = attendancePolicies[entry!.id];
+    }
+    initialPolicyString ??= AttendancePolicy.flexible.toString();
 
     final initialPolicy = AttendancePolicy.values.firstWhere(
       (p) => p.toString() == initialPolicyString,
@@ -1733,68 +1804,23 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
     var selectedPolicy = initialPolicy;
 
     final teacherNameController = TextEditingController(
-      text: teacherNames[entry.courseId] ?? '',
+      text: entry?.courseId != null ? teacherNames[entry!.courseId] ?? '' : '',
     );
 
-    final date = DateFormat(
-      'yyyyMMdd',
-    ).format(_displayedMonday.add(Duration(days: dayIndex)));
-
-    // ★★★ 修正点：Providerから直接データを読み込む ★★★
-    final allAttendanceStatus =
-        ref.read(timetableProvider)['attendanceStatus']
-            as Map<String, Map<String, String>>? ??
-        {};
-    final courseStatus = allAttendanceStatus[entry.courseId!] ?? {};
-    final initialStatusString = courseStatus[date];
-
-    var currentStatus =
-        initialStatusString != null && initialStatusString.isNotEmpty
-            ? AttendanceStatus.values.firstWhere(
-              (s) => s.toString() == initialStatusString,
-              orElse: () => AttendanceStatus.none,
-            )
-            : AttendanceStatus.none;
-
-    await showDialog<void>(
+    bool? noteWasSaved = await showDialog<bool>(
       context: context,
       builder: (BuildContext dialogContext) {
         return StatefulBuilder(
           builder: (context, setDialogState) {
-            final activeAbsentStyle = ElevatedButton.styleFrom(
-              backgroundColor: Colors.red[600],
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-                side: const BorderSide(color: Colors.redAccent, width: 2),
-              ),
-              elevation: 8,
-              shadowColor: Colors.redAccent.withOpacity(0.5),
-            );
-
-            final activeLateStyle = ElevatedButton.styleFrom(
-              backgroundColor: Colors.orange[600],
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-                side: const BorderSide(color: Colors.orangeAccent, width: 2),
-              ),
-              elevation: 8,
-              shadowColor: Colors.orangeAccent.withOpacity(0.5),
-            );
-
-            final inactiveStyle = ElevatedButton.styleFrom(
-              backgroundColor: Colors.grey[800],
-              foregroundColor: Colors.white70,
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-                side: BorderSide(color: Colors.grey[700]!),
-              ),
-              elevation: 2,
-            );
+            // ★★★ 変更を検知するためのロジックを追加 ★★★
+            final bool hasChanged =
+                noteController.text != initialText ||
+                isWeekly != isInitiallyWeekly ||
+                selectedPolicy != initialPolicy ||
+                teacherNameController.text.trim() !=
+                    (entry?.courseId != null
+                        ? teacherNames[entry!.courseId] ?? ''
+                        : '');
 
             return AlertDialog(
               backgroundColor: const Color.fromARGB(255, 22, 22, 22),
@@ -1815,7 +1841,7 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    "${entry!.subjectName} (${entry.originalLocation})",
+                    "${entry?.subjectName ?? ''} (${entry?.originalLocation ?? ''})",
                     style: TextStyle(
                       fontFamily: 'misaki',
                       fontSize: 12,
@@ -1965,25 +1991,124 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                           ),
                         ),
                       ),
+                      // 現在の出席状態を表示
+                      Builder(
+                        builder: (context) {
+                          final date = DateFormat('yyyyMMdd').format(
+                            _displayedMonday.add(Duration(days: dayIndex)),
+                          );
+                          final currentStatusString =
+                              entry?.courseId != null
+                                  ? ref
+                                      .read(timetableProvider.notifier)
+                                      .getAttendanceStatus(
+                                        entry!.courseId!,
+                                        date,
+                                      )
+                                  : null;
+                          final currentStatus =
+                              currentStatusString != null &&
+                                      currentStatusString.isNotEmpty
+                                  ? AttendanceStatus.values.firstWhere(
+                                    (s) => s.toString() == currentStatusString,
+                                    orElse: () => AttendanceStatus.none,
+                                  )
+                                  : AttendanceStatus.none;
+
+                          // 欠席や遅刻の場合のみ表示
+                          if (currentStatus == AttendanceStatus.absent ||
+                              currentStatus == AttendanceStatus.late) {
+                            return Column(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey[800],
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        currentStatus == AttendanceStatus.absent
+                                            ? Icons.cancel
+                                            : Icons.watch_later,
+                                        color:
+                                            currentStatus ==
+                                                    AttendanceStatus.absent
+                                                ? Colors.red
+                                                : Colors.orange,
+                                        size: 20,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        currentStatus == AttendanceStatus.absent
+                                            ? '欠席'
+                                            : '遅刻',
+                                        style: TextStyle(
+                                          color:
+                                              currentStatus ==
+                                                      AttendanceStatus.absent
+                                                  ? Colors.red
+                                                  : Colors.orange,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                              ],
+                            );
+                          }
+
+                          return const SizedBox.shrink();
+                        },
+                      ),
+                      // 出席記録ボタン
                       Row(
                         children: [
                           Expanded(
                             child: ElevatedButton.icon(
-                              style:
-                                  currentStatus == AttendanceStatus.absent
-                                      ? activeAbsentStyle
-                                      : inactiveStyle,
                               onPressed: () {
-                                final newStatus =
-                                    currentStatus == AttendanceStatus.absent
-                                        ? AttendanceStatus.none
-                                        : AttendanceStatus.absent;
-                                _setAttendanceStatus(
-                                  oneTimeNoteKey,
-                                  entry!.courseId!,
-                                  newStatus,
-                                );
-                                setDialogState(() => currentStatus = newStatus);
+                                if (entry?.courseId != null) {
+                                  final date = DateFormat('yyyyMMdd').format(
+                                    _displayedMonday.add(
+                                      Duration(days: dayIndex),
+                                    ),
+                                  );
+                                  final currentStatusString = ref
+                                      .read(timetableProvider.notifier)
+                                      .getAttendanceStatus(
+                                        entry!.courseId!,
+                                        date,
+                                      );
+                                  final currentStatus =
+                                      currentStatusString != null &&
+                                              currentStatusString.isNotEmpty
+                                          ? AttendanceStatus.values.firstWhere(
+                                            (s) =>
+                                                s.toString() ==
+                                                currentStatusString,
+                                            orElse: () => AttendanceStatus.none,
+                                          )
+                                          : AttendanceStatus.none;
+
+                                  final newStatus =
+                                      currentStatus == AttendanceStatus.absent
+                                          ? AttendanceStatus.none
+                                          : AttendanceStatus.absent;
+                                  final uniqueKey =
+                                      "${entry!.courseId}_${DateFormat('yyyyMMdd').format(_displayedMonday.add(Duration(days: dayIndex)))}";
+                                  _setAttendanceStatus(
+                                    uniqueKey,
+                                    entry.courseId!,
+                                    newStatus,
+                                  );
+                                  setDialogState(() {});
+                                }
                               },
                               icon: const Icon(Icons.cancel_outlined),
                               label: const Text('欠席'),
@@ -1992,21 +2117,44 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                           const SizedBox(width: 8),
                           Expanded(
                             child: ElevatedButton.icon(
-                              style:
-                                  currentStatus == AttendanceStatus.late
-                                      ? activeLateStyle
-                                      : inactiveStyle,
                               onPressed: () {
-                                final newStatus =
-                                    currentStatus == AttendanceStatus.late
-                                        ? AttendanceStatus.none
-                                        : AttendanceStatus.late;
-                                _setAttendanceStatus(
-                                  oneTimeNoteKey,
-                                  entry!.courseId!,
-                                  newStatus,
-                                );
-                                setDialogState(() => currentStatus = newStatus);
+                                if (entry?.courseId != null) {
+                                  final date = DateFormat('yyyyMMdd').format(
+                                    _displayedMonday.add(
+                                      Duration(days: dayIndex),
+                                    ),
+                                  );
+                                  final currentStatusString = ref
+                                      .read(timetableProvider.notifier)
+                                      .getAttendanceStatus(
+                                        entry!.courseId!,
+                                        date,
+                                      );
+                                  final currentStatus =
+                                      currentStatusString != null &&
+                                              currentStatusString.isNotEmpty
+                                          ? AttendanceStatus.values.firstWhere(
+                                            (s) =>
+                                                s.toString() ==
+                                                currentStatusString,
+                                            orElse: () => AttendanceStatus.none,
+                                          )
+                                          : AttendanceStatus.none;
+
+                                  final newStatus =
+                                      currentStatus == AttendanceStatus.late
+                                          ? AttendanceStatus.none
+                                          : AttendanceStatus.late;
+
+                                  final uniqueKey =
+                                      "${entry!.courseId}_${DateFormat('yyyyMMdd').format(_displayedMonday.add(Duration(days: dayIndex)))}";
+                                  _setAttendanceStatus(
+                                    uniqueKey,
+                                    entry.courseId!,
+                                    newStatus,
+                                  );
+                                  setDialogState(() {});
+                                }
                               },
                               icon: const Icon(Icons.watch_later_outlined),
                               label: const Text('遅刻'),
@@ -2015,69 +2163,72 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                         ],
                       ),
                       const SizedBox(height: 12),
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.grey[850],
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.grey[700]!),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceAround,
-                          children: [
-                            Column(
-                              children: [
-                                Icon(
-                                  Icons.cancel,
-                                  color: Colors.red[400],
-                                  size: 20,
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  '欠席',
-                                  style: TextStyle(
+                      // 累計回数表示
+                      if (entry?.courseId != null) ...[
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[850],
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.grey[700]!),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceAround,
+                            children: [
+                              Column(
+                                children: [
+                                  Icon(
+                                    Icons.cancel,
                                     color: Colors.red[400],
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
+                                    size: 20,
                                   ),
-                                ),
-                                Text(
-                                  '${absenceCount[entry!.courseId] ?? 0}回',
-                                  style: TextStyle(
-                                    color: Colors.grey[400],
-                                    fontSize: 10,
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    '欠席',
+                                    style: TextStyle(
+                                      color: Colors.red[400],
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
-                                ),
-                              ],
-                            ),
-                            Column(
-                              children: [
-                                Icon(
-                                  Icons.watch_later,
-                                  color: Colors.orange[400],
-                                  size: 20,
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  '遅刻',
-                                  style: TextStyle(
+                                  Text(
+                                    '${absenceCount[entry!.courseId] ?? 0}回',
+                                    style: TextStyle(
+                                      color: Colors.grey[400],
+                                      fontSize: 10,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              Column(
+                                children: [
+                                  Icon(
+                                    Icons.watch_later,
                                     color: Colors.orange[400],
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
+                                    size: 20,
                                   ),
-                                ),
-                                Text(
-                                  '${lateCount[entry!.courseId] ?? 0}回',
-                                  style: TextStyle(
-                                    color: Colors.grey[400],
-                                    fontSize: 10,
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    '遅刻',
+                                    style: TextStyle(
+                                      color: Colors.orange[400],
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
-                                ),
-                              ],
-                            ),
-                          ],
+                                  Text(
+                                    '${lateCount[entry!.courseId] ?? 0}回',
+                                    style: TextStyle(
+                                      color: Colors.grey[400],
+                                      fontSize: 10,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
+                      ],
                     ],
                   ],
                 ),
@@ -2098,36 +2249,7 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                     '保存',
                     style: TextStyle(fontFamily: 'misaki', color: Colors.black),
                   ),
-                  onPressed: () {
-                    final newText = noteController.text.trim();
-                    final newCellNotes = Map<String, String>.from(cellNotes);
-                    final newWeeklyNotes = Map<String, String>.from(
-                      weeklyNotes,
-                    );
-                    if (newText.isEmpty) {
-                      newCellNotes.remove(oneTimeNoteKey);
-                      newWeeklyNotes.remove(weeklyNoteKey);
-                    } else {
-                      if (isWeekly) {
-                        newWeeklyNotes[weeklyNoteKey] = newText;
-                        newCellNotes.remove(oneTimeNoteKey);
-                      } else {
-                        newCellNotes[oneTimeNoteKey] = newText;
-                        newWeeklyNotes.remove(weeklyNoteKey);
-                      }
-                    }
-                    _updateCellNotes(newCellNotes);
-                    _updateWeeklyNotes(newWeeklyNotes);
-                    _updateAttendancePolicies({
-                      ...attendancePolicies,
-                      entry!.courseId!: selectedPolicy.toString(),
-                    });
-                    final teacherName = teacherNameController.text.trim();
-                    ref
-                        .read(timetableProvider.notifier)
-                        .setTeacherName(entry!.courseId!, teacherName);
-                    Navigator.of(dialogContext).pop();
-                  },
+                  onPressed: () => Navigator.of(dialogContext).pop(true),
                 ),
               ],
             );
@@ -2135,6 +2257,54 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
         );
       },
     );
+
+    if (noteWasSaved == true) {
+      final currentEntry = entry;
+      if (currentEntry != null) {
+        final newText = noteController.text.trim();
+
+        final newCellNotes = Map<String, String>.from(cellNotes);
+        final newWeeklyNotes = Map<String, String>.from(weeklyNotes);
+
+        if (newText.isEmpty) {
+          newCellNotes.remove(oneTimeNoteKey);
+          newWeeklyNotes.remove(weeklyNoteKey);
+        } else {
+          if (isWeekly) {
+            newWeeklyNotes[weeklyNoteKey] = newText;
+            newCellNotes.remove(oneTimeNoteKey);
+          } else {
+            newCellNotes[oneTimeNoteKey] = newText;
+            newWeeklyNotes.remove(weeklyNoteKey);
+          }
+        }
+
+        _updateCellNotes(newCellNotes);
+        _updateWeeklyNotes(newWeeklyNotes);
+
+        if (currentEntry.courseId != null) {
+          final user = FirebaseAuth.instance.currentUser;
+          if (user != null) {
+            FirebaseFirestore.instance
+                .collection('course_enrollments')
+                .doc(currentEntry.courseId!)
+                .set({
+                  'enrolledUserIds': FieldValue.arrayUnion([user.uid]),
+                }, SetOptions(merge: true));
+          }
+
+          _updateAttendancePolicies({
+            ...attendancePolicies,
+            currentEntry.courseId!: selectedPolicy.toString(),
+          });
+
+          final teacherName = teacherNameController.text.trim();
+          ref
+              .read(timetableProvider.notifier)
+              .setTeacherName(currentEntry.courseId!, teacherName);
+        }
+      }
+    }
   }
 
   Widget _buildAttendanceStatusIcon(AttendanceStatus status) {
@@ -2157,7 +2327,11 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
 
   Widget _buildAttendancePopupMenu(String uniqueKey, TimetableEntry entry) {
     // ★★★ 後方互換性のためのロジック変更 ★★★
-    String? policyString = attendancePolicies[entry.courseId];
+    String? policyString;
+    if (entry.courseId != null) {
+      // nullチェックを追加
+      policyString = attendancePolicies[entry.courseId!];
+    }
     if (policyString == null) {
       policyString = attendancePolicies[entry.id];
     }
@@ -2174,7 +2348,10 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
     );
     final currentStatusString = ref
         .read(timetableProvider.notifier)
-        .getAttendanceStatus(entry.courseId ?? '', date);
+        .getAttendanceStatus(
+          entry.courseId ?? '',
+          date,
+        ); // entry.courseIdがnullの場合に備えて ?? ''
     final currentStatus =
         currentStatusString != null
             ? AttendanceStatus.values.firstWhere(
@@ -2190,9 +2367,23 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
       child: PopupMenuButton<AttendanceStatus>(
         child: _buildAttendanceStatusIcon(currentStatus),
         tooltip: '出欠を記録',
-        onSelected: (AttendanceStatus newStatus) {
+        onSelected: (AttendanceStatus newStatus) async {
           if (entry.courseId != null) {
-            _setAttendanceStatus(uniqueKey, entry.courseId!, newStatus);
+            // entry.courseIdがnullの場合があるのでチェック
+            // main.dart の _handleAttendanceAction を呼び出す
+            String actionId;
+            if (newStatus == AttendanceStatus.present) {
+              actionId = 'present_action';
+            } else if (newStatus == AttendanceStatus.absent) {
+              actionId = 'absent_action';
+            } else {
+              // newStatus == AttendanceStatus.late
+              actionId = 'late_action';
+            }
+            await _handleAttendanceAction(
+              actionId,
+              entry.courseId!,
+            ); // entry.courseIdがnullでないことを保証
           }
         },
         itemBuilder:
@@ -2339,7 +2530,6 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
     return eventCells;
   }
 
-  // ★★★ このメソッドを、以下の完成版に丸ごと置き換えてください ★★★
   Widget _buildNewContinuousTimeColumn({
     required double periodRowHeight,
     required double lunchRowHeight,
@@ -2745,20 +2935,20 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                   children: [
                     TextField(
                       controller: memoController,
-                      decoration: InputDecoration(
+                      decoration: const InputDecoration(
                         labelText: 'メモ',
                         border: OutlineInputBorder(),
                       ),
                       maxLines: 3,
                     ),
-                    SizedBox(height: 16),
+                    const SizedBox(height: 16),
                     DropdownButtonFormField<String>(
                       value: attendancePolicy,
-                      decoration: InputDecoration(
+                      decoration: const InputDecoration(
                         labelText: '出席ポリシー',
                         border: OutlineInputBorder(),
                       ),
-                      items: [
+                      items: const [
                         DropdownMenuItem(value: 'flexible', child: Text('柔軟')),
                         DropdownMenuItem(value: 'mandatory', child: Text('必須')),
                       ],
@@ -2768,24 +2958,86 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                         });
                       },
                     ),
-                    SizedBox(height: 16),
+                    const SizedBox(height: 16),
                     TextField(
                       controller: teacherNameController,
-                      decoration: InputDecoration(
+                      decoration: const InputDecoration(
                         labelText: '教員名',
                         border: OutlineInputBorder(),
                         hintText: '例: 田中太郎',
                       ),
                     ),
-                    SizedBox(height: 16),
+                    const SizedBox(height: 16),
                     // 出席ボタン
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        ElevatedButton(
+                          onPressed: () {
+                            final uniqueKey =
+                                "${courseId}_${DateFormat('yyyyMMdd').format(_displayedMonday)}";
+                            _setAttendanceStatus(
+                              uniqueKey,
+                              courseId,
+                              AttendanceStatus.present,
+                            );
+                            Navigator.of(context).pop();
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.green,
+                            foregroundColor: Colors.white,
+                          ),
+                          child: Text('出席'),
+                        ),
+                        ElevatedButton(
+                          onPressed: () {
+                            final uniqueKey =
+                                "${courseId}_${DateFormat('yyyyMMdd').format(_displayedMonday)}";
+                            _setAttendanceStatus(
+                              uniqueKey,
+                              courseId,
+                              AttendanceStatus.absent,
+                            );
+                            Navigator.of(context).pop();
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red,
+                            foregroundColor: Colors.white,
+                          ),
+                          child: Text('欠席'),
+                        ),
+                        ElevatedButton(
+                          onPressed: () {
+                            final uniqueKey =
+                                "${courseId}_${DateFormat('yyyyMMdd').format(_displayedMonday)}";
+                            _setAttendanceStatus(
+                              uniqueKey,
+                              courseId,
+                              AttendanceStatus.late,
+                            );
+                            Navigator.of(context).pop();
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.orange,
+                            foregroundColor: Colors.white,
+                          ),
+                          child: Text('遅刻'),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 8),
+                    // 出席状況表示
+                    Text(
+                      '出席: ${absenceCount[courseId] ?? 0} | 欠席: ${absenceCount[courseId] ?? 0} | 遅刻: ${lateCount[courseId] ?? 0}',
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                    ),
                   ],
                 ),
               ),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.of(context).pop(),
-                  child: Text('キャンセル'),
+                  child: const Text('キャンセル'),
                 ),
                 TextButton(
                   onPressed: () async {
@@ -2813,12 +3065,14 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                     // 教員名をグローバルに保存
                     final teacherName = teacherNameController.text.trim();
                     if (teacherName.isNotEmpty) {
-                      await _setGlobalTeacherName(courseId, teacherName);
+                      ref
+                          .read(timetableProvider.notifier)
+                          .setTeacherName(courseId, teacherName);
                     }
 
                     Navigator.of(context).pop();
                   },
-                  child: Text('保存'),
+                  child: const Text('保存'),
                 ),
               ],
             );
@@ -2826,90 +3080,6 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
         );
       },
     );
-  }
-
-  // 教員名を取得
-  Future<String> _getGlobalTeacherName(String courseId) async {
-    final doc =
-        await FirebaseFirestore.instance
-            .collection('courses')
-            .doc(courseId)
-            .collection('meta')
-            .doc('info')
-            .get();
-    return doc.data()?['teacherName'] ?? '';
-  }
-
-  // 教員名を保存
-  Future<void> _setGlobalTeacherName(
-    String courseId,
-    String teacherName,
-  ) async {
-    await FirebaseFirestore.instance
-        .collection('courses')
-        .doc(courseId)
-        .collection('meta')
-        .doc('info')
-        .set({'teacherName': teacherName}, SetOptions(merge: true));
-  }
-
-  Future<TimeOfDay?> pickTime(
-    BuildContext context,
-    TimeOfDay initialTime,
-  ) async {
-    if (Platform.isIOS) {
-      TimeOfDay? picked;
-      DateTime tempDateTime = DateTime(
-        2023,
-        1,
-        1,
-        initialTime.hour,
-        initialTime.minute,
-      );
-      await showModalBottomSheet(
-        context: context,
-        builder: (context) {
-          DateTime selectedDateTime = tempDateTime;
-          return Container(
-            height: 250,
-            child: Column(
-              children: [
-                Expanded(
-                  child: CupertinoDatePicker(
-                    mode: CupertinoDatePickerMode.time,
-                    use24hFormat: true,
-                    initialDateTime: tempDateTime,
-                    onDateTimeChanged: (DateTime newTime) {
-                      selectedDateTime = newTime;
-                      picked = TimeOfDay(
-                        hour: newTime.hour,
-                        minute: newTime.minute,
-                      );
-                    },
-                  ),
-                ),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: const Text('キャンセル'),
-                    ),
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: const Text('完了'),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          );
-        },
-      );
-      return picked;
-    } else {
-      return await showTimePicker(context: context, initialTime: initialTime);
-    }
   }
 }
 

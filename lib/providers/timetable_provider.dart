@@ -1,24 +1,30 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:intl/intl.dart'; // DateFormat を使用するため追加 (もしtime_schedule_page.dartでDateFormatを使っているなら必要)
 
-// 時間割のメモデータを管理するProvider
+// Provider定義
+final timetableProvider =
+    StateNotifierProvider<TimetableNotifier, Map<String, dynamic>>((ref) {
+  return TimetableNotifier();
+});
+
 class TimetableNotifier extends StateNotifier<Map<String, dynamic>> {
   TimetableNotifier()
-    : super({
-        'cellNotes': <String, String>{},
-        'weeklyNotes': <String, String>{},
-        'attendancePolicies': <String, String>{},
-        'attendanceStatus': <String, String>{},
-        'absenceCount': <String, int>{},
-        'lateCount': <String, int>{},
-        'teacherNames': <String, String>{},
-        'courseIds': <String, String>{},
-        'questSelectedClass': null,
-        'questTaskType': null,
-        'questDeadline': null,
-        'questDescription': '',
-      }) {
+      : super({
+          'cellNotes': <String, String>{},
+          'weeklyNotes': <String, String>{},
+          'attendancePolicies': <String, String>{},
+          'attendanceStatus': <String, Map<String, String>>{}, // Map<String, Map<String, String>> 型に修正
+          'absenceCount': <String, int>{},
+          'lateCount': <String, int>{},
+          'teacherNames': <String, String>{},
+          'courseIds': <String, String>{},
+          'questSelectedClass': null,
+          'questTaskType': null,
+          'questDeadline': null,
+          'questDescription': '',
+        }) {
     // 初期化時にFirebaseからデータを読み込み
     _initializeFromFirebase();
   }
@@ -51,6 +57,7 @@ class TimetableNotifier extends StateNotifier<Map<String, dynamic>> {
   }
 
   // 出席状況を更新
+  // このメソッドはもう使われない可能性が高いが、念のため残す
   void updateAttendanceStatus(Map<String, Map<String, String>> status) {
     state = {...state, 'attendanceStatus': status};
     _saveToFirestore();
@@ -307,6 +314,17 @@ class TimetableNotifier extends StateNotifier<Map<String, dynamic>> {
     _saveToFirestore();
   }
 
+  // ★★★ 新しいメソッド：特定のcourseIdの教員名を削除 ★★★
+  void removeTeacherName(String courseId) { // ここを追加しました！
+    final currentData = Map<String, dynamic>.from(state);
+    final teacherNames = Map<String, String>.from(currentData['teacherNames'] ?? {});
+    teacherNames.remove(courseId);
+    currentData['teacherNames'] = teacherNames;
+    state = currentData;
+    _saveToFirestore();
+  }
+
+
   // 教員名が設定されている講義の一覧を取得
   List<Map<String, String>> getLecturesWithTeachers() {
     final teacherNames = state['teacherNames'] as Map<String, String>? ?? {};
@@ -340,13 +358,7 @@ class TimetableNotifier extends StateNotifier<Map<String, dynamic>> {
 
   // ★★★ 特定のセルのcourseIdを取得するメソッドを追加 ★★★
   String? getCourseId(String cellKey) {
-    final courseIds = state['courseIds'] as Map<String, String>?;
-    return courseIds?[cellKey];
+    final courseIdMap = state['courseIds'] as Map<String, String>?; // state['courseId']ではなくstate['courseIds']
+    return courseIdMap?[cellKey];
   }
 }
-
-// Providerの定義
-final timetableProvider =
-    StateNotifierProvider<TimetableNotifier, Map<String, dynamic>>((ref) {
-      return TimetableNotifier();
-    });
