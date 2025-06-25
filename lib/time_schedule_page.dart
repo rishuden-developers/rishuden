@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
+import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -968,12 +969,12 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
     double totalHeight,
   ) {
     List<Widget> positionedWidgets = [];
-    
+
     // 時間帯の定義
     const int classStartMinutes = 8 * 60 + 50; // 8:50
-    const int classEndMinutes = 20 * 60 + 0;   // 20:00
-    const int dayEndMinutes = 24 * 60 + 0;     // 24:00
-    
+    const int classEndMinutes = 20 * 60 + 0; // 20:00
+    const int dayEndMinutes = 24 * 60 + 0; // 24:00
+
     // 授業時間と放課後時間の高さ配分
     final double classTimeHeight = totalHeight * 0.85; // 授業時間は85%
     final double afterSchoolHeight = totalHeight * 0.15; // 放課後は15%
@@ -1005,25 +1006,42 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
 
       final int startMinutes = startTime.hour * 60 + startTime.minute;
       final int endMinutes = endTime.hour * 60 + endTime.minute;
-      
+
       double top, height;
-      
+
       if (startMinutes < classEndMinutes) {
         // 授業時間内の予定
-        final double classStartMinutesFromBase = (startMinutes - classStartMinutes).toDouble();
-        final double classEndMinutesFromBase = (endMinutes - classStartMinutes).toDouble();
-        
-        top = (classStartMinutesFromBase / (classEndMinutes - classStartMinutes)) * classTimeHeight;
-        height = ((classEndMinutesFromBase - classStartMinutesFromBase) / (classEndMinutes - classStartMinutes)) * classTimeHeight;
+        final double classStartMinutesFromBase =
+            (startMinutes - classStartMinutes).toDouble();
+        final double classEndMinutesFromBase =
+            (endMinutes - classStartMinutes).toDouble();
+
+        top =
+            (classStartMinutesFromBase /
+                (classEndMinutes - classStartMinutes)) *
+            classTimeHeight;
+        height =
+            ((classEndMinutesFromBase - classStartMinutesFromBase) /
+                (classEndMinutes - classStartMinutes)) *
+            classTimeHeight;
       } else {
         // 放課後の予定
-        final double afterSchoolStartMinutesFromBase = (startMinutes - classEndMinutes).toDouble();
-        final double afterSchoolEndMinutesFromBase = (endMinutes - classEndMinutes).toDouble();
-        
-        top = classTimeHeight + (afterSchoolStartMinutesFromBase / (dayEndMinutes - classEndMinutes)) * afterSchoolHeight;
-        height = ((afterSchoolEndMinutesFromBase - afterSchoolStartMinutesFromBase) / (dayEndMinutes - classEndMinutes)) * afterSchoolHeight;
+        final double afterSchoolStartMinutesFromBase =
+            (startMinutes - classEndMinutes).toDouble();
+        final double afterSchoolEndMinutesFromBase =
+            (endMinutes - classEndMinutes).toDouble();
+
+        top =
+            classTimeHeight +
+            (afterSchoolStartMinutesFromBase /
+                    (dayEndMinutes - classEndMinutes)) *
+                afterSchoolHeight;
+        height =
+            ((afterSchoolEndMinutesFromBase - afterSchoolStartMinutesFromBase) /
+                (dayEndMinutes - classEndMinutes)) *
+            afterSchoolHeight;
       }
-      
+
       if (height <= 0) continue;
 
       const eventColor = Colors.amberAccent;
@@ -1077,9 +1095,10 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
     TimeOfDay? newEventStartTime,
     int eventIndex = -1,
   }) async {
-    final eventToEdit = eventIndex != -1 && _weekdayEvents[dayIndex] != null 
-        ? _weekdayEvents[dayIndex]![eventIndex] 
-        : null;
+    final eventToEdit =
+        eventIndex != -1 && _weekdayEvents[dayIndex] != null
+            ? _weekdayEvents[dayIndex]![eventIndex]
+            : null;
 
     final titleController = TextEditingController(
       text: eventToEdit?['title'] ?? '',
@@ -1120,7 +1139,8 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
             final isTimeValid =
                 (endTime.hour * 60 + endTime.minute) >
                 (startTime.hour * 60 + startTime.minute);
-            final hasChanged = eventIndex == -1 || 
+            final hasChanged =
+                eventIndex == -1 ||
                 titleController.text != initialTitle ||
                 startTime != initialStartTime ||
                 endTime != initialEndTime ||
@@ -1165,35 +1185,15 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                       children: [
                         InkWell(
                           onTap: () async {
-                            await showModalBottomSheet(
-                              context: context,
-                              builder: (BuildContext builder) {
-                                return Container(
-                                  height: 250,
-                                  child: CupertinoDatePicker(
-                                    mode: CupertinoDatePickerMode.time,
-                                    use24hFormat: true,
-                                    initialDateTime: DateTime(
-                                      2023,
-                                      1,
-                                      1,
-                                      startTime.hour,
-                                      startTime.minute,
-                                    ),
-                                    onDateTimeChanged: (DateTime newTime) {
-                                      setDialogState(() {
-                                        startTime = TimeOfDay.fromDateTime(
-                                          newTime,
-                                        );
-                                      });
-                                    },
-                                  ),
-                                );
-                              },
+                            final TimeOfDay? picked = await pickTime(
+                              context,
+                              startTime ?? TimeOfDay.now(),
                             );
+                            if (picked != null)
+                              setDialogState(() => startTime = picked);
                           },
                           child: Text(
-                            "開始: ${startTime.format(context)}",
+                            "開始: ${startTime?.format(context) ?? '未選択'}",
                             style: const TextStyle(
                               color: Colors.amberAccent,
                               fontWeight: FontWeight.bold,
@@ -1202,35 +1202,15 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                         ),
                         InkWell(
                           onTap: () async {
-                            await showModalBottomSheet(
-                              context: context,
-                              builder: (BuildContext builder) {
-                                return Container(
-                                  height: 250,
-                                  child: CupertinoDatePicker(
-                                    mode: CupertinoDatePickerMode.time,
-                                    use24hFormat: true,
-                                    initialDateTime: DateTime(
-                                      2023,
-                                      1,
-                                      1,
-                                      endTime.hour,
-                                      endTime.minute,
-                                    ),
-                                    onDateTimeChanged: (DateTime newTime) {
-                                      setDialogState(() {
-                                        endTime = TimeOfDay.fromDateTime(
-                                          newTime,
-                                        );
-                                      });
-                                    },
-                                  ),
-                                );
-                              },
+                            final TimeOfDay? picked = await pickTime(
+                              context,
+                              endTime ?? startTime ?? TimeOfDay.now(),
                             );
+                            if (picked != null)
+                              setDialogState(() => endTime = picked);
                           },
                           child: Text(
-                            "終了: ${endTime.format(context)}",
+                            "終了: ${endTime?.format(context) ?? '未選択'}",
                             style: const TextStyle(
                               color: Colors.amberAccent,
                               fontWeight: FontWeight.bold,
@@ -1401,25 +1381,30 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
           onTapDown: (details) {
             final double tappedY = details.localPosition.dy;
             const double classStartMinutes = 8 * 60 + 50; // 8:50
-            const double classEndMinutes = 20 * 60 + 0;   // 20:00
-            const double dayEndMinutes = 24 * 60 + 0;     // 24:00
-            
+            const double classEndMinutes = 20 * 60 + 0; // 20:00
+            const double dayEndMinutes = 24 * 60 + 0; // 24:00
+
             // 授業時間と放課後時間の高さ配分
             final double classTimeHeight = totalHeight * 0.85; // 授業時間は85%
             final double afterSchoolHeight = totalHeight * 0.15; // 放課後は15%
-            
+
             double totalMinutesFromMidnight;
-            
+
             if (tappedY < classTimeHeight) {
               // 授業時間エリアのタップ
               final double classTimeRatio = tappedY / classTimeHeight;
-              totalMinutesFromMidnight = classStartMinutes + (classTimeRatio * (classEndMinutes - classStartMinutes));
+              totalMinutesFromMidnight =
+                  classStartMinutes +
+                  (classTimeRatio * (classEndMinutes - classStartMinutes));
             } else {
               // 放課後エリアのタップ
-              final double afterSchoolRatio = (tappedY - classTimeHeight) / afterSchoolHeight;
-              totalMinutesFromMidnight = classEndMinutes + (afterSchoolRatio * (dayEndMinutes - classEndMinutes));
+              final double afterSchoolRatio =
+                  (tappedY - classTimeHeight) / afterSchoolHeight;
+              totalMinutesFromMidnight =
+                  classEndMinutes +
+                  (afterSchoolRatio * (dayEndMinutes - classEndMinutes));
             }
-            
+
             if (totalMinutesFromMidnight > dayEndMinutes - 60) {
               totalMinutesFromMidnight = dayEndMinutes - 60;
             }
@@ -1430,10 +1415,7 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
             int minute = roundedTotalMinutes.toInt() % 60;
 
             final startTime = TimeOfDay(hour: hour, minute: minute);
-            _showEventDialog(
-              dayIndex: 6,
-              newEventStartTime: startTime,
-            );
+            _showEventDialog(dayIndex: 6, newEventStartTime: startTime);
           },
           child: SizedBox(
             height: totalHeight,
@@ -1495,23 +1477,28 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
 
               // 授業コマが存在しない場合のみ、予定追加ダイアログを表示
               const double classStartMinutes = 8 * 60 + 50; // 8:50
-              const double classEndMinutes = 20 * 60 + 0;   // 20:00
-              const double dayEndMinutes = 24 * 60 + 0;     // 24:00
-              
+              const double classEndMinutes = 20 * 60 + 0; // 20:00
+              const double dayEndMinutes = 24 * 60 + 0; // 24:00
+
               // 授業時間と放課後時間の高さ配分
               final double classTimeHeight = totalHeight * 0.85; // 授業時間は85%
               final double afterSchoolHeight = totalHeight * 0.15; // 放課後は15%
-              
+
               double totalMinutesFromMidnight;
-              
+
               if (tappedY < classTimeHeight) {
                 // 授業時間エリアのタップ
                 final double classTimeRatio = tappedY / classTimeHeight;
-                totalMinutesFromMidnight = classStartMinutes + (classTimeRatio * (classEndMinutes - classStartMinutes));
+                totalMinutesFromMidnight =
+                    classStartMinutes +
+                    (classTimeRatio * (classEndMinutes - classStartMinutes));
               } else {
                 // 放課後エリアのタップ
-                final double afterSchoolRatio = (tappedY - classTimeHeight) / afterSchoolHeight;
-                totalMinutesFromMidnight = classEndMinutes + (afterSchoolRatio * (dayEndMinutes - classEndMinutes));
+                final double afterSchoolRatio =
+                    (tappedY - classTimeHeight) / afterSchoolHeight;
+                totalMinutesFromMidnight =
+                    classEndMinutes +
+                    (afterSchoolRatio * (dayEndMinutes - classEndMinutes));
               }
 
               if (totalMinutesFromMidnight > dayEndMinutes - 60) {
@@ -1603,15 +1590,15 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                       children: [
                         InkWell(
                           onTap: () async {
-                            final TimeOfDay? picked = await showTimePicker(
-                              context: context,
-                              initialTime: startTime ?? TimeOfDay.now(),
+                            final TimeOfDay? picked = await pickTime(
+                              context,
+                              startTime ?? TimeOfDay.now(),
                             );
                             if (picked != null)
                               setDialogState(() => startTime = picked);
                           },
                           child: Text(
-                            "開始: ${startTime?.format(context) ?? '未選択'}",
+                            "開始: ${startTime?.format(context) ?? '未選択'}",
                             style: const TextStyle(
                               color: Colors.tealAccent,
                               fontWeight: FontWeight.bold,
@@ -1620,16 +1607,15 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                         ),
                         InkWell(
                           onTap: () async {
-                            final TimeOfDay? picked = await showTimePicker(
-                              context: context,
-                              initialTime:
-                                  endTime ?? startTime ?? TimeOfDay.now(),
+                            final TimeOfDay? picked = await pickTime(
+                              context,
+                              endTime ?? startTime ?? TimeOfDay.now(),
                             );
                             if (picked != null)
                               setDialogState(() => endTime = picked);
                           },
                           child: Text(
-                            "終了: ${endTime?.format(context) ?? '未選択'}",
+                            "終了: ${endTime?.format(context) ?? '未選択'}",
                             style: const TextStyle(
                               color: Colors.tealAccent,
                               fontWeight: FontWeight.bold,
@@ -2248,16 +2234,16 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
 
   List<Widget> _buildSundayEventCells(double totalHeight) {
     List<Widget> eventCells = [];
-    
+
     // 時間帯の定義
     const int classStartMinutes = 8 * 60 + 50; // 8:50
-    const int classEndMinutes = 20 * 60 + 0;   // 20:00
-    const int dayEndMinutes = 24 * 60 + 0;     // 24:00
-    
+    const int classEndMinutes = 20 * 60 + 0; // 20:00
+    const int dayEndMinutes = 24 * 60 + 0; // 24:00
+
     // 授業時間と放課後時間の高さ配分
     final double classTimeHeight = totalHeight * 0.85; // 授業時間は85%
     final double afterSchoolHeight = totalHeight * 0.15; // 放課後は15%
-    
+
     final DateTime currentSunday = _displayedMonday.add(
       const Duration(days: 6),
     );
@@ -2274,30 +2260,47 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
       final TimeOfDay startTime = event['start'];
       final TimeOfDay endTime = event['end'];
       final String title = event['title'];
-      
+
       final int startMinutes = startTime.hour * 60 + startTime.minute;
       final int endMinutes = endTime.hour * 60 + endTime.minute;
-      
+
       double top, height;
-      
+
       if (startMinutes < classEndMinutes) {
         // 授業時間内の予定
-        final double classStartMinutesFromBase = (startMinutes - classStartMinutes).toDouble();
-        final double classEndMinutesFromBase = (endMinutes - classStartMinutes).toDouble();
-        
-        top = (classStartMinutesFromBase / (classEndMinutes - classStartMinutes)) * classTimeHeight;
-        height = ((classEndMinutesFromBase - classStartMinutesFromBase) / (classEndMinutes - classStartMinutes)) * classTimeHeight;
+        final double classStartMinutesFromBase =
+            (startMinutes - classStartMinutes).toDouble();
+        final double classEndMinutesFromBase =
+            (endMinutes - classStartMinutes).toDouble();
+
+        top =
+            (classStartMinutesFromBase /
+                (classEndMinutes - classStartMinutes)) *
+            classTimeHeight;
+        height =
+            ((classEndMinutesFromBase - classStartMinutesFromBase) /
+                (classEndMinutes - classStartMinutes)) *
+            classTimeHeight;
       } else {
         // 放課後の予定
-        final double afterSchoolStartMinutesFromBase = (startMinutes - classEndMinutes).toDouble();
-        final double afterSchoolEndMinutesFromBase = (endMinutes - classEndMinutes).toDouble();
-        
-        top = classTimeHeight + (afterSchoolStartMinutesFromBase / (dayEndMinutes - classEndMinutes)) * afterSchoolHeight;
-        height = ((afterSchoolEndMinutesFromBase - afterSchoolStartMinutesFromBase) / (dayEndMinutes - classEndMinutes)) * afterSchoolHeight;
+        final double afterSchoolStartMinutesFromBase =
+            (startMinutes - classEndMinutes).toDouble();
+        final double afterSchoolEndMinutesFromBase =
+            (endMinutes - classEndMinutes).toDouble();
+
+        top =
+            classTimeHeight +
+            (afterSchoolStartMinutesFromBase /
+                    (dayEndMinutes - classEndMinutes)) *
+                afterSchoolHeight;
+        height =
+            ((afterSchoolEndMinutesFromBase - afterSchoolStartMinutesFromBase) /
+                (dayEndMinutes - classEndMinutes)) *
+            afterSchoolHeight;
       }
-      
+
       if (height <= 0) continue;
-      
+
       const eventColor = Colors.pinkAccent;
       eventCells.add(
         Positioned(
@@ -2848,6 +2851,65 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
         .collection('meta')
         .doc('info')
         .set({'teacherName': teacherName}, SetOptions(merge: true));
+  }
+
+  Future<TimeOfDay?> pickTime(
+    BuildContext context,
+    TimeOfDay initialTime,
+  ) async {
+    if (Platform.isIOS) {
+      TimeOfDay? picked;
+      DateTime tempDateTime = DateTime(
+        2023,
+        1,
+        1,
+        initialTime.hour,
+        initialTime.minute,
+      );
+      await showModalBottomSheet(
+        context: context,
+        builder: (context) {
+          DateTime selectedDateTime = tempDateTime;
+          return Container(
+            height: 250,
+            child: Column(
+              children: [
+                Expanded(
+                  child: CupertinoDatePicker(
+                    mode: CupertinoDatePickerMode.time,
+                    use24hFormat: true,
+                    initialDateTime: tempDateTime,
+                    onDateTimeChanged: (DateTime newTime) {
+                      selectedDateTime = newTime;
+                      picked = TimeOfDay(
+                        hour: newTime.hour,
+                        minute: newTime.minute,
+                      );
+                    },
+                  ),
+                ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: const Text('キャンセル'),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: const Text('完了'),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          );
+        },
+      );
+      return picked;
+    } else {
+      return await showTimePicker(context: context, initialTime: initialTime);
+    }
   }
 }
 
