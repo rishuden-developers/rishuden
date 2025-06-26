@@ -106,25 +106,18 @@ class _ParkPageState extends ConsumerState<ParkPage> {
 
   void _claimDailyTakoyaki() async {
     if (_isTakoyakiClaimed) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text(
-            '今日の たこ焼きは もう 受け取ったで！ また 明日な！',
-            style: TextStyle(fontFamily: 'misaki', color: Colors.white),
-          ),
-          backgroundColor: Colors.black.withOpacity(0.85),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-            side: const BorderSide(color: Colors.white, width: 2.5),
-          ),
-        ),
-      );
+      setState(() {
+        _dialogueMessages = ["今日のログインボーナスはもう受け取ったで！", "また明日な！"];
+        _currentMessageIndex = 0;
+      });
       return;
     }
     if (!mounted) return;
     setState(() {
-      _takoyakiCount += 10;
+      _takoyakiCount += 1; // 10個→1個に変更
       _isTakoyakiClaimed = true;
+      _dialogueMessages = ["ログインボーナス！", "たこ焼きを 1個 ゲットした！", "今日も一日がんばろう！"];
+      _currentMessageIndex = 0;
     });
 
     // Firebaseにたこ焼き数を保存
@@ -134,20 +127,6 @@ class _ParkPageState extends ConsumerState<ParkPage> {
     final String todayKey =
         'takoyakiClaimed_${DateFormat('yyyy-MM-dd').format(DateTime.now())}';
     await prefs.setBool(todayKey, true);
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text(
-          'たこ焼きを 10個 ゲットした！',
-          style: TextStyle(fontFamily: 'misaki', color: Colors.white),
-        ),
-        backgroundColor: Colors.black.withOpacity(0.85),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-          side: const BorderSide(color: Colors.white, width: 2.5),
-        ),
-      ),
-    );
   }
 
   void _showRpgMessageAfterCrack(Map<String, dynamic> taskData) {
@@ -573,7 +552,7 @@ class _ParkPageState extends ConsumerState<ParkPage> {
                           ),
                           const SizedBox(height: 16),
                           const Text(
-                            '履修伝説を作成した学生団体\n大学入学を機にプログラミングを始めた阪大一回生三人と\nデザイン担当の2回生で構成されています\n\n',
+                            '履修伝説を作成した学生団体\n大学入学を機にプログラミングを始めた阪大一回生三人と\nデザイン担当の阪大二回生で構成されているらしい。。\n\n',
                             style: TextStyle(
                               fontFamily: 'misaki',
                               fontSize: 16,
@@ -857,7 +836,7 @@ class _ParkPageState extends ConsumerState<ParkPage> {
                     Positioned(
                       right: -2,
                       child: GestureDetector(
-                        onTap: () {}, // _showPurchaseDialog(context),
+                        onTap: () => _showTakoyakiInfoDialog(context), // ここを修正
                         child: Container(
                           padding: const EdgeInsets.all(1.0),
                           child: Image.asset(
@@ -1949,6 +1928,17 @@ class _ParkPageState extends ConsumerState<ParkPage> {
         });
       });
 
+      // クエスト情報を取得
+      final questDoc =
+          await FirebaseFirestore.instance
+              .collection('quests')
+              .doc(questId)
+              .get();
+      final questData = questDoc.data() ?? {};
+      final subjectName =
+          questData['subjectName'] ?? questData['name'] ?? '授業名不明';
+      final taskType = questData['taskType'] ?? '課題';
+
       // 自分が対象者の場合、UIを更新
       final currentUser = FirebaseAuth.instance.currentUser;
       if (currentUser != null && enrolledUserIds.contains(currentUser.uid)) {
@@ -1961,14 +1951,14 @@ class _ParkPageState extends ConsumerState<ParkPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text(
-              '半数達成！全員にたこ焼き1個、作成者に2個配布されました！',
+            content: Text(
+              '「$subjectName」の「$taskType」が半数達成！全員にたこ焼き1個、作成者に2個配布されました！',
               style: TextStyle(fontFamily: 'misaki', color: Colors.white),
             ),
             backgroundColor: Colors.black.withOpacity(0.85),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
-              side: const BorderSide(color: Colors.white, width: 2.5),
+              side: BorderSide(color: Colors.white, width: 2.5),
             ),
           ),
         );
@@ -2014,6 +2004,17 @@ class _ParkPageState extends ConsumerState<ParkPage> {
         });
       });
 
+      // クエスト情報を取得
+      final questDoc =
+          await FirebaseFirestore.instance
+              .collection('quests')
+              .doc(questId)
+              .get();
+      final questData = questDoc.data() ?? {};
+      final subjectName =
+          questData['subjectName'] ?? questData['name'] ?? '授業名不明';
+      final taskType = questData['taskType'] ?? '課題';
+
       // 自分が対象者の場合、UIを更新
       final currentUser = FirebaseAuth.instance.currentUser;
       if (currentUser != null && enrolledUserIds.contains(currentUser.uid)) {
@@ -2026,14 +2027,14 @@ class _ParkPageState extends ConsumerState<ParkPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text(
-              '全員達成！全員にたこ焼き5個、作成者に10個配布されました！',
+            content: Text(
+              '「$subjectName」の「$taskType」が全員達成！全員にたこ焼き5個、作成者に10個配布されました！',
               style: TextStyle(fontFamily: 'misaki', color: Colors.white),
             ),
             backgroundColor: Colors.black.withOpacity(0.85),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
-              side: const BorderSide(color: Colors.white, width: 2.5),
+              side: BorderSide(color: Colors.white, width: 2.5),
             ),
           ),
         );
@@ -2041,6 +2042,151 @@ class _ParkPageState extends ConsumerState<ParkPage> {
     } catch (e) {
       print('Error distributing full completion rewards: $e');
     }
+  }
+
+  // ★ たこ焼きの増やし方・使い方ダイアログ表示メソッドを追加
+  void _showTakoyakiInfoDialog(BuildContext context) {
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: 'Close',
+      barrierColor: Colors.black.withOpacity(0.6),
+      transitionDuration: const Duration(milliseconds: 300),
+      pageBuilder: (ctx, anim1, anim2) {
+        return Center(
+          child: Material(
+            type: MaterialType.transparency,
+            child: ScaleTransition(
+              scale: anim1,
+              child: FadeTransition(
+                opacity: anim1,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(15.0),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
+                    child: Container(
+                      width: MediaQuery.of(context).size.width * 0.85,
+                      padding: const EdgeInsets.all(24.0),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(15.0),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.3),
+                        ),
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text(
+                            'たこ焼きの増やし方・使い方',
+                            style: TextStyle(
+                              fontFamily: 'misaki',
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          SingleChildScrollView(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: const [
+                                Text(
+                                  '【たこ焼きの増やし方】',
+                                  style: TextStyle(
+                                    fontFamily: 'misaki',
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                SizedBox(height: 8),
+                                Text(
+                                  '・ログインボーナス',
+                                  style: TextStyle(
+                                    fontFamily: 'misaki',
+                                    fontSize: 16,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                Text(
+                                  '・クエスト討伐',
+                                  style: TextStyle(
+                                    fontFamily: 'misaki',
+                                    fontSize: 16,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                Text(
+                                  '・クエスト作成',
+                                  style: TextStyle(
+                                    fontFamily: 'misaki',
+                                    fontSize: 16,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                Text(
+                                  '・クエストへのいいね',
+                                  style: TextStyle(
+                                    fontFamily: 'misaki',
+                                    fontSize: 16,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                Text(
+                                  '・単位レビュー投稿',
+                                  style: TextStyle(
+                                    fontFamily: 'misaki',
+                                    fontSize: 16,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                SizedBox(height: 16),
+                                Text(
+                                  '【たこ焼きの使い方】',
+                                  style: TextStyle(
+                                    fontFamily: 'misaki',
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                SizedBox(height: 8),
+                                Text(
+                                  '・レビュー閲覧',
+                                  style: TextStyle(
+                                    fontFamily: 'misaki',
+                                    fontSize: 16,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                Text(
+                                  '・アイテム購入（ver2.0で実装！）',
+                                  style: TextStyle(
+                                    fontFamily: 'misaki',
+                                    fontSize: 16,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          ElevatedButton(
+                            onPressed: () => Navigator.of(ctx).pop(),
+                            child: const Text('閉じる'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
   }
 }
 

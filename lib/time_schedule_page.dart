@@ -1131,10 +1131,9 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
 
     final result = await showDialog<String>(
       context: context,
-      builder: (context) {
+      builder: (BuildContext dialogContext) {
         return StatefulBuilder(
           builder: (context, setDialogState) {
-            // 変更検知ロジック
             final isTitleValid = titleController.text.isNotEmpty;
             final isTimeValid =
                 (endTime.hour * 60 + endTime.minute) >
@@ -1147,7 +1146,6 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                 isWeekly != initialIsWeekly;
             final canSave = isTitleValid && isTimeValid && hasChanged;
 
-            // テキスト変更時にUIを更新
             titleController.addListener(() {
               setDialogState(() {});
             });
@@ -1187,13 +1185,13 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                           onTap: () async {
                             final TimeOfDay? picked = await pickTime(
                               context,
-                              startTime ?? TimeOfDay.now(),
+                              startTime,
                             );
                             if (picked != null)
                               setDialogState(() => startTime = picked);
                           },
                           child: Text(
-                            "開始: ${startTime?.format(context) ?? '未選択'}",
+                            "開始: ${startTime.format(context)}",
                             style: const TextStyle(
                               color: Colors.amberAccent,
                               fontWeight: FontWeight.bold,
@@ -1204,13 +1202,13 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                           onTap: () async {
                             final TimeOfDay? picked = await pickTime(
                               context,
-                              endTime ?? startTime ?? TimeOfDay.now(),
+                              endTime,
                             );
                             if (picked != null)
                               setDialogState(() => endTime = picked);
                           },
                           child: Text(
-                            "終了: ${endTime?.format(context) ?? '未選択'}",
+                            "終了: ${endTime.format(context)}",
                             style: const TextStyle(
                               color: Colors.amberAccent,
                               fontWeight: FontWeight.bold,
@@ -1243,7 +1241,7 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
               actions: [
                 if (eventIndex != -1)
                   TextButton(
-                    onPressed: () => Navigator.of(context).pop('delete'),
+                    onPressed: () => Navigator.of(dialogContext).pop('delete'),
                     child: const Text(
                       '削除',
                       style: TextStyle(color: Colors.redAccent),
@@ -1251,7 +1249,7 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                   ),
                 const Spacer(),
                 TextButton(
-                  onPressed: () => Navigator.of(context).pop(null),
+                  onPressed: () => Navigator.of(dialogContext).pop(null),
                   child: const Text(
                     'キャンセル',
                     style: TextStyle(color: Colors.white70),
@@ -1260,7 +1258,7 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                 TextButton(
                   onPressed:
                       canSave
-                          ? () => Navigator.of(context).pop('update')
+                          ? () => Navigator.of(dialogContext).pop('update')
                           : null,
                   child: const Text(
                     '保存',
@@ -1283,9 +1281,7 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
           'isWeekly': isWeekly,
           'date': _displayedMonday.add(Duration(days: dayIndex)),
         };
-
         if (dayIndex == 6) {
-          // 日曜の場合
           if (eventIndex == -1) {
             _sundayEvents.add(newEvent);
           } else {
@@ -1297,7 +1293,6 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
             ),
           );
         } else {
-          // 平日の場合
           if (_weekdayEvents[dayIndex] == null) {
             _weekdayEvents[dayIndex] = [];
           }
