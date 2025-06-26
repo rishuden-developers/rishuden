@@ -123,6 +123,17 @@ class _CreditReviewPageState extends ConsumerState<CreditReviewPage> {
     try {
       Query query = FirebaseFirestore.instance.collection('reviews');
 
+      // courseIdでフィルタリング（その講義のレビューのみを取得）
+      if (widget.courseId != null && widget.courseId!.isNotEmpty) {
+        query = query.where('courseId', isEqualTo: widget.courseId);
+      } else {
+        // courseIdがない場合は、lectureNameとteacherNameでフィルタリング
+        query = query.where('lectureName', isEqualTo: widget.lectureName);
+        if (widget.teacherName.isNotEmpty) {
+          query = query.where('teacherName', isEqualTo: widget.teacherName);
+        }
+      }
+
       final querySnapshot = await query.get();
 
       final reviews =
