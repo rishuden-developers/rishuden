@@ -113,76 +113,54 @@ class _CreditResultPageState extends ConsumerState<CreditResultPage> {
     try {
       final List<Map<String, dynamic>> allCourses = [];
 
-      // 1. course_dataコレクションから後期の授業を取得
-      final courseDataSnapshot =
-          await FirebaseFirestore.instance.collection('course_data').get();
-      for (final doc in courseDataSnapshot.docs) {
-        final data = doc.data();
-        if (data.containsKey('data') &&
-            data['data'] is Map &&
-            data['data']['courses'] is List) {
-          final List<dynamic> courses = data['data']['courses'];
-          for (final course in courses) {
-            if (course is Map<String, dynamic>) {
-              // courseIdを生成（授業名|教員名|曜日|時限の形式）
-              final lectureName = course['lectureName'] ?? course['name'] ?? '';
-              final teacherName =
-                  course['teacherName'] ??
-                  course['instructor'] ??
-                  course['teacher'] ??
-                  '';
-              final period = course['period'] ?? '';
-              final courseId = '$lectureName|$teacherName|$period';
+      // global/course_mappingドキュメントからmappingフィールドを取得
+      final doc =
+          await FirebaseFirestore.instance
+              .collection('global')
+              .doc('course_mapping')
+              .get();
 
-              allCourses.add({
-                ...course,
-                'courseId': courseId,
-                'semester': course['semester'] ?? '後期',
-              });
+      if (doc.exists) {
+        final data = doc.data()!;
+        final mapping = data['mapping'] as Map<String, dynamic>? ?? {};
+
+        // mappingの各エントリを処理
+        for (final entry in mapping.entries) {
+          final courseId = entry.key; // 「講義名|教室|曜日|時限」形式
+          final courseData = entry.value;
+
+          // courseIdをパースして講義名と教室を取得
+          String lectureName = '';
+          String classroom = '';
+
+          if (courseId.contains('|')) {
+            final parts = courseId.split('|');
+            if (parts.length >= 2) {
+              lectureName = parts[0];
+              classroom = parts[1];
             }
+          } else {
+            // 古い形式の場合はcourseIdをそのまま講義名として使用
+            lectureName = courseId;
           }
-        }
-      }
-
-      // 2. master_coursesコレクションから前期の授業を取得
-      final masterCoursesSnapshot =
-          await FirebaseFirestore.instance.collection('master_courses').get();
-      for (final doc in masterCoursesSnapshot.docs) {
-        final data = doc.data() as Map<String, dynamic>;
-        if (data.isNotEmpty) {
-          // courseIdを生成（授業名|教員名|曜日|時限の形式）
-          final lectureName = data['name'] ?? '';
-          final teacherName = data['instructor'] ?? '';
-          final period = data['period'] ?? '';
-          final courseId = '$lectureName|$teacherName|$period';
 
           allCourses.add({
-            'lectureName': lectureName,
-            'teacherName': teacherName,
-            'period': period,
-            'category': data['category'] ?? '',
-            'semester': '前期',
             'courseId': courseId,
-            // 他のフィールドも追加
-            'name': lectureName,
-            'instructor': teacherName,
-            'day': data['day'] ?? '',
-            'subject': data['category'] ?? '',
+            'lectureName': lectureName,
+            'classroom': classroom,
+            'teacherName': '', // 教員名は別途取得が必要な場合があります
+            'category': '', // カテゴリは別途設定が必要
+            'semester': '前期', // デフォルトで前期として設定
+            'avgSatisfaction': 0.0,
+            'avgEasiness': 0.0,
+            'reviewCount': 0,
+            'hasMyReview': false,
           });
         }
       }
 
-      // カテゴリ一覧を抽出
-      final allCategoriesRaw =
-          allCourses.map((course) {
-            return (course['category'] ?? course['subject'] ?? '').toString();
-          }).toList();
-      final categorySet = allCategoriesRaw.toSet();
-      final categories =
-          categorySet.where((c) => c.isNotEmpty).toList()..sort();
-      if (allCategoriesRaw.any((c) => c.isEmpty)) {
-        categories.insert(0, '未分類');
-      }
+      // カテゴリ一覧を抽出（現在は空のカテゴリのみ）
+      final categories = ['未分類'];
 
       // 既存のallCoursesリストをList<CourseCardModel>に変換してsetState
       final courseCardModels =
@@ -197,9 +175,7 @@ class _CreditResultPageState extends ConsumerState<CreditResultPage> {
         _courseCardModels = courseCardModels;
       });
 
-      print(
-        'Loaded ${allCourses.length} courses (${courseDataSnapshot.docs.length} from course_data, ${masterCoursesSnapshot.docs.length} from master_courses)',
-      );
+      print('Loaded ${allCourses.length} courses from course_mapping');
     } catch (e) {
       print('Error loading courses: $e');
       setState(() {

@@ -2,16 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'components/course_card.dart';
 
-class AutumnWinterCourseCardListPage extends StatefulWidget {
-  const AutumnWinterCourseCardListPage({super.key});
+class SpringSummerCourseCardListPage extends StatefulWidget {
+  const SpringSummerCourseCardListPage({super.key});
 
   @override
-  State<AutumnWinterCourseCardListPage> createState() =>
-      _AutumnWinterCourseCardListPageState();
+  State<SpringSummerCourseCardListPage> createState() =>
+      _SpringSummerCourseCardListPageState();
 }
 
-class _AutumnWinterCourseCardListPageState
-    extends State<AutumnWinterCourseCardListPage> {
+class _SpringSummerCourseCardListPageState
+    extends State<SpringSummerCourseCardListPage> {
   bool _isLoading = true;
   List<Map<String, dynamic>> _courses = [];
 
@@ -77,7 +77,7 @@ class _AutumnWinterCourseCardListPageState
 
       print('Loaded ${courses.length} courses from course_mapping');
     } catch (e) {
-      print('Error loading autumn/winter courses: $e');
+      print('Error loading spring/summer courses: $e');
       setState(() => _isLoading = false);
     }
   }
@@ -86,7 +86,7 @@ class _AutumnWinterCourseCardListPageState
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('秋冬学期の授業一覧'),
+        title: const Text('春夏学期の授業一覧'),
         backgroundColor: Colors.indigo[800],
         foregroundColor: Colors.white,
       ),

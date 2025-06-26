@@ -7,6 +7,20 @@ class CourseCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // courseIdから講義名と教室を抽出
+    String lectureName = course['lectureName'] ?? '';
+    String classroom = course['classroom'] ?? '';
+
+    // courseIdが「講義名|教室|曜日|時限」形式の場合、パースして取得
+    final courseId = course['courseId'] ?? '';
+    if (courseId.contains('|')) {
+      final parts = courseId.split('|');
+      if (parts.length >= 2) {
+        lectureName = parts[0];
+        classroom = parts[1];
+      }
+    }
+
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 8.0),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
@@ -19,8 +33,8 @@ class CourseCard extends StatelessWidget {
             MaterialPageRoute(
               builder:
                   (context) => CreditReviewPage(
-                    lectureName: course['lectureName'],
-                    teacherName: course['teacherName'],
+                    lectureName: lectureName,
+                    teacherName: course['teacherName'] ?? '',
                     courseId: course['courseId'],
                   ),
             ),
@@ -32,7 +46,7 @@ class CourseCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 授業名と教員名
+              // 授業名と教室
               Row(
                 children: [
                   Expanded(
@@ -40,7 +54,7 @@ class CourseCard extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          course['lectureName'],
+                          lectureName,
                           style: const TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
@@ -49,7 +63,9 @@ class CourseCard extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          course['teacherName'],
+                          classroom.isNotEmpty
+                              ? '教室: $classroom'
+                              : course['teacherName'] ?? '',
                           style: TextStyle(
                             fontSize: 14,
                             color: Colors.grey[700],

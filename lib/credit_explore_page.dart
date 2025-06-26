@@ -5,6 +5,7 @@ import 'autumn_winter_category_page.dart';
 import 'my_reviews_page.dart';
 import 'credit_result_page.dart';
 import 'autumn_winter_course_card_list_page.dart';
+import 'spring_summer_course_card_list_page.dart';
 
 class CreditExplorePage extends StatefulWidget {
   const CreditExplorePage({super.key});
@@ -132,7 +133,7 @@ class _CreditExplorePageState extends State<CreditExplorePage> {
                             MaterialPageRoute(
                               builder:
                                   (context) =>
-                                      const CurrentSemesterReviewsPage(),
+                                      const SpringSummerCourseCardListPage(),
                             ),
                           );
                         },
@@ -346,7 +347,9 @@ class _CreditExplorePageState extends State<CreditExplorePage> {
         onPressed: () {
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => const MyReviewsPage()),
+            MaterialPageRoute(
+              builder: (context) => const CurrentSemesterReviewsPage(),
+            ),
           );
         },
       ),
