@@ -80,14 +80,26 @@ class _CurrentSemesterReviewsPageState
           final lectureName = parts.isNotEmpty ? parts[0] : courseId;
           final teacherName = parts.length > 1 ? parts[1] : '';
 
-          // その授業のレビューを取得
+          // その授業のレビューを取得（courseIdで検索）
           final reviewsSnapshot =
               await FirebaseFirestore.instance
                   .collection('reviews')
                   .where('courseId', isEqualTo: courseId)
                   .get();
 
-          // ユーザーが投稿したレビューも取得（courseIdが設定されていない場合のフォールバック）
+          final allReviews = <Map<String, dynamic>>[];
+          final Set<String> addedReviewIds = <String>{};
+
+          // courseIdで取得したレビューを追加
+          for (final doc in reviewsSnapshot.docs) {
+            final data = doc.data();
+            data['reviewId'] = doc.id; // reviewIdを追加
+            allReviews.add(data);
+            addedReviewIds.add(doc.id);
+          }
+
+          // ユーザーが投稿したレビューで、まだ追加されていないものを取得
+          // courseIdが設定されていない場合のフォールバック
           final userReviewsSnapshot =
               await FirebaseFirestore.instance
                   .collection('reviews')
@@ -95,18 +107,13 @@ class _CurrentSemesterReviewsPageState
                   .where('lectureName', isEqualTo: lectureName)
                   .get();
 
-          final allReviews = <Map<String, dynamic>>[];
-
-          // courseIdで取得したレビューを追加
-          for (final doc in reviewsSnapshot.docs) {
-            allReviews.add(doc.data());
-          }
-
-          // ユーザーのレビューで重複していないものを追加
+          // 重複していないレビューのみを追加
           for (final doc in userReviewsSnapshot.docs) {
-            final data = doc.data();
-            if (!allReviews.any((r) => r['reviewId'] == doc.id)) {
+            if (!addedReviewIds.contains(doc.id)) {
+              final data = doc.data();
+              data['reviewId'] = doc.id; // reviewIdを追加
               allReviews.add(data);
+              addedReviewIds.add(doc.id);
             }
           }
 
@@ -151,7 +158,9 @@ class _CurrentSemesterReviewsPageState
             'hasMyReview': hasMyReview,
           });
 
-          print('Added course: $lectureName with $reviewCount reviews');
+          print(
+            'Added course: $lectureName with $reviewCount reviews (unique)',
+          );
         } catch (e) {
           print('Error processing course $courseId: $e');
         }

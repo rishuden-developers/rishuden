@@ -14,7 +14,7 @@ import 'credit_input_page.dart'; // ★ 遷移先として追加
 class MyCourseReviewModel {
   final String subjectName;
   final String teacherName;
-  final String reviewId;
+  final String courseId;
   double avgSatisfaction;
   double avgEasiness;
   int reviewCount;
@@ -22,7 +22,7 @@ class MyCourseReviewModel {
   MyCourseReviewModel({
     required this.subjectName,
     required this.teacherName,
-    required this.reviewId,
+    required this.courseId,
     this.avgSatisfaction = 0.0,
     this.avgEasiness = 0.0,
     this.reviewCount = 0,
@@ -121,7 +121,7 @@ class _MyReviewsPageState extends ConsumerState<MyReviewsPage> {
         MyCourseReviewModel(
           subjectName: subjectName,
           teacherName: teacherName,
-          reviewId: courseId,
+          courseId: courseId,
           avgSatisfaction: avgSatisfaction,
           avgEasiness: avgEasiness,
           reviewCount: reviewsForCourse.length,
@@ -140,17 +140,17 @@ class _MyReviewsPageState extends ConsumerState<MyReviewsPage> {
         .collection('reviews')
         .snapshots()
         .listen((snapshot) {
-          final Map<String, List<DocumentSnapshot>> reviewsByReviewId = {};
+          final Map<String, List<DocumentSnapshot>> reviewsByCourseId = {};
           for (var doc in snapshot.docs) {
-            final reviewId = doc.data()['reviewId'] as String?;
-            if (reviewId != null) {
-              reviewsByReviewId.putIfAbsent(reviewId, () => []).add(doc);
+            final courseId = doc.data()['courseId'] as String?;
+            if (courseId != null) {
+              reviewsByCourseId.putIfAbsent(courseId, () => []).add(doc);
             }
           }
 
           final updatedCourses = List<MyCourseReviewModel>.from(_myCourses);
           for (var course in updatedCourses) {
-            final reviews = reviewsByReviewId[course.reviewId] ?? [];
+            final reviews = reviewsByCourseId[course.courseId] ?? [];
             if (reviews.isNotEmpty) {
               course.reviewCount = reviews.length;
               course.avgSatisfaction =
@@ -239,7 +239,7 @@ class _MyReviewsPageState extends ConsumerState<MyReviewsPage> {
             MaterialPageRoute(
               builder:
                   (context) => CreditInputPage(
-                    courseId: result.reviewId,
+                    courseId: result.courseId,
                     lectureName: result.subjectName,
                     teacherName: result.teacherName,
                   ),

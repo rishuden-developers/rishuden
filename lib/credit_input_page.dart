@@ -207,6 +207,13 @@ class _CreditInputPageState extends ConsumerState<CreditInputPage> {
   Future<void> _saveReview() async {
     print('saveReview呼び出し時のcourseId: \\${widget.courseId}');
     if (!mounted) return;
+
+    // 既にローディング中の場合は処理をスキップ（二重クリック防止）
+    if (_isLoading) {
+      print('既にローディング中のため、処理をスキップします');
+      return;
+    }
+
     setState(() => _isLoading = true);
 
     final lectureName = widget.lectureName;
@@ -293,10 +300,12 @@ class _CreditInputPageState extends ConsumerState<CreditInputPage> {
     } catch (e, st) {
       print('レビュー投稿エラー: $e');
       print(st);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('レビュー投稿に失敗: $e')));
-      setState(() => _isLoading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('レビュー投稿に失敗: $e')));
+        setState(() => _isLoading = false);
+      }
       return;
     }
   }
