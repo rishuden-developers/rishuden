@@ -13,6 +13,8 @@ import 'package:flutter_rating_bar/flutter_rating_bar.dart'; // ★レート表�
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rishuden/providers/global_course_mapping_provider.dart';
 import 'package:rishuden/providers/global_review_mapping_provider.dart';
+import 'current_semester_reviews_page.dart' show _CourseCard;
+import 'components/course_card.dart';
 
 // 検索結果の各講義を表すデータモデル
 class LectureSearchResult {
@@ -31,6 +33,39 @@ class LectureSearchResult {
     this.avgEasiness = 0.0,
     this.reviewCount = 0,
   });
+}
+
+class CourseCardModel {
+  final String courseId;
+  final String lectureName;
+  final String teacherName;
+  final double avgSatisfaction;
+  final double avgEasiness;
+  final int reviewCount;
+  final bool hasMyReview;
+
+  CourseCardModel({
+    required this.courseId,
+    required this.lectureName,
+    required this.teacherName,
+    required this.avgSatisfaction,
+    required this.avgEasiness,
+    required this.reviewCount,
+    required this.hasMyReview,
+  });
+
+  // ファクトリ: Mapから生成
+  factory CourseCardModel.fromMap(Map<String, dynamic> map) {
+    return CourseCardModel(
+      courseId: map['courseId'] ?? '',
+      lectureName: map['lectureName'] ?? map['name'] ?? '',
+      teacherName: map['teacherName'] ?? map['instructor'] ?? '',
+      avgSatisfaction: (map['avgSatisfaction'] ?? 0.0) * 1.0,
+      avgEasiness: (map['avgEasiness'] ?? 0.0) * 1.0,
+      reviewCount: map['reviewCount'] ?? 0,
+      hasMyReview: map['hasMyReview'] ?? false,
+    );
+  }
 }
 
 class CreditResultPage extends ConsumerStatefulWidget {
@@ -61,6 +96,7 @@ class _CreditResultPageState extends ConsumerState<CreditResultPage> {
   List<String> _categories = [];
   List<Map<String, dynamic>> _allCourses = [];
   bool _isLoadingCourses = true;
+  List<CourseCardModel> _courseCardModels = [];
 
   @override
   void initState() {
@@ -75,11 +111,12 @@ class _CreditResultPageState extends ConsumerState<CreditResultPage> {
     });
 
     try {
-      final snapshot =
-          await FirebaseFirestore.instance.collection('course_data').get();
       final List<Map<String, dynamic>> allCourses = [];
 
-      for (final doc in snapshot.docs) {
+      // 1. course_dataコレクションから後期の授業を取得
+      final courseDataSnapshot =
+          await FirebaseFirestore.instance.collection('course_data').get();
+      for (final doc in courseDataSnapshot.docs) {
         final data = doc.data();
         if (data.containsKey('data') &&
             data['data'] is Map &&
@@ -97,9 +134,41 @@ class _CreditResultPageState extends ConsumerState<CreditResultPage> {
               final period = course['period'] ?? '';
               final courseId = '$lectureName|$teacherName|$period';
 
-              allCourses.add({...course, 'courseId': courseId});
+              allCourses.add({
+                ...course,
+                'courseId': courseId,
+                'semester': course['semester'] ?? '後期',
+              });
             }
           }
+        }
+      }
+
+      // 2. master_coursesコレクションから前期の授業を取得
+      final masterCoursesSnapshot =
+          await FirebaseFirestore.instance.collection('master_courses').get();
+      for (final doc in masterCoursesSnapshot.docs) {
+        final data = doc.data() as Map<String, dynamic>;
+        if (data.isNotEmpty) {
+          // courseIdを生成（授業名|教員名|曜日|時限の形式）
+          final lectureName = data['name'] ?? '';
+          final teacherName = data['instructor'] ?? '';
+          final period = data['period'] ?? '';
+          final courseId = '$lectureName|$teacherName|$period';
+
+          allCourses.add({
+            'lectureName': lectureName,
+            'teacherName': teacherName,
+            'period': period,
+            'category': data['category'] ?? '',
+            'semester': '前期',
+            'courseId': courseId,
+            // 他のフィールドも追加
+            'name': lectureName,
+            'instructor': teacherName,
+            'day': data['day'] ?? '',
+            'subject': data['category'] ?? '',
+          });
         }
       }
 
@@ -115,11 +184,22 @@ class _CreditResultPageState extends ConsumerState<CreditResultPage> {
         categories.insert(0, '未分類');
       }
 
+      // 既存のallCoursesリストをList<CourseCardModel>に変換してsetState
+      final courseCardModels =
+          allCourses.map((course) {
+            return CourseCardModel.fromMap(course);
+          }).toList();
+
       setState(() {
         _allCourses = allCourses;
         _categories = categories;
         _isLoadingCourses = false;
+        _courseCardModels = courseCardModels;
       });
+
+      print(
+        'Loaded ${allCourses.length} courses (${courseDataSnapshot.docs.length} from course_data, ${masterCoursesSnapshot.docs.length} from master_courses)',
+      );
     } catch (e) {
       print('Error loading courses: $e');
       setState(() {
@@ -279,7 +359,7 @@ class _CreditResultPageState extends ConsumerState<CreditResultPage> {
                     // 授業一覧
                     Expanded(
                       child:
-                          _filteredCourses.isEmpty
+                          _courseCardModels.isEmpty
                               ? const Center(
                                 child: Text(
                                   '授業が見つかりませんでした',
@@ -293,10 +373,20 @@ class _CreditResultPageState extends ConsumerState<CreditResultPage> {
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 16,
                                 ),
-                                itemCount: _filteredCourses.length,
+                                itemCount: _courseCardModels.length,
                                 itemBuilder: (context, index) {
-                                  final course = _filteredCourses[index];
-                                  return _buildCourseCard(course);
+                                  final model = _courseCardModels[index];
+                                  return CourseCard(
+                                    course: {
+                                      'courseId': model.courseId,
+                                      'lectureName': model.lectureName,
+                                      'teacherName': model.teacherName,
+                                      'avgSatisfaction': model.avgSatisfaction,
+                                      'avgEasiness': model.avgEasiness,
+                                      'reviewCount': model.reviewCount,
+                                      'hasMyReview': model.hasMyReview,
+                                    },
+                                  );
                                 },
                               ),
                     ),

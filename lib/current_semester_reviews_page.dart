@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'credit_input_page.dart';
 import 'character_data.dart';
 import 'credit_review_page.dart';
+import 'components/course_card.dart';
 
 class CurrentSemesterReviewsPage extends StatefulWidget {
   const CurrentSemesterReviewsPage({super.key});
@@ -213,7 +214,7 @@ class _CurrentSemesterReviewsPageState
                 child: ListView.builder(
                   itemCount: courses.length,
                   itemBuilder: (context, index) {
-                    return _CourseCard(course: courses[index]);
+                    return CourseCard(course: courses[index]);
                   },
                 ),
               );

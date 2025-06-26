@@ -4,6 +4,7 @@ import 'current_semester_reviews_page.dart';
 import 'autumn_winter_category_page.dart';
 import 'my_reviews_page.dart';
 import 'credit_result_page.dart';
+import 'autumn_winter_course_card_list_page.dart';
 
 class CreditExplorePage extends StatefulWidget {
   const CreditExplorePage({super.key});
@@ -146,13 +147,14 @@ class _CreditExplorePageState extends State<CreditExplorePage> {
                         subtitle: '秋冬学期',
                         icon: Icons.school,
                         color: Colors.green[700]!,
-                        isDisabled: true,
+                        isDisabled: false,
                         onTap: () {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
                               builder:
-                                  (context) => const AutumnWinterCategoryPage(),
+                                  (context) =>
+                                      const AutumnWinterCourseCardListPage(),
                             ),
                           );
                         },
