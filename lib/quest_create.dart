@@ -350,6 +350,8 @@ class _QuestCreationWidgetState extends ConsumerState<QuestCreationWidget> {
                     onPressed:
                         (tempTaskType != null && tempDeadline != null)
                             ? () async {
+                              print('DEBUG: クエスト作成ボタンが押されました');
+
                               // 週のクエスト作成回数をチェック
                               final courseId =
                                   selectedClass!['courseId'] as String?;
@@ -372,6 +374,8 @@ class _QuestCreationWidgetState extends ConsumerState<QuestCreationWidget> {
                                 }
                               }
 
+                              print('DEBUG: クエスト作成を開始します');
+
                               ref
                                   .read(timetableProvider.notifier)
                                   .updateQuestTaskType(tempTaskType);
@@ -381,18 +385,28 @@ class _QuestCreationWidgetState extends ConsumerState<QuestCreationWidget> {
                               ref
                                   .read(timetableProvider.notifier)
                                   .updateQuestDescription(tempDescription);
+
+                              print('DEBUG: widget.onCreateを呼び出します');
                               widget.onCreate(
                                 selectedClass!,
                                 tempTaskType!,
                                 tempDeadline!,
                                 tempDescription,
                               );
+
+                              print('DEBUG: クエスト作成完了後、データをリセットします');
                               // クエスト作成完了後、データをリセット
                               ref
                                   .read(timetableProvider.notifier)
                                   .resetQuestData();
                               _hasShownDialog = false; // フラグをリセット
-                              Navigator.of(context).pop();
+
+                              print('DEBUG: ダイアログを閉じます');
+                              if (mounted) {
+                                Navigator.of(context).pop();
+                              }
+
+                              print('DEBUG: クエスト作成処理完了');
                             }
                             : null,
                     child: const Text("作成"),

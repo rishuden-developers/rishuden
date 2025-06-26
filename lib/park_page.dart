@@ -993,8 +993,14 @@ class _ParkPageState extends ConsumerState<ParkPage> {
 
                   // ★★★ _createQuestを呼び出すように変更 ★★★
                   _createQuest(selectedClass, taskType, deadline, description);
-                  setState(() {
-                    isQuestCreationVisible = false;
+
+                  // 少し遅延させてからsetStateを呼び出す（ダイアログの閉じる処理と競合を避ける）
+                  Future.delayed(const Duration(milliseconds: 100), () {
+                    if (mounted) {
+                      setState(() {
+                        isQuestCreationVisible = false;
+                      });
+                    }
                   });
                 },
               ),
