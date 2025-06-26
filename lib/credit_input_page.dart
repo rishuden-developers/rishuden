@@ -361,7 +361,7 @@ class _CreditInputPageState extends ConsumerState<CreditInputPage> {
                 right: 0,
                 child: AppBar(
                   title: const Text('レビューを投稿'),
-                  backgroundColor: Colors.transparent,
+                  backgroundColor: const Color.fromARGB(0, 255, 255, 255),
                   elevation: 0,
                 ),
               ),
@@ -478,6 +478,7 @@ class _CreditInputPageState extends ConsumerState<CreditInputPage> {
                                     ),
                           ),
                         ),
+                        const SizedBox(height: 100), // ボタンの下に空白を追加
                       ],
                     ),
                   ),

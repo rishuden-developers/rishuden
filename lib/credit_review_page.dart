@@ -252,34 +252,49 @@ class _CreditReviewPageState extends ConsumerState<CreditReviewPage> {
     print('レビュー件数: ${_allReviews.length}');
     print('CreditReviewPageでのwidget.courseId: \\${widget.courseId}');
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          '講義レビュー',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-            fontFamily: 'NotoSansJP',
-          ),
+    final double topOffset =
+        kToolbarHeight + MediaQuery.of(context).padding.top;
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: Image.asset('assets/night_view.png', fit: BoxFit.cover),
         ),
-        backgroundColor: Colors.indigo[800],
-        elevation: 0,
-        centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
-      body: LayoutBuilder(
-        builder:
-            (context, constraints) => SingleChildScrollView(
-              padding: const EdgeInsets.all(16.0),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  minHeight: constraints.maxHeight - 32,
+        Positioned.fill(child: Container(color: Colors.black.withOpacity(0.5))),
+        Material(
+          type: MaterialType.transparency,
+          child: Stack(
+            children: [
+              // AppBar
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: AppBar(
+                  title: const Text(
+                    '講義レビュー',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontFamily: 'NotoSansJP',
+                    ),
+                  ),
+                  backgroundColor: Colors.transparent,
+                  elevation: 0,
+                  centerTitle: true,
+                  leading: IconButton(
+                    icon: const Icon(Icons.arrow_back, color: Colors.white),
+                    onPressed: () => Navigator.pop(context),
+                  ),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
+              ),
+              // ListView（AppBarの下から画面の一番下まで）
+              Positioned(
+                top: topOffset,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: ListView(
+                  padding: const EdgeInsets.all(16.0),
                   children: [
                     _buildLectureInfoCard(),
                     const SizedBox(height: 20),
@@ -304,12 +319,21 @@ class _CreditReviewPageState extends ConsumerState<CreditReviewPage> {
                     ],
                     const SizedBox(height: 20),
                     _buildPostReviewButton(context),
+                    const SizedBox(height: 200), // ボトムナビの高さ分の余白を増加
                   ],
                 ),
               ),
-            ),
-      ),
-      bottomNavigationBar: const CommonBottomNavigation(),
+              // ボトムナビ
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: const CommonBottomNavigation(),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
