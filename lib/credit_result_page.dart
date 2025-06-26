@@ -241,144 +241,155 @@ class _CreditResultPageState extends ConsumerState<CreditResultPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        title: Text(
-          _getPageTitle(),
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-            fontFamily: 'NotoSansJP',
-          ),
+    final double topOffset =
+        kToolbarHeight + MediaQuery.of(context).padding.top;
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: Image.asset('assets/night_view.png', fit: BoxFit.cover),
         ),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: const BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage('assets/night_view.png'),
-            fit: BoxFit.cover,
-          ),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.only(
-            bottom: 95.0,
-            top: kToolbarHeight + 24,
-          ),
-          child:
-              _isLoadingCourses
-                  ? const Center(
-                    child: CircularProgressIndicator(color: Colors.white),
-                  )
-                  : Column(
-                    children: [
-                      // カテゴリフィルター
-                      Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.9),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: Colors.blueAccent[100]!,
-                              width: 1.5,
-                            ),
-                          ),
-                          child: DropdownButtonHideUnderline(
-                            child: DropdownButton<String>(
-                              isExpanded: true,
-                              value: _selectedCategory,
-                              hint: const Text('教科で絞り込む'),
-                              icon: const Icon(
-                                Icons.arrow_drop_down,
-                                color: Colors.indigo,
-                              ),
-                              items:
-                                  _categories
-                                      .map(
-                                        (cat) => DropdownMenuItem(
-                                          value: cat,
-                                          child: Text(cat),
-                                        ),
-                                      )
-                                      .toList(),
-                              onChanged: (val) {
-                                setState(() {
-                                  _selectedCategory = val;
-                                });
-                              },
-                            ),
-                          ),
-                        ),
-                      ),
-
-                      // 結果件数表示
-                      if (widget.searchQuery != null &&
-                          widget.searchQuery!.isNotEmpty)
-                        Container(
+        Positioned.fill(child: Container(color: Colors.black.withOpacity(0.5))),
+        Material(
+          type: MaterialType.transparency,
+          child: Stack(
+            children: [
+              // AppBar
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: AppBar(
+                  title: Text(
+                    _getPageTitle(),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontFamily: 'NotoSansJP',
+                    ),
+                  ),
+                  backgroundColor: Colors.transparent,
+                  elevation: 0,
+                  centerTitle: true,
+                  leading: IconButton(
+                    icon: const Icon(Icons.arrow_back, color: Colors.white),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ),
+              ),
+              // ListView（AppBarの下から画面の一番下まで）
+              Positioned(
+                top: topOffset,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child:
+                    _isLoadingCourses
+                        ? const Center(
+                          child: CircularProgressIndicator(color: Colors.white),
+                        )
+                        : ListView(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 16,
-                            vertical: 8,
+                            vertical: 24,
                           ),
-                          child: Text(
-                            '${_filteredCourses.length}件の授業が見つかりました',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ),
-
-                      // 授業一覧
-                      Expanded(
-                        child:
-                            _courseCardModels.isEmpty
-                                ? const Center(
-                                  child: Text(
-                                    '授業が見つかりませんでした',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 16,
+                          children: [
+                            // カテゴリフィルター
+                            Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.9),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: Colors.blueAccent[100]!,
+                                    width: 1.5,
+                                  ),
+                                ),
+                                child: DropdownButtonHideUnderline(
+                                  child: DropdownButton<String>(
+                                    isExpanded: true,
+                                    value: _selectedCategory,
+                                    hint: const Text('教科で絞り込む'),
+                                    icon: const Icon(
+                                      Icons.arrow_drop_down,
+                                      color: Colors.indigo,
                                     ),
+                                    items:
+                                        _categories
+                                            .map(
+                                              (cat) => DropdownMenuItem(
+                                                value: cat,
+                                                child: Text(cat),
+                                              ),
+                                            )
+                                            .toList(),
+                                    onChanged: (val) {
+                                      setState(() {
+                                        _selectedCategory = val;
+                                      });
+                                    },
                                   ),
-                                )
-                                : ListView.builder(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
+                                ),
+                              ),
+                            ),
+                            // 結果件数表示
+                            if (widget.searchQuery != null &&
+                                widget.searchQuery!.isNotEmpty)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 8,
+                                ),
+                                child: Text(
+                                  '${_filteredCourses.length}件の授業が見つかりました',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 14,
                                   ),
-                                  itemCount: _courseCardModels.length,
-                                  itemBuilder: (context, index) {
-                                    final model = _courseCardModels[index];
-                                    return CourseCard(
-                                      course: {
-                                        'courseId': model.courseId,
-                                        'lectureName': model.lectureName,
-                                        'teacherName': model.teacherName,
-                                        'avgSatisfaction':
-                                            model.avgSatisfaction,
-                                        'avgEasiness': model.avgEasiness,
-                                        'reviewCount': model.reviewCount,
-                                        'hasMyReview': model.hasMyReview,
-                                      },
-                                    );
+                                ),
+                              ),
+                            // 授業一覧
+                            if (_courseCardModels.isEmpty)
+                              const Center(
+                                child: Text(
+                                  '授業が見つかりませんでした',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                              )
+                            else
+                              ..._courseCardModels.map(
+                                (model) => CourseCard(
+                                  course: {
+                                    'courseId': model.courseId,
+                                    'lectureName': model.lectureName,
+                                    'teacherName': model.teacherName,
+                                    'avgSatisfaction': model.avgSatisfaction,
+                                    'avgEasiness': model.avgEasiness,
+                                    'reviewCount': model.reviewCount,
+                                    'hasMyReview': model.hasMyReview,
                                   },
                                 ),
-                      ),
-                    ],
-                  ),
+                              ),
+                          ],
+                        ),
+              ),
+              // ボトムナビ
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: const CommonBottomNavigation(),
+              ),
+            ],
+          ),
         ),
-      ),
-      bottomNavigationBar: const CommonBottomNavigation(),
+      ],
     );
   }
 

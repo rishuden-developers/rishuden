@@ -178,56 +178,75 @@ class _CurrentSemesterReviewsPageState
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        title: const Text('今学期の履修授業'),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        foregroundColor: Colors.white,
-      ),
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: const BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage('assets/night_view.png'),
-            fit: BoxFit.cover,
+    final double topOffset =
+        kToolbarHeight + MediaQuery.of(context).padding.top;
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: Image.asset('assets/night_view.png', fit: BoxFit.cover),
+        ),
+        Positioned.fill(child: Container(color: Colors.black.withOpacity(0.5))),
+        Material(
+          type: MaterialType.transparency,
+          child: Stack(
+            children: [
+              // AppBar
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: AppBar(
+                  title: const Text('今学期の履修授業'),
+                  backgroundColor: Colors.transparent,
+                  elevation: 0,
+                  foregroundColor: Colors.white,
+                ),
+              ),
+              // ListView（AppBarの下から画面の一番下まで）
+              Positioned(
+                top: topOffset,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: FutureBuilder<List<Map<String, dynamic>>>(
+                  future: _coursesFuture,
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(
+                        child: CircularProgressIndicator(color: Colors.white),
+                      );
+                    }
+                    if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                      return const Center(
+                        child: Text(
+                          '今学期の履修授業がありません',
+                          style: TextStyle(color: Colors.white, fontSize: 18),
+                        ),
+                      );
+                    }
+                    final courses = snapshot.data!;
+                    return ListView.builder(
+                      physics: ClampingScrollPhysics(),
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      itemCount: courses.length,
+                      itemBuilder: (context, index) {
+                        return CourseCard(course: courses[index]);
+                      },
+                    );
+                  },
+                ),
+              ),
+              // ボトムナビ
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: const CommonBottomNavigation(),
+              ),
+            ],
           ),
         ),
-        child: FutureBuilder<List<Map<String, dynamic>>>(
-          future: _coursesFuture,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(
-                child: CircularProgressIndicator(color: Colors.white),
-              );
-            }
-            if (!snapshot.hasData || snapshot.data!.isEmpty) {
-              return const Center(
-                child: Text(
-                  '今学期の履修授業がありません',
-                  style: TextStyle(color: Colors.white, fontSize: 18),
-                ),
-              );
-            }
-            final courses = snapshot.data!;
-            return ListView.builder(
-              padding: const EdgeInsets.only(
-                bottom: 95.0,
-                top: kToolbarHeight + 24,
-                left: 16.0,
-                right: 16.0,
-              ),
-              itemCount: courses.length,
-              itemBuilder: (context, index) {
-                return CourseCard(course: courses[index]);
-              },
-            );
-          },
-        ),
-      ),
-      bottomNavigationBar: const CommonBottomNavigation(),
+      ],
     );
   }
 }

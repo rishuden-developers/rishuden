@@ -342,137 +342,158 @@ class _CreditInputPageState extends ConsumerState<CreditInputPage> {
       reward += 5;
     }
 
-    return Scaffold(
-      extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        title: const Text('レビューを投稿'),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-      ),
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: const BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage('assets/night_view.png'),
-            fit: BoxFit.cover,
-          ),
+    final double topOffset =
+        kToolbarHeight + MediaQuery.of(context).padding.top;
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: Image.asset('assets/night_view.png', fit: BoxFit.cover),
         ),
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.only(
-            bottom: 95.0,
-            top: kToolbarHeight + 24,
-            left: 16.0,
-            right: 16.0,
-          ),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildSectionTitle('講義・教員名', Icons.school),
-                _buildLectureDisplay(),
-                const SizedBox(height: 24),
-                _buildSectionTitle('評価項目', Icons.star),
-                const SizedBox(height: 10),
-                _buildOverallSatisfaction(),
-                const SizedBox(height: 10),
-                _buildEasinessRating(),
-                const SizedBox(height: 20),
-                _buildSectionTitle('詳細情報', Icons.info_outline),
-                const SizedBox(height: 10),
-                _buildDropdown(
-                  '講義形式',
-                  _classFormats,
-                  _classFormat,
-                  (val) => setState(() => _classFormat = val),
+        Positioned.fill(child: Container(color: Colors.black.withOpacity(0.5))),
+        Material(
+          type: MaterialType.transparency,
+          child: Stack(
+            children: [
+              // AppBar
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: AppBar(
+                  title: const Text('レビューを投稿'),
+                  backgroundColor: Colors.transparent,
+                  elevation: 0,
                 ),
-                const SizedBox(height: 10),
-                _buildDropdown(
-                  '出席の厳しさ',
-                  _attendanceOptions,
-                  _selectedAttendance,
-                  (val) => setState(() => _selectedAttendance = val),
-                ),
-                const SizedBox(height: 10),
-                _buildDropdown(
-                  '試験の形式',
-                  _examOptions,
-                  _selectedExamType,
-                  (val) => setState(() => _selectedExamType = val),
-                ),
-                const SizedBox(height: 20),
-                _buildSectionTitle('教員の特徴', Icons.person_outline),
-                _buildChipsSection(),
-                const SizedBox(height: 20),
-                _buildSectionTitle('授業のタグ', Icons.label),
-                _buildTagChipsSection(),
-                const SizedBox(height: 20),
-                _buildSectionTitle(
-                  'コメント (+${_commentController.text.trim().isEmpty ? '5' : '0'}個)',
-                  Icons.comment,
-                ),
-                TextField(
-                  controller: _commentController,
-                  decoration: const InputDecoration(
-                    hintText: '授業の感想、TAの様子など...',
-                    filled: true,
-                    fillColor: Colors.white,
-                    border: OutlineInputBorder(),
+              ),
+              // SingleChildScrollView（AppBarの下から画面の一番下まで）
+              Positioned(
+                top: topOffset,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 24,
                   ),
-                  maxLines: 5,
-                ),
-                const SizedBox(height: 20),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.amber.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.amber),
-                  ),
-                  child: Center(
-                    child: Text(
-                      '報酬: たこ焼き ${reward}個 GET!',
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: _isLoading ? null : _saveReview,
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      backgroundColor: Colors.cyan,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30),
-                      ),
-                    ),
-                    child:
-                        _isLoading
-                            ? const CircularProgressIndicator(
-                              color: Colors.white,
-                            )
-                            : const Text(
-                              'レビューを投稿する',
-                              style: TextStyle(
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildSectionTitle('講義・教員名', Icons.school),
+                        _buildLectureDisplay(),
+                        const SizedBox(height: 24),
+                        _buildSectionTitle('評価項目', Icons.star),
+                        const SizedBox(height: 10),
+                        _buildOverallSatisfaction(),
+                        const SizedBox(height: 10),
+                        _buildEasinessRating(),
+                        const SizedBox(height: 20),
+                        _buildSectionTitle('詳細情報', Icons.info_outline),
+                        const SizedBox(height: 10),
+                        _buildDropdown(
+                          '講義形式',
+                          _classFormats,
+                          _classFormat,
+                          (val) => setState(() => _classFormat = val),
+                        ),
+                        const SizedBox(height: 10),
+                        _buildDropdown(
+                          '出席の厳しさ',
+                          _attendanceOptions,
+                          _selectedAttendance,
+                          (val) => setState(() => _selectedAttendance = val),
+                        ),
+                        const SizedBox(height: 10),
+                        _buildDropdown(
+                          '試験の形式',
+                          _examOptions,
+                          _selectedExamType,
+                          (val) => setState(() => _selectedExamType = val),
+                        ),
+                        const SizedBox(height: 20),
+                        _buildSectionTitle('教員の特徴', Icons.person_outline),
+                        _buildChipsSection(),
+                        const SizedBox(height: 20),
+                        _buildSectionTitle('授業のタグ', Icons.label),
+                        _buildTagChipsSection(),
+                        const SizedBox(height: 20),
+                        _buildSectionTitle(
+                          'コメント (+${_commentController.text.trim().isEmpty ? '5' : '0'}個)',
+                          Icons.comment,
+                        ),
+                        TextField(
+                          controller: _commentController,
+                          decoration: const InputDecoration(
+                            hintText: '授業の感想、TAの様子など...',
+                            filled: true,
+                            fillColor: Colors.white,
+                            border: OutlineInputBorder(),
+                          ),
+                          maxLines: 5,
+                        ),
+                        const SizedBox(height: 20),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.amber.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.amber),
+                          ),
+                          child: Center(
+                            child: Text(
+                              '報酬: たこ焼き ${reward}個 GET!',
+                              style: const TextStyle(
                                 fontSize: 18,
+                                fontWeight: FontWeight.bold,
                                 color: Colors.white,
                               ),
                             ),
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: _isLoading ? null : _saveReview,
+                            style: ElevatedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              backgroundColor: Colors.cyan,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(30),
+                              ),
+                            ),
+                            child:
+                                _isLoading
+                                    ? const CircularProgressIndicator(
+                                      color: Colors.white,
+                                    )
+                                    : const Text(
+                                      'レビューを投稿する',
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ],
-            ),
+              ),
+              // ボトムナビ
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: const CommonBottomNavigation(),
+              ),
+            ],
           ),
         ),
-      ),
-      bottomNavigationBar: const CommonBottomNavigation(),
+      ],
     );
   }
 

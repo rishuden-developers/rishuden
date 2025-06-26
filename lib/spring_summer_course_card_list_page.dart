@@ -85,44 +85,47 @@ class _SpringSummerCourseCardListPageState
 
   @override
   Widget build(BuildContext context) {
+    final double topOffset =
+        kToolbarHeight + MediaQuery.of(context).padding.top;
+    const double bottomNavHeight = 95.0;
     return Stack(
       children: [
         Positioned.fill(
           child: Image.asset('assets/night_view.png', fit: BoxFit.cover),
         ),
         Positioned.fill(child: Container(color: Colors.black.withOpacity(0.5))),
-        Scaffold(
-          backgroundColor: Colors.transparent,
-          body:
-              _isLoading
-                  ? const Center(
-                    child: CircularProgressIndicator(color: Colors.white),
-                  )
-                  : CustomScrollView(
-                    physics: ClampingScrollPhysics(),
-                    slivers: [
-                      SliverAppBar(
-                        pinned: true,
-                        backgroundColor: Colors.transparent,
-                        elevation: 0,
-                        title: const Text('春夏学期の授業一覧'),
-                        foregroundColor: Colors.white,
-                      ),
-                      SliverPersistentHeader(
-                        pinned: false,
-                        delegate: _DummyHeaderDelegate(height: 16),
-                      ),
-                      SliverPadding(
-                        padding: const EdgeInsets.only(
-                          left: 16.0,
-                          right: 16.0,
-                          bottom: 95.0,
-                        ),
-                        sliver: SliverList(
-                          delegate: SliverChildBuilderDelegate((
-                            context,
-                            index,
-                          ) {
+        Material(
+          type: MaterialType.transparency,
+          child: Stack(
+            children: [
+              // AppBar
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: AppBar(
+                  title: const Text('春夏学期の授業一覧'),
+                  backgroundColor: Colors.transparent,
+                  elevation: 0,
+                  foregroundColor: Colors.white,
+                ),
+              ),
+              // ListView（AppBarの下からボトムナビの上まで）
+              Positioned(
+                top: topOffset,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child:
+                    _isLoading
+                        ? const Center(
+                          child: CircularProgressIndicator(color: Colors.white),
+                        )
+                        : ListView.builder(
+                          physics: ClampingScrollPhysics(),
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          itemCount: _courses.length,
+                          itemBuilder: (context, index) {
                             return Align(
                               alignment: Alignment.center,
                               child: FractionallySizedBox(
@@ -130,12 +133,18 @@ class _SpringSummerCourseCardListPageState
                                 child: CourseCard(course: _courses[index]),
                               ),
                             );
-                          }, childCount: _courses.length),
+                          },
                         ),
-                      ),
-                    ],
-                  ),
-          bottomNavigationBar: const CommonBottomNavigation(),
+              ),
+              // ボトムナビ
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: const CommonBottomNavigation(),
+              ),
+            ],
+          ),
         ),
       ],
     );
