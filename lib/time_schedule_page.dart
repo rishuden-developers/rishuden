@@ -1095,248 +1095,180 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
     TimeOfDay? newEventStartTime,
     int eventIndex = -1,
   }) async {
+    final isSunday = dayIndex == 6;
+    final events = isSunday ? _sundayEvents : (_weekdayEvents[dayIndex] ?? []);
     final eventToEdit =
-        eventIndex != -1 && _weekdayEvents[dayIndex] != null
-            ? _weekdayEvents[dayIndex]![eventIndex]
+        (eventIndex != -1 && eventIndex < events.length)
+            ? events[eventIndex]
             : null;
 
     final titleController = TextEditingController(
       text: eventToEdit?['title'] ?? '',
     );
-    TimeOfDay startTime;
-    TimeOfDay endTime;
-    bool isWeekly;
+    TimeOfDay startTime =
+        eventToEdit?['start'] ??
+        (newEventStartTime ?? const TimeOfDay(hour: 10, minute: 0));
+    TimeOfDay endTime =
+        eventToEdit?['end'] ??
+        TimeOfDay(
+          hour: (startTime.hour + 1 > 23 ? 23 : startTime.hour + 1),
+          minute: startTime.minute,
+        );
+    bool isWeekly = eventToEdit?['isWeekly'] ?? false;
 
-    if (eventIndex == -1) {
-      // 新規作成
-      startTime = newEventStartTime ?? const TimeOfDay(hour: 10, minute: 0);
-      final endHour = startTime.hour + 1;
-      endTime = TimeOfDay(
-        hour: endHour > 23 ? 23 : endHour,
-        minute: endHour > 23 ? 59 : startTime.minute,
-      );
-      isWeekly = false;
-      titleController.text = '';
-    } else {
-      // 編集
-      startTime = eventToEdit!['start'];
-      endTime = eventToEdit['end'];
-      isWeekly = eventToEdit['isWeekly'];
-    }
-
-    final String? initialTitle = eventToEdit?['title'];
-    final TimeOfDay initialStartTime = eventToEdit?['start'] ?? startTime;
-    final TimeOfDay initialEndTime = eventToEdit?['end'] ?? endTime;
-    final bool initialIsWeekly = eventToEdit?['isWeekly'] ?? isWeekly;
-
-    final result = await showDialog<String>(
+    await showDialog(
       context: context,
-      builder: (BuildContext dialogContext) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            final isTitleValid = titleController.text.isNotEmpty;
-            final isTimeValid =
-                (endTime.hour * 60 + endTime.minute) >
-                (startTime.hour * 60 + startTime.minute);
-            final hasChanged =
-                eventIndex == -1 ||
-                titleController.text != initialTitle ||
-                startTime != initialStartTime ||
-                endTime != initialEndTime ||
-                isWeekly != initialIsWeekly;
-            final canSave = isTitleValid && isTimeValid && hasChanged;
-
-            titleController.addListener(() {
-              setDialogState(() {});
-            });
-
-            return AlertDialog(
-              backgroundColor: const Color.fromARGB(255, 22, 22, 22),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(15.0),
-              ),
-              title: Text(
-                '${_days[dayIndex]}の予定',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontFamily: 'misaki',
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: Colors.black87,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15.0),
+          ),
+          title: Text(
+            '${_days[dayIndex]}の予定',
+            style: const TextStyle(color: Colors.white, fontFamily: 'misaki'),
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                TextField(
+                  controller: titleController,
+                  style: const TextStyle(color: Colors.white, fontSize: 14),
+                  decoration: InputDecoration(
+                    hintText: '予定のタイトル',
+                    hintStyle: TextStyle(color: Colors.grey[600]),
+                    focusedBorder: const UnderlineInputBorder(
+                      borderSide: BorderSide(color: Colors.amberAccent),
+                    ),
+                  ),
                 ),
-              ),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
+                const SizedBox(height: 20),
+                Row(
                   children: [
-                    TextField(
-                      controller: titleController,
-                      style: const TextStyle(color: Colors.white, fontSize: 14),
-                      decoration: InputDecoration(
-                        hintText: '予定のタイトル',
-                        hintStyle: TextStyle(color: Colors.grey[600]),
-                        focusedBorder: const UnderlineInputBorder(
-                          borderSide: BorderSide(color: Colors.amberAccent),
+                    Expanded(
+                      child: TextButton(
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.amberAccent,
                         ),
+                        onPressed: () async {
+                          final picked = await pickTime(context, startTime);
+                          if (picked != null) {
+                            startTime = picked;
+                          }
+                        },
+                        child: Text('開始: ${startTime.format(context)}'),
                       ),
                     ),
-                    const SizedBox(height: 20),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: [
-                        InkWell(
-                          onTap: () async {
-                            final TimeOfDay? picked = await pickTime(
-                              context,
-                              startTime,
-                            );
-                            if (picked != null)
-                              setDialogState(() => startTime = picked);
-                          },
-                          child: Text(
-                            "開始: ${startTime.format(context)}",
-                            style: const TextStyle(
-                              color: Colors.amberAccent,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
+                    Expanded(
+                      child: TextButton(
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.amberAccent,
                         ),
-                        InkWell(
-                          onTap: () async {
-                            final TimeOfDay? picked = await pickTime(
-                              context,
-                              endTime,
-                            );
-                            if (picked != null)
-                              setDialogState(() => endTime = picked);
-                          },
-                          child: Text(
-                            "終了: ${endTime.format(context)}",
-                            style: const TextStyle(
-                              color: Colors.amberAccent,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    CheckboxListTile(
-                      title: const Text(
-                        "毎週の予定にする",
-                        style: TextStyle(
-                          fontFamily: 'misaki',
-                          fontSize: 13,
-                          color: Colors.white,
-                        ),
+                        onPressed: () async {
+                          final picked = await pickTime(context, endTime);
+                          if (picked != null) {
+                            endTime = picked;
+                          }
+                        },
+                        child: Text('終了: ${endTime.format(context)}'),
                       ),
-                      value: isWeekly,
-                      activeColor: Colors.amberAccent,
-                      checkColor: Colors.black,
-                      onChanged:
-                          (bool? value) =>
-                              setDialogState(() => isWeekly = value ?? false),
-                      controlAffinity: ListTileControlAffinity.leading,
-                      contentPadding: EdgeInsets.zero,
                     ),
                   ],
                 ),
-              ),
-              actions: [
-                if (eventIndex != -1)
-                  TextButton(
-                    onPressed: () => Navigator.of(dialogContext).pop('delete'),
-                    child: const Text(
-                      '削除',
-                      style: TextStyle(color: Colors.redAccent),
-                    ),
+                CheckboxListTile(
+                  value: isWeekly,
+                  onChanged: (v) {
+                    isWeekly = v ?? false;
+                  },
+                  title: const Text(
+                    '毎週の予定',
+                    style: TextStyle(color: Colors.white),
                   ),
-                const Spacer(),
-                TextButton(
-                  onPressed: () => Navigator.of(dialogContext).pop(null),
-                  child: const Text(
-                    'キャンセル',
-                    style: TextStyle(color: Colors.white70),
-                  ),
-                ),
-                TextButton(
-                  onPressed:
-                      canSave
-                          ? () => Navigator.of(dialogContext).pop('update')
-                          : null,
-                  child: const Text(
-                    '保存',
-                    style: TextStyle(color: Colors.amberAccent),
-                  ),
+                  activeColor: Colors.amberAccent,
+                  checkColor: Colors.black,
+                  contentPadding: EdgeInsets.zero,
+                  controlAffinity: ListTileControlAffinity.leading,
                 ),
               ],
-            );
-          },
+            ),
+          ),
+          actions: [
+            if (eventToEdit != null)
+              TextButton(
+                onPressed: () {
+                  setState(() {
+                    if (isSunday) {
+                      _sundayEvents.removeAt(eventIndex);
+                    } else {
+                      _weekdayEvents[dayIndex]?.removeAt(eventIndex);
+                    }
+                  });
+                  Navigator.of(context).pop();
+                },
+                child: const Text(
+                  '削除',
+                  style: TextStyle(color: Colors.redAccent),
+                ),
+              ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text(
+                'キャンセル',
+                style: TextStyle(color: Colors.white70),
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                if (titleController.text.trim().isEmpty) return;
+                if ((endTime.hour * 60 + endTime.minute) <=
+                    (startTime.hour * 60 + startTime.minute))
+                  return;
+                setState(() {
+                  final newEvent = {
+                    'title': titleController.text,
+                    'start': startTime,
+                    'end': endTime,
+                    'isWeekly': isWeekly,
+                    'date': _displayedMonday.add(Duration(days: dayIndex)),
+                  };
+                  if (isSunday) {
+                    if (eventToEdit == null) {
+                      _sundayEvents.add(newEvent);
+                    } else {
+                      _sundayEvents[eventIndex] = newEvent;
+                    }
+                    _sundayEvents.sort(
+                      (a, b) => (a['start'] as TimeOfDay).hour.compareTo(
+                        (b['start'] as TimeOfDay).hour,
+                      ),
+                    );
+                  } else {
+                    _weekdayEvents[dayIndex] ??= [];
+                    if (eventToEdit == null) {
+                      _weekdayEvents[dayIndex]!.add(newEvent);
+                    } else {
+                      _weekdayEvents[dayIndex]![eventIndex] = newEvent;
+                    }
+                    _weekdayEvents[dayIndex]!.sort(
+                      (a, b) => (a['start'] as TimeOfDay).hour.compareTo(
+                        (b['start'] as TimeOfDay).hour,
+                      ),
+                    );
+                  }
+                });
+                Navigator.of(context).pop();
+              },
+              child: const Text(
+                '保存',
+                style: TextStyle(color: Colors.amberAccent),
+              ),
+            ),
+          ],
         );
       },
     );
-
-    if (result == 'update') {
-      setState(() {
-        final newEvent = {
-          'title': titleController.text,
-          'start': startTime,
-          'end': endTime,
-          'isWeekly': isWeekly,
-          'date': _displayedMonday.add(Duration(days: dayIndex)),
-        };
-        if (dayIndex == 6) {
-          if (eventIndex == -1) {
-            _sundayEvents.add(newEvent);
-          } else {
-            _sundayEvents[eventIndex] = newEvent;
-          }
-          _sundayEvents.sort(
-            (a, b) => (a['start'] as TimeOfDay).hour.compareTo(
-              (b['start'] as TimeOfDay).hour,
-            ),
-          );
-        } else {
-          if (_weekdayEvents[dayIndex] == null) {
-            _weekdayEvents[dayIndex] = [];
-          }
-          if (eventIndex == -1) {
-            _weekdayEvents[dayIndex]!.add(newEvent);
-          } else {
-            _weekdayEvents[dayIndex]![eventIndex] = newEvent;
-          }
-          _weekdayEvents[dayIndex]!.sort(
-            (a, b) => (a['start'] as TimeOfDay).hour.compareTo(
-              (b['start'] as TimeOfDay).hour,
-            ),
-          );
-        }
-      });
-    } else if (result == 'delete') {
-      bool? confirmDelete = await showDialog<bool>(
-        context: context,
-        builder:
-            (context) => AlertDialog(
-              title: const Text('予定を削除'),
-              content: const Text('この予定を削除しますか？'),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(false),
-                  child: const Text('いいえ'),
-                ),
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(true),
-                  child: const Text('はい'),
-                ),
-              ],
-            ),
-      );
-      if (confirmDelete == true) {
-        setState(() {
-          if (dayIndex == 6) {
-            _sundayEvents.removeAt(eventIndex);
-          } else {
-            _weekdayEvents[dayIndex]!.removeAt(eventIndex);
-          }
-        });
-      }
-    }
   }
 
   // ★★★ このメソッドを、以下の完成版に丸ごと置き換えてください ★★★
