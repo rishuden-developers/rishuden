@@ -5,6 +5,7 @@ import 'credit_input_page.dart';
 import 'character_data.dart';
 import 'credit_review_page.dart';
 import 'components/course_card.dart';
+import 'common_bottom_navigation.dart'; // ボトムナビゲーション用
 
 class CurrentSemesterReviewsPage extends StatefulWidget {
   const CurrentSemesterReviewsPage({super.key});
@@ -178,50 +179,55 @@ class _CurrentSemesterReviewsPageState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
         title: const Text('今学期の履修授業'),
-        backgroundColor: Colors.indigo[800],
+        backgroundColor: Colors.transparent,
+        elevation: 0,
         foregroundColor: Colors.white,
       ),
       body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Colors.indigo[800]!, Colors.indigo[600]!],
+        width: double.infinity,
+        height: double.infinity,
+        decoration: const BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage('assets/night_view.png'),
+            fit: BoxFit.cover,
           ),
         ),
-        child: SafeArea(
-          child: FutureBuilder<List<Map<String, dynamic>>>(
-            future: _coursesFuture,
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(
-                  child: CircularProgressIndicator(color: Colors.white),
-                );
-              }
-              if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                return const Center(
-                  child: Text(
-                    '今学期の履修授業がありません',
-                    style: TextStyle(color: Colors.white, fontSize: 18),
-                  ),
-                );
-              }
-              final courses = snapshot.data!;
-              return Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: ListView.builder(
-                  itemCount: courses.length,
-                  itemBuilder: (context, index) {
-                    return CourseCard(course: courses[index]);
-                  },
+        child: FutureBuilder<List<Map<String, dynamic>>>(
+          future: _coursesFuture,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(
+                child: CircularProgressIndicator(color: Colors.white),
+              );
+            }
+            if (!snapshot.hasData || snapshot.data!.isEmpty) {
+              return const Center(
+                child: Text(
+                  '今学期の履修授業がありません',
+                  style: TextStyle(color: Colors.white, fontSize: 18),
                 ),
               );
-            },
-          ),
+            }
+            final courses = snapshot.data!;
+            return ListView.builder(
+              padding: const EdgeInsets.only(
+                bottom: 95.0,
+                top: kToolbarHeight + 24,
+                left: 16.0,
+                right: 16.0,
+              ),
+              itemCount: courses.length,
+              itemBuilder: (context, index) {
+                return CourseCard(course: courses[index]);
+              },
+            );
+          },
         ),
       ),
+      bottomNavigationBar: const CommonBottomNavigation(),
     );
   }
 }

@@ -9,6 +9,7 @@ import 'providers/timetable_provider.dart';
 import 'providers/global_course_mapping_provider.dart';
 import 'providers/global_review_mapping_provider.dart';
 import 'credit_input_page.dart'; // ★ 遷移先として追加
+import 'common_bottom_navigation.dart'; // ボトムナビゲーション用
 
 // ページの状態で使用するデータモデル
 class MyCourseReviewModel {
@@ -191,39 +192,48 @@ class _MyReviewsPageState extends ConsumerState<MyReviewsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
         title: const Text('自分の授業をレビュー'),
-        backgroundColor: Colors.indigo[800],
+        backgroundColor: Colors.transparent,
+        elevation: 0,
       ),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Colors.indigo[800]!, Colors.indigo[600]!],
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: Image.asset('assets/night_view.png', fit: BoxFit.cover),
           ),
-        ),
-        child:
-            _isLoading
-                ? const Center(
-                  child: CircularProgressIndicator(color: Colors.white),
-                )
-                : _myCourses.isEmpty
-                ? const Center(
-                  child: Text(
-                    '時間割に授業が登録されていません。',
-                    style: TextStyle(color: Colors.white70, fontSize: 16),
-                  ),
-                )
-                : ListView.builder(
-                  padding: const EdgeInsets.all(8.0),
-                  itemCount: _myCourses.length,
-                  itemBuilder: (context, index) {
-                    final course = _myCourses[index];
-                    return _buildResultCard(course);
-                  },
-                ),
+          Positioned.fill(
+            child: Container(color: Colors.black.withOpacity(0.5)),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(
+              bottom: 95.0,
+              top: kToolbarHeight + 24,
+            ),
+            child:
+                _isLoading
+                    ? const Center(
+                      child: CircularProgressIndicator(color: Colors.white),
+                    )
+                    : _myCourses.isEmpty
+                    ? const Center(
+                      child: Text(
+                        '時間割に授業が登録されていません。',
+                        style: TextStyle(color: Colors.white70, fontSize: 16),
+                      ),
+                    )
+                    : ListView.builder(
+                      itemCount: _myCourses.length,
+                      itemBuilder: (context, index) {
+                        final course = _myCourses[index];
+                        return _buildResultCard(course);
+                      },
+                    ),
+          ),
+        ],
       ),
+      bottomNavigationBar: const CommonBottomNavigation(),
     );
   }
 

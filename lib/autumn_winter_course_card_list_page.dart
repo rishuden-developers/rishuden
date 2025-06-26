@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'components/course_card.dart';
+import 'common_bottom_navigation.dart'; // ボトムナビゲーション用
 
 class AutumnWinterCourseCardListPage extends StatefulWidget {
   const AutumnWinterCourseCardListPage({super.key});
@@ -85,17 +86,20 @@ class _AutumnWinterCourseCardListPageState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
         title: const Text('秋冬学期の授業一覧'),
-        backgroundColor: Colors.indigo[800],
+        backgroundColor: Colors.transparent,
+        elevation: 0,
         foregroundColor: Colors.white,
       ),
       body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Colors.indigo[800]!, Colors.indigo[600]!],
+        width: double.infinity,
+        height: double.infinity,
+        decoration: const BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage('assets/night_view.png'),
+            fit: BoxFit.cover,
           ),
         ),
         child:
@@ -104,13 +108,17 @@ class _AutumnWinterCourseCardListPageState
                   child: CircularProgressIndicator(color: Colors.white),
                 )
                 : ListView.builder(
-                  padding: const EdgeInsets.all(16.0),
+                  padding: const EdgeInsets.only(
+                    bottom: 95.0,
+                    top: kToolbarHeight + 24,
+                  ),
                   itemCount: _courses.length,
                   itemBuilder: (context, index) {
                     return CourseCard(course: _courses[index]);
                   },
                 ),
       ),
+      bottomNavigationBar: const CommonBottomNavigation(),
     );
   }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'components/course_card.dart';
+import 'common_bottom_navigation.dart'; // ボトムナビゲーション用
 
 class SpringSummerCourseCardListPage extends StatefulWidget {
   const SpringSummerCourseCardListPage({super.key});
@@ -84,33 +85,80 @@ class _SpringSummerCourseCardListPageState
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('春夏学期の授業一覧'),
-        backgroundColor: Colors.indigo[800],
-        foregroundColor: Colors.white,
-      ),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Colors.indigo[800]!, Colors.indigo[600]!],
-          ),
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: Image.asset('assets/night_view.png', fit: BoxFit.cover),
         ),
-        child:
-            _isLoading
-                ? const Center(
-                  child: CircularProgressIndicator(color: Colors.white),
-                )
-                : ListView.builder(
-                  padding: const EdgeInsets.all(16.0),
-                  itemCount: _courses.length,
-                  itemBuilder: (context, index) {
-                    return CourseCard(course: _courses[index]);
-                  },
-                ),
-      ),
+        Positioned.fill(child: Container(color: Colors.black.withOpacity(0.5))),
+        Scaffold(
+          backgroundColor: Colors.transparent,
+          body:
+              _isLoading
+                  ? const Center(
+                    child: CircularProgressIndicator(color: Colors.white),
+                  )
+                  : CustomScrollView(
+                    physics: ClampingScrollPhysics(),
+                    slivers: [
+                      SliverAppBar(
+                        pinned: true,
+                        backgroundColor: Colors.transparent,
+                        elevation: 0,
+                        title: const Text('春夏学期の授業一覧'),
+                        foregroundColor: Colors.white,
+                      ),
+                      SliverPersistentHeader(
+                        pinned: false,
+                        delegate: _DummyHeaderDelegate(height: 16),
+                      ),
+                      SliverPadding(
+                        padding: const EdgeInsets.only(
+                          left: 16.0,
+                          right: 16.0,
+                          bottom: 95.0,
+                        ),
+                        sliver: SliverList(
+                          delegate: SliverChildBuilderDelegate((
+                            context,
+                            index,
+                          ) {
+                            return Align(
+                              alignment: Alignment.center,
+                              child: FractionallySizedBox(
+                                widthFactor: 0.80,
+                                child: CourseCard(course: _courses[index]),
+                              ),
+                            );
+                          }, childCount: _courses.length),
+                        ),
+                      ),
+                    ],
+                  ),
+          bottomNavigationBar: const CommonBottomNavigation(),
+        ),
+      ],
     );
   }
+}
+
+class _DummyHeaderDelegate extends SliverPersistentHeaderDelegate {
+  final double height;
+  _DummyHeaderDelegate({required this.height});
+  @override
+  double get minExtent => height;
+  @override
+  double get maxExtent => height;
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    return SizedBox(height: height);
+  }
+
+  @override
+  bool shouldRebuild(covariant SliverPersistentHeaderDelegate oldDelegate) =>
+      false;
 }
