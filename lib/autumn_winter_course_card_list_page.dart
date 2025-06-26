@@ -1,38 +1,41 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'credit_review_page.dart';
 import 'components/course_card.dart';
+import 'providers/timetable_provider.dart';
 import 'common_bottom_navigation.dart'; // ボトムナビゲーション用
 
-class AutumnWinterCourseCardListPage extends StatefulWidget {
+class AutumnWinterCourseCardListPage extends ConsumerStatefulWidget {
   const AutumnWinterCourseCardListPage({super.key});
 
   @override
-  State<AutumnWinterCourseCardListPage> createState() =>
+  ConsumerState<AutumnWinterCourseCardListPage> createState() =>
       _AutumnWinterCourseCardListPageState();
 }
 
 class _AutumnWinterCourseCardListPageState
-    extends State<AutumnWinterCourseCardListPage> {
-  bool _isLoading = true;
+    extends ConsumerState<AutumnWinterCourseCardListPage> {
   List<Map<String, dynamic>> _courses = [];
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _loadCourses();
+    _loadAutumnWinterCourses();
   }
 
-  Future<void> _loadCourses() async {
-    setState(() => _isLoading = true);
+  // 秋冬学期の授業データを読み込む
+  Future<void> _loadAutumnWinterCourses() async {
     try {
+      final List<Map<String, dynamic>> courses = [];
+
       // global/course_mappingドキュメントからmappingフィールドを取得
       final doc =
           await FirebaseFirestore.instance
               .collection('global')
               .doc('course_mapping')
               .get();
-
-      final List<Map<String, dynamic>> courses = [];
 
       if (doc.exists) {
         final data = doc.data()!;
@@ -58,11 +61,23 @@ class _AutumnWinterCourseCardListPageState
             lectureName = courseId;
           }
 
+          // 教員名をtimetableProviderから取得（時間割画面と同期）
+          String teacherName =
+              courseData['teacherName'] ?? courseData['instructor'] ?? '';
+          if (courseId.isNotEmpty) {
+            final timetableTeacherName =
+                ref.read(timetableProvider)['teacherNames']?[courseId];
+            if (timetableTeacherName != null &&
+                timetableTeacherName.isNotEmpty) {
+              teacherName = timetableTeacherName;
+            }
+          }
+
           courses.add({
             'courseId': courseId,
             'lectureName': lectureName,
             'classroom': classroom,
-            'teacherName': '', // 教員名は別途取得が必要な場合があります
+            'teacherName': teacherName,
             'avgSatisfaction': 0.0,
             'avgEasiness': 0.0,
             'reviewCount': 0,
@@ -129,7 +144,15 @@ class _AutumnWinterCourseCardListPageState
                               alignment: Alignment.center,
                               child: FractionallySizedBox(
                                 widthFactor: 0.80,
-                                child: CourseCard(course: _courses[index]),
+                                child: CourseCard(
+                                  course: _courses[index],
+                                  onTeacherNameChanged: (newTeacherName) {
+                                    _updateTeacherName(
+                                      _courses[index]['courseId'],
+                                      newTeacherName,
+                                    );
+                                  },
+                                ),
                               ),
                             );
                           },
@@ -147,5 +170,20 @@ class _AutumnWinterCourseCardListPageState
         ),
       ],
     );
+  }
+
+  // 教員名を更新するメソッド
+  void _updateTeacherName(String courseId, String newTeacherName) {
+    setState(() {
+      for (int i = 0; i < _courses.length; i++) {
+        if (_courses[i]['courseId'] == courseId) {
+          _courses[i]['teacherName'] = newTeacherName;
+          break;
+        }
+      }
+    });
+
+    // TODO: 必要に応じてFirestoreにも保存
+    print('Updated teacher name for $courseId to: $newTeacherName');
   }
 }

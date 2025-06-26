@@ -77,10 +77,10 @@ class _CurrentSemesterReviewsPageState
 
       for (final courseId in userCourses) {
         try {
-          // courseIdから講義名と教員名を抽出
+          // courseIdから講義名を抽出
           final parts = courseId.split('|');
           final lectureName = parts.isNotEmpty ? parts[0] : courseId;
-          final teacherName = parts.length > 1 ? parts[1] : '';
+          final teacherName = '';
 
           // その授業のレビューを取得（courseIdで検索）
           final reviewsSnapshot =
@@ -230,7 +230,13 @@ class _CurrentSemesterReviewsPageState
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       itemCount: courses.length,
                       itemBuilder: (context, index) {
-                        return CourseCard(course: courses[index]);
+                        return CourseCard(
+                          course: courses[index],
+                          onTeacherNameChanged: (newTeacherName) {
+                            // coursesリストの該当courseのteacherNameを更新
+                            courses[index]['teacherName'] = newTeacherName;
+                          },
+                        );
                       },
                     );
                   },
@@ -253,8 +259,9 @@ class _CurrentSemesterReviewsPageState
 
 class _CourseCard extends StatelessWidget {
   final Map<String, dynamic> course;
+  final Function(String) onTeacherNameChanged;
 
-  const _CourseCard({required this.course});
+  const _CourseCard({required this.course, required this.onTeacherNameChanged});
 
   @override
   Widget build(BuildContext context) {

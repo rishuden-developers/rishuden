@@ -1,38 +1,41 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'credit_review_page.dart';
 import 'components/course_card.dart';
+import 'providers/timetable_provider.dart';
 import 'common_bottom_navigation.dart'; // ボトムナビゲーション用
 
-class SpringSummerCourseCardListPage extends StatefulWidget {
+class SpringSummerCourseCardListPage extends ConsumerStatefulWidget {
   const SpringSummerCourseCardListPage({super.key});
 
   @override
-  State<SpringSummerCourseCardListPage> createState() =>
+  ConsumerState<SpringSummerCourseCardListPage> createState() =>
       _SpringSummerCourseCardListPageState();
 }
 
 class _SpringSummerCourseCardListPageState
-    extends State<SpringSummerCourseCardListPage> {
-  bool _isLoading = true;
+    extends ConsumerState<SpringSummerCourseCardListPage> {
   List<Map<String, dynamic>> _courses = [];
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _loadCourses();
+    _loadSpringSummerCourses();
   }
 
-  Future<void> _loadCourses() async {
-    setState(() => _isLoading = true);
+  // 春夏学期の授業データを読み込む
+  Future<void> _loadSpringSummerCourses() async {
     try {
+      final List<Map<String, dynamic>> courses = [];
+
       // global/course_mappingドキュメントからmappingフィールドを取得
       final doc =
           await FirebaseFirestore.instance
               .collection('global')
               .doc('course_mapping')
               .get();
-
-      final List<Map<String, dynamic>> courses = [];
 
       if (doc.exists) {
         final data = doc.data()!;
@@ -58,11 +61,23 @@ class _SpringSummerCourseCardListPageState
             lectureName = courseId;
           }
 
+          // 教員名をtimetableProviderから取得（時間割画面と同期）
+          String teacherName =
+              courseData['teacherName'] ?? courseData['instructor'] ?? '';
+          if (courseId.isNotEmpty) {
+            final timetableTeacherName =
+                ref.read(timetableProvider)['teacherNames']?[courseId];
+            if (timetableTeacherName != null &&
+                timetableTeacherName.isNotEmpty) {
+              teacherName = timetableTeacherName;
+            }
+          }
+
           courses.add({
             'courseId': courseId,
             'lectureName': lectureName,
             'classroom': classroom,
-            'teacherName': '', // 教員名は別途取得が必要な場合があります
+            'teacherName': teacherName,
             'avgSatisfaction': 0.0,
             'avgEasiness': 0.0,
             'reviewCount': 0,
@@ -126,11 +141,32 @@ class _SpringSummerCourseCardListPageState
                           padding: const EdgeInsets.symmetric(horizontal: 16),
                           itemCount: _courses.length,
                           itemBuilder: (context, index) {
+                            final course = _courses[index];
                             return Align(
                               alignment: Alignment.center,
                               child: FractionallySizedBox(
                                 widthFactor: 0.80,
-                                child: CourseCard(course: _courses[index]),
+                                child: CourseCard(
+                                  key: ValueKey(course['courseId']),
+                                  course: course,
+                                  onTeacherNameChanged: (newTeacherName) {
+                                    final idx = _courses.indexWhere(
+                                      (c) =>
+                                          c['courseId'] == course['courseId'],
+                                    );
+                                    if (idx != -1) {
+                                      setState(() {
+                                        _courses[idx] = {
+                                          ..._courses[idx],
+                                          'teacherName': newTeacherName,
+                                        };
+                                      });
+                                      print(
+                                        'Updated teacher name for \\${course['courseId']} to: \\$newTeacherName',
+                                      );
+                                    }
+                                  },
+                                ),
                               ),
                             );
                           },
@@ -148,6 +184,19 @@ class _SpringSummerCourseCardListPageState
         ),
       ],
     );
+  }
+
+  // 教員名を更新するメソッド
+  void _updateTeacherName(String courseId, String newTeacherName) {
+    setState(() {
+      for (int i = 0; i < _courses.length; i++) {
+        if (_courses[i]['courseId'] == courseId) {
+          _courses[i] = {..._courses[i], 'teacherName': newTeacherName};
+          break;
+        }
+      }
+    });
+    print('Updated teacher name for $courseId to: $newTeacherName');
   }
 }
 
