@@ -307,7 +307,7 @@ class _CreditExplorePageState extends State<CreditExplorePage> {
           ),
         ),
         style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.orange[700],
+          backgroundColor: const Color.fromARGB(255, 21, 204, 255),
           minimumSize: const Size(double.infinity, 50),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(10),
