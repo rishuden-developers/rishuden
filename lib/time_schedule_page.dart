@@ -701,6 +701,15 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
       }
     }
 
+    // === 今日の日付を取得 ===
+    final today = DateTime(now.year, now.month, now.day);
+    final displayedDate = _displayedMonday.add(Duration(days: dayIndex));
+    final displayedDateOnly = DateTime(
+      displayedDate.year,
+      displayedDate.month,
+      displayedDate.day,
+    );
+
     for (
       int periodIndex = 0;
       periodIndex < _timetableGrid[dayIndex].length;
@@ -818,7 +827,8 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
 
       // === 今あっている授業だけ枠を追加 ===
       final bool isNowClass =
-          dayIndex == todayWeekday && entry.period == currentPeriod;
+          displayedDateOnly.isAtSameMomentAs(today) &&
+          entry.period == currentPeriod;
       final BoxDecoration finalDecoration =
           isNowClass
               ? decoration.copyWith(
@@ -1119,153 +1129,166 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
     await showDialog(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          backgroundColor: Colors.black87,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(15.0),
-          ),
-          title: Text(
-            '${_days[dayIndex]}の予定',
-            style: const TextStyle(color: Colors.white, fontFamily: 'misaki'),
-          ),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                TextField(
-                  controller: titleController,
-                  style: const TextStyle(color: Colors.white, fontSize: 14),
-                  decoration: InputDecoration(
-                    hintText: '予定のタイトル',
-                    hintStyle: TextStyle(color: Colors.grey[600]),
-                    focusedBorder: const UnderlineInputBorder(
-                      borderSide: BorderSide(color: Colors.amberAccent),
-                    ),
-                  ),
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              backgroundColor: Colors.black87,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(15.0),
+              ),
+              title: Text(
+                '${_days[dayIndex]}の予定',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontFamily: 'misaki',
                 ),
-                const SizedBox(height: 20),
-                Row(
+              ),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: TextButton(
-                        style: TextButton.styleFrom(
-                          foregroundColor: Colors.amberAccent,
+                    TextField(
+                      controller: titleController,
+                      style: const TextStyle(color: Colors.white, fontSize: 14),
+                      decoration: InputDecoration(
+                        hintText: '予定のタイトル',
+                        hintStyle: TextStyle(color: Colors.grey[600]),
+                        focusedBorder: const UnderlineInputBorder(
+                          borderSide: BorderSide(color: Colors.amberAccent),
                         ),
-                        onPressed: () async {
-                          final picked = await pickTime(context, startTime);
-                          if (picked != null) {
-                            startTime = picked;
-                          }
-                        },
-                        child: Text('開始: ${startTime.format(context)}'),
                       ),
                     ),
-                    Expanded(
-                      child: TextButton(
-                        style: TextButton.styleFrom(
-                          foregroundColor: Colors.amberAccent,
+                    const SizedBox(height: 20),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextButton(
+                            style: TextButton.styleFrom(
+                              foregroundColor: Colors.amberAccent,
+                            ),
+                            onPressed: () async {
+                              final picked = await pickTime(context, startTime);
+                              if (picked != null) {
+                                setDialogState(() {
+                                  startTime = picked;
+                                });
+                              }
+                            },
+                            child: Text('開始: ${startTime.format(context)}'),
+                          ),
                         ),
-                        onPressed: () async {
-                          final picked = await pickTime(context, endTime);
-                          if (picked != null) {
-                            endTime = picked;
-                          }
-                        },
-                        child: Text('終了: ${endTime.format(context)}'),
+                        Expanded(
+                          child: TextButton(
+                            style: TextButton.styleFrom(
+                              foregroundColor: Colors.amberAccent,
+                            ),
+                            onPressed: () async {
+                              final picked = await pickTime(context, endTime);
+                              if (picked != null) {
+                                setDialogState(() {
+                                  endTime = picked;
+                                });
+                              }
+                            },
+                            child: Text('終了: ${endTime.format(context)}'),
+                          ),
+                        ),
+                      ],
+                    ),
+                    CheckboxListTile(
+                      value: isWeekly,
+                      onChanged: (v) {
+                        setDialogState(() {
+                          isWeekly = v ?? false;
+                        });
+                      },
+                      title: const Text(
+                        '毎週の予定',
+                        style: TextStyle(color: Colors.white),
                       ),
+                      activeColor: Colors.amberAccent,
+                      checkColor: Colors.black,
+                      contentPadding: EdgeInsets.zero,
+                      controlAffinity: ListTileControlAffinity.leading,
                     ),
                   ],
                 ),
-                CheckboxListTile(
-                  value: isWeekly,
-                  onChanged: (v) {
-                    isWeekly = v ?? false;
-                  },
-                  title: const Text(
-                    '毎週の予定',
-                    style: TextStyle(color: Colors.white),
+              ),
+              actions: [
+                if (eventToEdit != null)
+                  TextButton(
+                    onPressed: () {
+                      setState(() {
+                        if (isSunday) {
+                          _sundayEvents.removeAt(eventIndex);
+                        } else {
+                          _weekdayEvents[dayIndex]?.removeAt(eventIndex);
+                        }
+                      });
+                      Navigator.of(context).pop();
+                    },
+                    child: const Text(
+                      '削除',
+                      style: TextStyle(color: Colors.redAccent),
+                    ),
                   ),
-                  activeColor: Colors.amberAccent,
-                  checkColor: Colors.black,
-                  contentPadding: EdgeInsets.zero,
-                  controlAffinity: ListTileControlAffinity.leading,
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text(
+                    'キャンセル',
+                    style: TextStyle(color: Colors.white70),
+                  ),
+                ),
+                TextButton(
+                  onPressed: () {
+                    if (titleController.text.trim().isEmpty) return;
+                    if ((endTime.hour * 60 + endTime.minute) <=
+                        (startTime.hour * 60 + startTime.minute))
+                      return;
+                    setState(() {
+                      final newEvent = {
+                        'title': titleController.text,
+                        'start': startTime,
+                        'end': endTime,
+                        'isWeekly': isWeekly,
+                        'date': _displayedMonday.add(Duration(days: dayIndex)),
+                      };
+                      if (isSunday) {
+                        if (eventToEdit == null) {
+                          _sundayEvents.add(newEvent);
+                        } else {
+                          _sundayEvents[eventIndex] = newEvent;
+                        }
+                        _sundayEvents.sort(
+                          (a, b) => (a['start'] as TimeOfDay).hour.compareTo(
+                            (b['start'] as TimeOfDay).hour,
+                          ),
+                        );
+                      } else {
+                        _weekdayEvents[dayIndex] ??= [];
+                        if (eventToEdit == null) {
+                          _weekdayEvents[dayIndex]!.add(newEvent);
+                        } else {
+                          _weekdayEvents[dayIndex]![eventIndex] = newEvent;
+                        }
+                        _weekdayEvents[dayIndex]!.sort(
+                          (a, b) => (a['start'] as TimeOfDay).hour.compareTo(
+                            (b['start'] as TimeOfDay).hour,
+                          ),
+                        );
+                      }
+                    });
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text(
+                    '保存',
+                    style: TextStyle(color: Colors.amberAccent),
+                  ),
                 ),
               ],
-            ),
-          ),
-          actions: [
-            if (eventToEdit != null)
-              TextButton(
-                onPressed: () {
-                  setState(() {
-                    if (isSunday) {
-                      _sundayEvents.removeAt(eventIndex);
-                    } else {
-                      _weekdayEvents[dayIndex]?.removeAt(eventIndex);
-                    }
-                  });
-                  Navigator.of(context).pop();
-                },
-                child: const Text(
-                  '削除',
-                  style: TextStyle(color: Colors.redAccent),
-                ),
-              ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text(
-                'キャンセル',
-                style: TextStyle(color: Colors.white70),
-              ),
-            ),
-            TextButton(
-              onPressed: () {
-                if (titleController.text.trim().isEmpty) return;
-                if ((endTime.hour * 60 + endTime.minute) <=
-                    (startTime.hour * 60 + startTime.minute))
-                  return;
-                setState(() {
-                  final newEvent = {
-                    'title': titleController.text,
-                    'start': startTime,
-                    'end': endTime,
-                    'isWeekly': isWeekly,
-                    'date': _displayedMonday.add(Duration(days: dayIndex)),
-                  };
-                  if (isSunday) {
-                    if (eventToEdit == null) {
-                      _sundayEvents.add(newEvent);
-                    } else {
-                      _sundayEvents[eventIndex] = newEvent;
-                    }
-                    _sundayEvents.sort(
-                      (a, b) => (a['start'] as TimeOfDay).hour.compareTo(
-                        (b['start'] as TimeOfDay).hour,
-                      ),
-                    );
-                  } else {
-                    _weekdayEvents[dayIndex] ??= [];
-                    if (eventToEdit == null) {
-                      _weekdayEvents[dayIndex]!.add(newEvent);
-                    } else {
-                      _weekdayEvents[dayIndex]![eventIndex] = newEvent;
-                    }
-                    _weekdayEvents[dayIndex]!.sort(
-                      (a, b) => (a['start'] as TimeOfDay).hour.compareTo(
-                        (b['start'] as TimeOfDay).hour,
-                      ),
-                    );
-                  }
-                });
-                Navigator.of(context).pop();
-              },
-              child: const Text(
-                '保存',
-                style: TextStyle(color: Colors.amberAccent),
-              ),
-            ),
-          ],
+            );
+          },
         );
       },
     );
@@ -2801,6 +2824,23 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
             height: 250,
             child: Column(
               children: [
+                // ボタンを上部に移動
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: const Text('キャンセル'),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: const Text('完了'),
+                      ),
+                    ],
+                  ),
+                ),
                 Expanded(
                   child: CupertinoDatePicker(
                     mode: CupertinoDatePickerMode.time,
@@ -2814,19 +2854,6 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                       );
                     },
                   ),
-                ),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: const Text('キャンセル'),
-                    ),
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: const Text('完了'),
-                    ),
-                  ],
                 ),
               ],
             ),

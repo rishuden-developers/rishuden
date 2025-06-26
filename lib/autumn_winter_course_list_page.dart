@@ -111,10 +111,10 @@ class _AutumnWinterCourseListPageState
                     course['teacher'] ??
                     '';
                 final semester = course['semester'] ?? '';
-                final code = course['code'] ?? '';
+                final courseId = course['courseId'] ?? '';
 
                 print(
-                  'DEBUG: 秋冬学期授業カード - 授業: $lectureName, 教員: $teacherName, code: $code',
+                  'DEBUG: 秋冬学期授業カード - 授業: $lectureName, 教員: $teacherName, courseId: $courseId',
                 );
 
                 return _AutumnWinterCourseCard(
@@ -122,7 +122,7 @@ class _AutumnWinterCourseListPageState
                   teacherName: teacherName,
                   semester: semester,
                   category: widget.category,
-                  code: code,
+                  courseId: courseId,
                   onTap: () {
                     Navigator.push(
                       context,
@@ -131,7 +131,7 @@ class _AutumnWinterCourseListPageState
                             (context) => AutumnWinterCourseDetailPage(
                               lectureName: lectureName,
                               teacherName: teacherName,
-                              code: code,
+                              courseId: courseId,
                               category: widget.category,
                               semester: semester,
                             ),
@@ -153,7 +153,7 @@ class _AutumnWinterCourseCard extends StatefulWidget {
   final String teacherName;
   final String semester;
   final String category;
-  final String code;
+  final String courseId;
   final VoidCallback? onTap;
 
   const _AutumnWinterCourseCard({
@@ -161,7 +161,7 @@ class _AutumnWinterCourseCard extends StatefulWidget {
     required this.teacherName,
     required this.semester,
     required this.category,
-    required this.code,
+    required this.courseId,
     this.onTap,
   });
 
@@ -186,11 +186,11 @@ class _AutumnWinterCourseCardState extends State<_AutumnWinterCourseCard> {
 
   Future<void> _fetchReviewStats() async {
     try {
-      if (widget.code.isEmpty) return;
+      if (widget.courseId.isEmpty) return;
       final query =
           await FirebaseFirestore.instance
               .collection('reviews')
-              .where('code', isEqualTo: widget.code)
+              .where('courseId', isEqualTo: widget.courseId)
               .get();
       final docs = query.docs;
       if (docs.isEmpty) {
@@ -225,11 +225,11 @@ class _AutumnWinterCourseCardState extends State<_AutumnWinterCourseCard> {
 
   Future<void> _fetchAllReviews() async {
     try {
-      if (widget.code.isEmpty) return;
+      if (widget.courseId.isEmpty) return;
       final query =
           await FirebaseFirestore.instance
               .collection('reviews')
-              .where('code', isEqualTo: widget.code)
+              .where('courseId', isEqualTo: widget.courseId)
               .orderBy('createdAt', descending: true)
               .get();
       setState(() {
@@ -536,7 +536,7 @@ class _AutumnWinterCourseCardState extends State<_AutumnWinterCourseCard> {
                                 (context) => AutumnWinterCourseDetailPage(
                                   lectureName: widget.lectureName,
                                   teacherName: widget.teacherName,
-                                  code: widget.code,
+                                  courseId: widget.courseId,
                                   category: widget.category,
                                   semester: widget.semester,
                                 ),
@@ -573,7 +573,7 @@ class _AutumnWinterCourseCardState extends State<_AutumnWinterCourseCard> {
                                 (context) => CreditInputPage(
                                   lectureName: widget.lectureName,
                                   teacherName: widget.teacherName,
-                                  code: widget.code,
+                                  courseId: widget.courseId,
                                 ),
                           ),
                         );

@@ -12,6 +12,7 @@ import 'item_page.dart';
 import 'credit_input_page.dart'; // レビュー投稿画面への遷移用
 import 'credit_explore_page.dart'; // ボトムナビゲーション用
 import 'providers/global_review_mapping_provider.dart';
+import 'character_data.dart'; // キャラクターデータをインポート
 import 'package:intl/intl.dart';
 import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -71,7 +72,7 @@ class LectureReview {
 class CreditReviewPage extends ConsumerStatefulWidget {
   final String lectureName;
   final String teacherName;
-  final String? code; // ★ codeを追加（秋冬学期用）
+  final String? courseId; // ★ courseIdに統一
   final String? initialDescription; // 講義の概要
   final double? initialOverallSatisfaction; // 講義全体の平均満足度
   final double? initialEasiness; // 講義全体の平均楽単度
@@ -80,7 +81,7 @@ class CreditReviewPage extends ConsumerStatefulWidget {
     super.key,
     required this.lectureName,
     required this.teacherName,
-    this.code, // ★ codeを追加
+    this.courseId, // ★ courseIdに統一
     this.initialDescription,
     this.initialOverallSatisfaction,
     this.initialEasiness,
@@ -91,16 +92,15 @@ class CreditReviewPage extends ConsumerStatefulWidget {
 }
 
 class _CreditReviewPageState extends ConsumerState<CreditReviewPage> {
-  // 実際のレビューデータ
-  List<LectureReview> _allReviews = [];
-  List<LectureReview> _filteredReviews = [];
+  List<Map<String, dynamic>> _allReviews = [];
+  List<Map<String, dynamic>> _filteredReviews = [];
   bool _isLoading = true;
-  StreamSubscription? _reviewsSubscription; // ★ Streamを監視するためのSubscription
+  StreamSubscription? _reviewsSubscription;
 
   // フィルター用
-  LectureFormat? _selectedFormatFilter;
-  AttendanceStrictness? _selectedAttendanceFilter;
-  ExamType? _selectedExamFilter;
+  String? _selectedFormatFilter;
+  String? _selectedAttendanceFilter;
+  String? _selectedExamFilter;
 
   @override
   void initState() {
@@ -121,55 +121,53 @@ class _CreditReviewPageState extends ConsumerState<CreditReviewPage> {
   void _subscribeToReviews() async {
     setState(() => _isLoading = true);
     try {
-      final query =
-          await FirebaseFirestore.instance
-              .collection('reviews')
-              .where('code', isEqualTo: widget.code)
-              .orderBy('createdAt', descending: true)
-              .get();
-      final parsedReviews =
-          query.docs.map((doc) {
+      Query query = FirebaseFirestore.instance.collection('reviews');
+
+      // courseIdでフィルタリング（その講義のレビューのみを取得）
+      if (widget.courseId != null && widget.courseId!.isNotEmpty) {
+        query = query.where('courseId', isEqualTo: widget.courseId);
+      } else {
+        // courseIdがない場合は、lectureNameとteacherNameでフィルタリング
+        query = query.where('lectureName', isEqualTo: widget.lectureName);
+        if (widget.teacherName.isNotEmpty) {
+          query = query.where('teacherName', isEqualTo: widget.teacherName);
+        }
+      }
+
+      final querySnapshot = await query.get();
+
+      final reviews =
+          querySnapshot.docs.map((doc) {
             final data = doc.data() as Map<String, dynamic>;
-            return LectureReview(
-              lectureName: data['lectureName'] ?? '',
-              teacherName: data['teacherName'] ?? '',
-              userId: data['userId'] ?? '',
-              overallSatisfaction: _parseToDouble(
+            return {
+              'reviewId': doc.id,
+              'lectureName': data['lectureName'] ?? '',
+              'teacherName': data['teacherName'] ?? '',
+              'userId': data['userId'] ?? '',
+              'overallSatisfaction': _parseToDouble(
                 data['overallSatisfaction'] ?? data['satisfaction'],
               ),
-              easiness: _parseToDouble(data['easiness'] ?? data['ease']),
-              lectureFormat: LectureFormat.values.firstWhere(
-                (e) =>
-                    e.toString() == data['lectureFormat'] ||
-                    e.toString() == data['classFormat'],
-                orElse: () => LectureFormat.other,
-              ),
-              attendanceStrictness: AttendanceStrictness.values.firstWhere(
-                (e) =>
-                    e.toString() == data['attendanceStrictness'] ||
-                    e.toString() == data['attendance'],
-                orElse: () => AttendanceStrictness.flexible,
-              ),
-              examType: ExamType.values.firstWhere(
-                (e) => e.toString() == data['examType'],
-                orElse: () => ExamType.other,
-              ),
-              teacherFeature: data['teacherFeature'] ?? '',
-              comment: data['comment'] ?? '',
-              tags: List<String>.from(
+              'easiness': _parseToDouble(data['easiness'] ?? data['ease']),
+              'lectureFormat':
+                  data['lectureFormat'] ?? data['classFormat'] ?? '',
+              'attendanceStrictness':
+                  data['attendanceStrictness'] ?? data['attendance'] ?? '',
+              'examType': data['examType'] ?? '',
+              'teacherFeature': data['teacherFeature'] ?? '',
+              'comment': data['comment'] ?? '',
+              'tags': List<String>.from(
                 data['tags'] ?? data['teacherTraits'] ?? [],
               ),
-              reviewId: data['reviewId'] ?? '',
-              reviewDate:
-                  data['createdAt'] != null
-                      ? DateFormat(
-                        'yyyy/MM/dd',
-                      ).format((data['createdAt'] as Timestamp).toDate())
-                      : '',
-            );
+              'createdAt': data['createdAt'],
+              'character': data['character'] ?? 'adventurer',
+              'takoyakiCount': data['takoyakiCount'] ?? 0,
+              'likedBy': data['likedBy'] ?? [],
+              'courseId': data['courseId'] ?? '',
+            };
           }).toList();
+
       setState(() {
-        _allReviews = parsedReviews;
+        _allReviews = reviews;
         _isLoading = false;
       });
       _applyFilters();
@@ -187,15 +185,16 @@ class _CreditReviewPageState extends ConsumerState<CreditReviewPage> {
         _allReviews.where((review) {
           bool matches = true;
           if (_selectedFormatFilter != null) {
-            matches = matches && review.lectureFormat == _selectedFormatFilter;
+            matches =
+                matches && review['lectureFormat'] == _selectedFormatFilter;
           }
           if (_selectedAttendanceFilter != null) {
             matches =
                 matches &&
-                review.attendanceStrictness == _selectedAttendanceFilter;
+                review['attendanceStrictness'] == _selectedAttendanceFilter;
           }
           if (_selectedExamFilter != null) {
-            matches = matches && review.examType == _selectedExamFilter;
+            matches = matches && review['examType'] == _selectedExamFilter;
           }
           return matches;
         }).toList();
@@ -204,14 +203,14 @@ class _CreditReviewPageState extends ConsumerState<CreditReviewPage> {
   double get _averageOverallSatisfaction {
     if (_allReviews.isEmpty) return 0.0;
     return _allReviews
-            .map((r) => r.overallSatisfaction)
+            .map((r) => r['overallSatisfaction'])
             .reduce((a, b) => a + b) /
         _allReviews.length;
   }
 
   double get _averageEasiness {
     if (_allReviews.isEmpty) return 0.0;
-    return _allReviews.map((r) => r.easiness).reduce((a, b) => a + b) /
+    return _allReviews.map((r) => r['easiness']).reduce((a, b) => a + b) /
         _allReviews.length;
   }
 
@@ -233,60 +232,108 @@ class _CreditReviewPageState extends ConsumerState<CreditReviewPage> {
     final myReview =
         user == null
             ? null
-            : (_allReviews.firstWhereOrNull((r) => r.userId == user.uid));
+            : (_allReviews.firstWhereOrNull((r) => r['userId'] == user.uid));
     final otherReviews =
         user == null
             ? _allReviews
-            : _allReviews.where((r) => r.userId != user.uid).toList();
+            : _allReviews.where((r) => r['userId'] != user.uid).toList();
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          '講義レビュー',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-            fontFamily: 'NotoSansJP',
-          ),
+    // courseIdがwidget.courseIdと一致するレビューだけを抽出
+    final filteredReviews =
+        _allReviews
+            .where(
+              (r) =>
+                  (r['courseId'] ?? '').toString().trim() ==
+                  (widget.courseId ?? '').toString().trim(),
+            )
+            .toList();
+
+    // デバッグ用: Firestoreから取得したレビュー件数を出力
+    print('レビュー件数: ${_allReviews.length}');
+    print('CreditReviewPageでのwidget.courseId: \\${widget.courseId}');
+
+    final double topOffset =
+        kToolbarHeight + MediaQuery.of(context).padding.top;
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: Image.asset('assets/night_view.png', fit: BoxFit.cover),
         ),
-        backgroundColor: Colors.indigo[800],
-        elevation: 0,
-        centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
-      body: LayoutBuilder(
-        builder:
-            (context, constraints) => SingleChildScrollView(
-              padding: const EdgeInsets.all(16.0),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  minHeight: constraints.maxHeight - 32,
+        Positioned.fill(child: Container(color: Colors.black.withOpacity(0.5))),
+        Material(
+          type: MaterialType.transparency,
+          child: Stack(
+            children: [
+              // AppBar
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: AppBar(
+                  title: const Text(
+                    '講義レビュー',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontFamily: 'NotoSansJP',
+                    ),
+                  ),
+                  backgroundColor: Colors.transparent,
+                  elevation: 0,
+                  centerTitle: true,
+                  leading: IconButton(
+                    icon: const Icon(Icons.arrow_back, color: Colors.white),
+                    onPressed: () => Navigator.pop(context),
+                  ),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
+              ),
+              // ListView（AppBarの下から画面の一番下まで）
+              Positioned(
+                top: topOffset,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: ListView(
+                  padding: const EdgeInsets.all(16.0),
                   children: [
                     _buildLectureInfoCard(),
                     const SizedBox(height: 20),
                     _buildOverallRatingsCard(),
-                    if (myReview != null) ...[
+                    if (filteredReviews.isEmpty) ...[
+                      const SizedBox(height: 32),
+                      Center(
+                        child: Text(
+                          'この講義のレビューはまだありません',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.grey[700],
+                          ),
+                        ),
+                      ),
+                    ] else ...[
                       const SizedBox(height: 20),
-                      _buildMyReviewCard(myReview),
-                    ],
-                    if (otherReviews.isNotEmpty) ...[
-                      const SizedBox(height: 20),
-                      ...otherReviews.map(_buildOtherReviewCard).toList(),
+                      // すべてのレビューをカードで表示
+                      ...filteredReviews
+                          .map<Widget>(_buildOtherReviewCard)
+                          .toList(),
                     ],
                     const SizedBox(height: 20),
                     _buildPostReviewButton(context),
+                    const SizedBox(height: 200), // ボトムナビの高さ分の余白を増加
                   ],
                 ),
               ),
-            ),
-      ),
-      bottomNavigationBar: const CommonBottomNavigation(),
+              // ボトムナビ
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: const CommonBottomNavigation(),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -408,6 +455,12 @@ class _CreditReviewPageState extends ConsumerState<CreditReviewPage> {
   Widget _buildPostReviewButton(BuildContext context) {
     return ElevatedButton.icon(
       onPressed: () {
+        if (widget.courseId == null || widget.courseId!.isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('courseIdが取得できません。授業カードから遷移してください。')),
+          );
+          return;
+        }
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -415,7 +468,7 @@ class _CreditReviewPageState extends ConsumerState<CreditReviewPage> {
                 (context) => CreditInputPage(
                   lectureName: widget.lectureName,
                   teacherName: widget.teacherName,
-                  code: widget.code,
+                  courseId: widget.courseId!,
                 ),
           ),
         ).then((result) {
@@ -448,7 +501,7 @@ class _CreditReviewPageState extends ConsumerState<CreditReviewPage> {
     );
   }
 
-  Widget _buildMyReviewCard(LectureReview review) {
+  Widget _buildMyReviewCard(Map<String, dynamic> review) {
     return Card(
       color: Colors.cyan[50],
       elevation: 6,
@@ -466,35 +519,7 @@ class _CreditReviewPageState extends ConsumerState<CreditReviewPage> {
                 borderRadius: BorderRadius.circular(12),
                 color: Colors.grey[200],
               ),
-              child:
-                  review.userId != null
-                      ? FutureBuilder<DocumentSnapshot>(
-                        future:
-                            FirebaseFirestore.instance
-                                .collection('users')
-                                .doc(review.userId)
-                                .get(),
-                        builder: (context, userSnapshot) {
-                          String? characterImage;
-                          if (userSnapshot.hasData &&
-                              userSnapshot.data != null) {
-                            final data =
-                                userSnapshot.data!.data()
-                                    as Map<String, dynamic>?;
-                            characterImage = data?['characterImage'] as String?;
-                          }
-                          return characterImage != null
-                              ? Image.asset(characterImage, fit: BoxFit.cover)
-                              : Image.asset(
-                                'assets/character_gorilla.png',
-                                fit: BoxFit.cover,
-                              );
-                        },
-                      )
-                      : Image.asset(
-                        'assets/character_gorilla.png',
-                        fit: BoxFit.cover,
-                      ),
+              child: _getCharacterImageWidget(review['userId']),
             ),
             const SizedBox(width: 16),
             // レビュー内容
@@ -515,7 +540,7 @@ class _CreditReviewPageState extends ConsumerState<CreditReviewPage> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       RatingBarIndicator(
-                        rating: review.overallSatisfaction,
+                        rating: review['overallSatisfaction'],
                         itemBuilder:
                             (context, index) =>
                                 const Icon(Icons.star, color: Colors.amber),
@@ -524,39 +549,43 @@ class _CreditReviewPageState extends ConsumerState<CreditReviewPage> {
                         direction: Axis.horizontal,
                       ),
                       Text(
-                        review.reviewDate,
+                        review['createdAt'] != null
+                            ? DateFormat('yyyy/MM/dd').format(
+                              (review['createdAt'] as Timestamp).toDate(),
+                            )
+                            : '',
                         style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                       ),
                     ],
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    '形式: ${_formatEnum(review.lectureFormat)}',
+                    '形式: ${_formatEnum(review['lectureFormat'])}',
                     style: const TextStyle(color: Colors.black87),
                   ),
                   Text(
-                    '出席: ${_formatEnum(review.attendanceStrictness)}',
+                    '出席: ${_formatEnum(review['attendanceStrictness'])}',
                     style: const TextStyle(color: Colors.black87),
                   ),
                   Text(
-                    '試験: ${_formatEnum(review.examType)}',
+                    '試験: ${_formatEnum(review['examType'])}',
                     style: const TextStyle(color: Colors.black87),
                   ),
                   Text(
-                    '教員特徴: ${review.teacherFeature}',
+                    '教員特徴: ${review['teacherFeature']}',
                     style: const TextStyle(color: Colors.black87),
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'コメント: ${review.comment}',
+                    'コメント: ${review['comment']}',
                     style: const TextStyle(color: Colors.black87),
                   ),
                   const SizedBox(height: 8),
                   Wrap(
                     spacing: 6.0,
                     children:
-                        review.tags
-                            .map(
+                        review['tags']
+                            .map<Widget>(
                               (tag) => Chip(
                                 label: Text(
                                   tag,
@@ -579,7 +608,7 @@ class _CreditReviewPageState extends ConsumerState<CreditReviewPage> {
     );
   }
 
-  Widget _buildOtherReviewCard(LectureReview review) {
+  Widget _buildOtherReviewCard(Map<String, dynamic> review) {
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 8.0),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
@@ -598,35 +627,7 @@ class _CreditReviewPageState extends ConsumerState<CreditReviewPage> {
                 borderRadius: BorderRadius.circular(12),
                 color: Colors.grey[200],
               ),
-              child:
-                  review.userId != null
-                      ? FutureBuilder<DocumentSnapshot>(
-                        future:
-                            FirebaseFirestore.instance
-                                .collection('users')
-                                .doc(review.userId)
-                                .get(),
-                        builder: (context, userSnapshot) {
-                          String? characterImage;
-                          if (userSnapshot.hasData &&
-                              userSnapshot.data != null) {
-                            final data =
-                                userSnapshot.data!.data()
-                                    as Map<String, dynamic>?;
-                            characterImage = data?['characterImage'] as String?;
-                          }
-                          return characterImage != null
-                              ? Image.asset(characterImage, fit: BoxFit.cover)
-                              : Image.asset(
-                                'assets/character_gorilla.png',
-                                fit: BoxFit.cover,
-                              );
-                        },
-                      )
-                      : Image.asset(
-                        'assets/character_gorilla.png',
-                        fit: BoxFit.cover,
-                      ),
+              child: _getCharacterImageWidget(review['userId']),
             ),
             const SizedBox(width: 16),
             // レビュー内容
@@ -638,7 +639,7 @@ class _CreditReviewPageState extends ConsumerState<CreditReviewPage> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       RatingBarIndicator(
-                        rating: review.overallSatisfaction,
+                        rating: review['overallSatisfaction'],
                         itemBuilder:
                             (context, index) =>
                                 const Icon(Icons.star, color: Colors.amber),
@@ -647,39 +648,43 @@ class _CreditReviewPageState extends ConsumerState<CreditReviewPage> {
                         direction: Axis.horizontal,
                       ),
                       Text(
-                        review.reviewDate,
+                        review['createdAt'] != null
+                            ? DateFormat('yyyy/MM/dd').format(
+                              (review['createdAt'] as Timestamp).toDate(),
+                            )
+                            : '',
                         style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                       ),
                     ],
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    '形式: ${_formatEnum(review.lectureFormat)}',
+                    '形式: ${_formatEnum(review['lectureFormat'])}',
                     style: const TextStyle(color: Colors.black87),
                   ),
                   Text(
-                    '出席: ${_formatEnum(review.attendanceStrictness)}',
+                    '出席: ${_formatEnum(review['attendanceStrictness'])}',
                     style: const TextStyle(color: Colors.black87),
                   ),
                   Text(
-                    '試験: ${_formatEnum(review.examType)}',
+                    '試験: ${_formatEnum(review['examType'])}',
                     style: const TextStyle(color: Colors.black87),
                   ),
                   Text(
-                    '教員特徴: ${review.teacherFeature}',
+                    '教員特徴: ${review['teacherFeature']}',
                     style: const TextStyle(color: Colors.black87),
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'コメント: ${review.comment}',
+                    'コメント: ${review['comment']}',
                     style: const TextStyle(color: Colors.black87),
                   ),
                   const SizedBox(height: 8),
                   Wrap(
                     spacing: 6.0,
                     children:
-                        review.tags
-                            .map(
+                        review['tags']
+                            .map<Widget>(
                               (tag) => Chip(
                                 label: Text(
                                   tag,
@@ -695,8 +700,8 @@ class _CreditReviewPageState extends ConsumerState<CreditReviewPage> {
                   ),
                   const SizedBox(height: 12),
                   _TakoyakiButton(
-                    userId: review.userId,
-                    reviewId: review.reviewId,
+                    userId: review['userId'],
+                    reviewId: review['reviewId'],
                   ),
                 ],
               ),
@@ -705,6 +710,37 @@ class _CreditReviewPageState extends ConsumerState<CreditReviewPage> {
         ),
       ),
     );
+  }
+
+  Widget _getCharacterImageWidget(String? userId) {
+    if (userId == null) {
+      return Image.asset('assets/character_gorilla.png', fit: BoxFit.cover);
+    } else {
+      return FutureBuilder<DocumentSnapshot>(
+        future:
+            FirebaseFirestore.instance.collection('users').doc(userId).get(),
+        builder: (context, userSnapshot) {
+          String? characterName;
+          if (userSnapshot.hasData && userSnapshot.data != null) {
+            final data = userSnapshot.data!.data() as Map<String, dynamic>?;
+            characterName = data?['character'] as String?;
+          }
+
+          // character_data.dartから画像パスを取得
+          String? characterImage;
+          if (characterName != null && characterName.isNotEmpty) {
+            characterImage =
+                characterFullDataGlobal[characterName]?['image'] as String?;
+          } else {
+            characterImage = null;
+          }
+
+          return characterImage != null
+              ? Image.asset(characterImage, fit: BoxFit.cover)
+              : Image.asset('assets/character_gorilla.png', fit: BoxFit.cover);
+        },
+      );
+    }
   }
 }
 

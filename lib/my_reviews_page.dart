@@ -9,12 +9,13 @@ import 'providers/timetable_provider.dart';
 import 'providers/global_course_mapping_provider.dart';
 import 'providers/global_review_mapping_provider.dart';
 import 'credit_input_page.dart'; // ★ 遷移先として追加
+import 'common_bottom_navigation.dart'; // ボトムナビゲーション用
 
 // ページの状態で使用するデータモデル
 class MyCourseReviewModel {
   final String subjectName;
   final String teacherName;
-  final String reviewId;
+  final String courseId;
   double avgSatisfaction;
   double avgEasiness;
   int reviewCount;
@@ -22,7 +23,7 @@ class MyCourseReviewModel {
   MyCourseReviewModel({
     required this.subjectName,
     required this.teacherName,
-    required this.reviewId,
+    required this.courseId,
     this.avgSatisfaction = 0.0,
     this.avgEasiness = 0.0,
     this.reviewCount = 0,
@@ -68,13 +69,9 @@ class _MyReviewsPageState extends ConsumerState<MyReviewsPage> {
       return;
     }
 
-    // reviewsコレクションから自分のレビューを全件取得
-    final query =
-        await FirebaseFirestore.instance
-            .collection('reviews')
-            .where('userId', isEqualTo: user.uid)
-            .get();
-    final myReviews =
+    // reviewsコレクションから全ユーザーのレビューを全件取得
+    final query = await FirebaseFirestore.instance.collection('reviews').get();
+    final allReviews =
         query.docs.map((doc) => doc.data() as Map<String, dynamic>).toList();
 
     // 履修情報を取得
@@ -93,18 +90,18 @@ class _MyReviewsPageState extends ConsumerState<MyReviewsPage> {
       timetableData?['teacherNames'] ?? {},
     );
 
-    // 各授業ごとに自分のレビューを集計
+    // 各授業ごとに全ユーザーのレビューを集計
     final courses = <MyCourseReviewModel>[];
     for (var entry in userCourseIds.entries) {
       final subjectName = entry.key;
       final courseId = entry.value;
       final teacherName = userTeacherNames[courseId] ?? '';
       final reviewsForCourse =
-          myReviews
+          allReviews
               .where(
                 (r) =>
-                    r['lectureName'] == subjectName &&
-                    r['teacherName'] == teacherName,
+                    (r['courseId'] ?? '').toString().trim() ==
+                    courseId.toString().trim(),
               )
               .toList();
       double avgSatisfaction = 0.0;
@@ -125,7 +122,7 @@ class _MyReviewsPageState extends ConsumerState<MyReviewsPage> {
         MyCourseReviewModel(
           subjectName: subjectName,
           teacherName: teacherName,
-          reviewId: courseId,
+          courseId: courseId,
           avgSatisfaction: avgSatisfaction,
           avgEasiness: avgEasiness,
           reviewCount: reviewsForCourse.length,
@@ -144,17 +141,17 @@ class _MyReviewsPageState extends ConsumerState<MyReviewsPage> {
         .collection('reviews')
         .snapshots()
         .listen((snapshot) {
-          final Map<String, List<DocumentSnapshot>> reviewsByReviewId = {};
+          final Map<String, List<DocumentSnapshot>> reviewsByCourseId = {};
           for (var doc in snapshot.docs) {
-            final reviewId = doc.data()['reviewId'] as String?;
-            if (reviewId != null) {
-              reviewsByReviewId.putIfAbsent(reviewId, () => []).add(doc);
+            final courseId = doc.data()['courseId'] as String?;
+            if (courseId != null) {
+              reviewsByCourseId.putIfAbsent(courseId, () => []).add(doc);
             }
           }
 
           final updatedCourses = List<MyCourseReviewModel>.from(_myCourses);
           for (var course in updatedCourses) {
-            final reviews = reviewsByReviewId[course.reviewId] ?? [];
+            final reviews = reviewsByCourseId[course.courseId] ?? [];
             if (reviews.isNotEmpty) {
               course.reviewCount = reviews.length;
               course.avgSatisfaction =
@@ -194,40 +191,71 @@ class _MyReviewsPageState extends ConsumerState<MyReviewsPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('自分の授業をレビュー'),
-        backgroundColor: Colors.indigo[800],
-      ),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Colors.indigo[800]!, Colors.indigo[600]!],
+    final double topOffset =
+        kToolbarHeight + MediaQuery.of(context).padding.top;
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: Image.asset('assets/night_view.png', fit: BoxFit.cover),
+        ),
+        Positioned.fill(child: Container(color: Colors.black.withOpacity(0.5))),
+        Material(
+          type: MaterialType.transparency,
+          child: Stack(
+            children: [
+              // AppBar
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: AppBar(
+                  title: const Text('自分の授業をレビュー'),
+                  backgroundColor: Colors.transparent,
+                  elevation: 0,
+                ),
+              ),
+              // ListView（AppBarの下から画面の一番下まで）
+              Positioned(
+                top: topOffset,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child:
+                    _isLoading
+                        ? const Center(
+                          child: CircularProgressIndicator(color: Colors.white),
+                        )
+                        : _myCourses.isEmpty
+                        ? const Center(
+                          child: Text(
+                            '時間割に授業が登録されていません。',
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 16,
+                            ),
+                          ),
+                        )
+                        : ListView.builder(
+                          physics: ClampingScrollPhysics(),
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          itemCount: _myCourses.length,
+                          itemBuilder: (context, index) {
+                            final course = _myCourses[index];
+                            return _buildResultCard(course);
+                          },
+                        ),
+              ),
+              // ボトムナビ
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: const CommonBottomNavigation(),
+              ),
+            ],
           ),
         ),
-        child:
-            _isLoading
-                ? const Center(
-                  child: CircularProgressIndicator(color: Colors.white),
-                )
-                : _myCourses.isEmpty
-                ? const Center(
-                  child: Text(
-                    '時間割に授業が登録されていません。',
-                    style: TextStyle(color: Colors.white70, fontSize: 16),
-                  ),
-                )
-                : ListView.builder(
-                  padding: const EdgeInsets.all(8.0),
-                  itemCount: _myCourses.length,
-                  itemBuilder: (context, index) {
-                    final course = _myCourses[index];
-                    return _buildResultCard(course);
-                  },
-                ),
-      ),
+      ],
     );
   }
 
@@ -243,6 +271,7 @@ class _MyReviewsPageState extends ConsumerState<MyReviewsPage> {
             MaterialPageRoute(
               builder:
                   (context) => CreditInputPage(
+                    courseId: result.courseId,
                     lectureName: result.subjectName,
                     teacherName: result.teacherName,
                   ),

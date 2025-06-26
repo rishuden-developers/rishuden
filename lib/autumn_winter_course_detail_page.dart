@@ -5,7 +5,7 @@ import 'credit_input_page.dart';
 class AutumnWinterCourseDetailPage extends StatefulWidget {
   final String lectureName;
   final String teacherName;
-  final String code;
+  final String courseId;
   final String category;
   final String semester;
 
@@ -13,7 +13,7 @@ class AutumnWinterCourseDetailPage extends StatefulWidget {
     super.key,
     required this.lectureName,
     required this.teacherName,
-    required this.code,
+    required this.courseId,
     required this.category,
     required this.semester,
   });
@@ -43,7 +43,7 @@ class _AutumnWinterCourseDetailPageState
       final query =
           await FirebaseFirestore.instance
               .collection('reviews')
-              .where('code', isEqualTo: widget.code)
+              .where('courseId', isEqualTo: widget.courseId)
               .orderBy('createdAt', descending: true)
               .get();
       final reviews =
@@ -214,7 +214,7 @@ class _AutumnWinterCourseDetailPageState
                                   (context) => CreditInputPage(
                                     lectureName: widget.lectureName,
                                     teacherName: widget.teacherName,
-                                    code: widget.code,
+                                    courseId: widget.courseId,
                                   ),
                             ),
                           );

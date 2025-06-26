@@ -350,6 +350,8 @@ class _QuestCreationWidgetState extends ConsumerState<QuestCreationWidget> {
                     onPressed:
                         (tempTaskType != null && tempDeadline != null)
                             ? () async {
+                              print('DEBUG: クエスト作成ボタンが押されました');
+
                               // 週のクエスト作成回数をチェック
                               final courseId =
                                   selectedClass!['courseId'] as String?;
@@ -372,6 +374,8 @@ class _QuestCreationWidgetState extends ConsumerState<QuestCreationWidget> {
                                 }
                               }
 
+                              print('DEBUG: クエスト作成を開始します');
+
                               ref
                                   .read(timetableProvider.notifier)
                                   .updateQuestTaskType(tempTaskType);
@@ -381,18 +385,28 @@ class _QuestCreationWidgetState extends ConsumerState<QuestCreationWidget> {
                               ref
                                   .read(timetableProvider.notifier)
                                   .updateQuestDescription(tempDescription);
+
+                              print('DEBUG: widget.onCreateを呼び出します');
                               widget.onCreate(
                                 selectedClass!,
                                 tempTaskType!,
                                 tempDeadline!,
                                 tempDescription,
                               );
+
+                              print('DEBUG: クエスト作成完了後、データをリセットします');
                               // クエスト作成完了後、データをリセット
                               ref
                                   .read(timetableProvider.notifier)
                                   .resetQuestData();
                               _hasShownDialog = false; // フラグをリセット
-                              Navigator.of(context).pop();
+
+                              print('DEBUG: ダイアログを閉じます');
+                              if (mounted) {
+                                Navigator.of(context).pop();
+                              }
+
+                              print('DEBUG: クエスト作成処理完了');
                             }
                             : null,
                     child: const Text("作成"),
@@ -605,19 +619,39 @@ class _QuestCreationWidgetState extends ConsumerState<QuestCreationWidget> {
                                         'courseId': entry.courseId,
                                       });
 
+                                  print(
+                                    'DEBUG: 授業タップ - ${entry.subjectName}, courseId: ${entry.courseId}',
+                                  );
+
                                   // 最新クエストを検索（courseIdがnullの場合は従来の手動入力）
                                   if (entry.courseId != null) {
-                                    final latestQuest =
-                                        await _getLatestQuestForCourse(
+                                    print('DEBUG: courseIdがあるため、過去のクエストを検索します');
+                                    final latestQuests =
+                                        await _getLatestQuestsForCourse(
                                           entry.courseId!,
                                         );
 
-                                    if (latestQuest != null) {
-                                      // 最新クエストがある場合は今週版作成の確認ダイアログを表示
-                                      _showWeeklyQuestConfirmationDialog(
-                                        latestQuest,
+                                    print(
+                                      'DEBUG: 検索結果 - latestQuests: $latestQuests',
+                                    );
+
+                                    if (latestQuests.isNotEmpty) {
+                                      print(
+                                        'DEBUG: 過去のクエストが見つかりました。今週版作成ダイアログを表示します',
                                       );
+                                      // 複数のクエストがある場合は選択ダイアログを表示
+                                      if (latestQuests.length > 1) {
+                                        _showQuestSelectionDialog(latestQuests);
+                                      } else {
+                                        // 単一のクエストの場合は今週版作成の確認ダイアログを表示
+                                        _showWeeklyQuestConfirmationDialog(
+                                          latestQuests.first,
+                                        );
+                                      }
                                     } else {
+                                      print(
+                                        'DEBUG: 過去のクエストが見つかりませんでした。手動入力画面を表示します',
+                                      );
                                       // 最新クエストがない場合は従来の手動入力画面
                                       if (selectedTaskType != null &&
                                           selectedDeadline != null) {
@@ -632,6 +666,9 @@ class _QuestCreationWidgetState extends ConsumerState<QuestCreationWidget> {
                                       _showTaskDetailsDialog();
                                     }
                                   } else {
+                                    print(
+                                      'DEBUG: courseIdがnullのため、手動入力画面を表示します',
+                                    );
                                     // courseIdがnullの場合は従来の手動入力画面
                                     if (selectedTaskType != null &&
                                         selectedDeadline != null) {
@@ -739,28 +776,151 @@ class _QuestCreationWidgetState extends ConsumerState<QuestCreationWidget> {
     return snapshot.docs.map((doc) => doc.data()).toList();
   }
 
-  // 最新クエストを取得
-  Future<Map<String, dynamic>?> _getLatestQuestForCourse(
+  // 最新クエストを取得（締切時間でグループ化して最大2つまで）
+  Future<List<Map<String, dynamic>>> _getLatestQuestsForCourse(
     String courseId,
   ) async {
     try {
+      print('DEBUG: _getLatestQuestsForCourse - courseId: $courseId');
+
+      // まず、そのcourseIdでクエストが存在するかチェック
+      final allQuestsSnapshot =
+          await FirebaseFirestore.instance.collection('quests').get();
+
+      print('DEBUG: 全クエスト数: ${allQuestsSnapshot.docs.length}');
+
+      // 全クエストのcourseIdを確認
+      for (var doc in allQuestsSnapshot.docs) {
+        final questData = doc.data();
+        final questCourseId = questData['courseId'] as String?;
+        final questName = questData['name'] as String?;
+        print('DEBUG: クエスト「$questName」のcourseId: $questCourseId');
+      }
+
+      // インデックスエラーを回避するため、orderByを削除してクライアント側でソート
       final snapshot =
           await FirebaseFirestore.instance
               .collection('quests')
               .where('courseId', isEqualTo: courseId)
-              .orderBy('createdAt', descending: true)
-              .limit(1)
               .get();
 
+      print('DEBUG: クエスト検索結果 - ドキュメント数: ${snapshot.docs.length}');
+
       if (snapshot.docs.isNotEmpty) {
-        final questData = snapshot.docs.first.data();
-        return {'id': snapshot.docs.first.id, ...questData};
+        // クライアント側でcreatedAtでソート
+        final sortedDocs =
+            snapshot.docs.toList()..sort((a, b) {
+              final aCreatedAt = a.data()['createdAt'] as Timestamp?;
+              final bCreatedAt = b.data()['createdAt'] as Timestamp?;
+              if (aCreatedAt == null && bCreatedAt == null) return 0;
+              if (aCreatedAt == null) return 1;
+              if (bCreatedAt == null) return -1;
+              return bCreatedAt.compareTo(aCreatedAt); // 降順（最新が先頭）
+            });
+
+        // 締切時間でグループ化
+        final Map<String, Map<String, dynamic>> timeGroupedQuests = {};
+
+        for (var doc in sortedDocs) {
+          final questData = doc.data();
+          final deadline = questData['deadline'] as Timestamp?;
+
+          if (deadline != null) {
+            final deadlineDate = deadline.toDate();
+            // 締切時間をキーとして使用（時:分の形式）
+            final timeKey =
+                '${deadlineDate.hour.toString().padLeft(2, '0')}:${deadlineDate.minute.toString().padLeft(2, '0')}';
+
+            // 同じ時間のクエストがまだない場合のみ追加
+            if (!timeGroupedQuests.containsKey(timeKey)) {
+              timeGroupedQuests[timeKey] = {'id': doc.id, ...questData};
+              print('DEBUG: 時間グループ「$timeKey」にクエストを追加: ${questData['name']}');
+            }
+          }
+        }
+
+        // 最大2つまで返す
+        final result = timeGroupedQuests.values.take(2).toList();
+        print('DEBUG: 時間グループ化後のクエスト数: ${result.length}');
+
+        return result;
+      } else {
+        print('DEBUG: 該当するクエストが見つかりませんでした');
       }
-      return null;
+      return [];
     } catch (e) {
-      print('Error getting latest quest: $e');
-      return null;
+      print('Error getting latest quests: $e');
+      return [];
     }
+  }
+
+  // 複数のクエスト履歴から選択するダイアログ
+  void _showQuestSelectionDialog(List<Map<String, dynamic>> quests) {
+    showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('今週版クエスト作成'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  '過去のクエスト履歴から選択してください：',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 16),
+                ...quests.map((quest) {
+                  final subjectName = quest['name'] as String? ?? '不明な授業';
+                  final taskType = quest['taskType'] as String? ?? '課題';
+                  final description = quest['description'] as String? ?? '';
+                  final deadline = quest['deadline'] as Timestamp?;
+
+                  String deadlineText = '期限なし';
+                  if (deadline != null) {
+                    final deadlineDate = deadline.toDate();
+                    deadlineText =
+                        '${deadlineDate.hour.toString().padLeft(2, '0')}:${deadlineDate.minute.toString().padLeft(2, '0')}締切';
+                  }
+
+                  return Card(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    child: ListTile(
+                      title: Text(subjectName),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('種類: $taskType'),
+                          Text('期限: $deadlineText'),
+                          if (description.isNotEmpty)
+                            Text(
+                              '詳細: $description',
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                        ],
+                      ),
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        _showWeeklyQuestConfirmationDialog(quest);
+                      },
+                    ),
+                  );
+                }).toList(),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  // キャンセル時は従来の手動入力画面を表示
+                  _showTaskDetailsDialog();
+                },
+                child: const Text('キャンセル'),
+              ),
+            ],
+          ),
+    );
   }
 
   // 今週版クエスト作成の確認ダイアログ
@@ -770,11 +930,12 @@ class _QuestCreationWidgetState extends ConsumerState<QuestCreationWidget> {
     final description = latestQuest['description'] as String? ?? '';
     final deadline = latestQuest['deadline'] as Timestamp?;
 
-    // 今週の期限を計算（7日後）
-    final newDeadline =
-        deadline != null
-            ? DateTime.now().add(const Duration(days: 7))
-            : DateTime.now().add(const Duration(days: 7));
+    print('DEBUG: 今週版クエスト作成ダイアログ - 元の期限: $deadline');
+
+    // 来週の期限を計算するヘルパーメソッド
+    DateTime newDeadline = _calculateNextWeekDeadline(deadline);
+
+    print('DEBUG: 今週版クエスト作成ダイアログ - 新しい期限: $newDeadline');
 
     showDialog(
       context: context,
@@ -821,6 +982,45 @@ class _QuestCreationWidgetState extends ConsumerState<QuestCreationWidget> {
             ],
           ),
     );
+  }
+
+  // 来週の期限を計算するヘルパーメソッド
+  DateTime _calculateNextWeekDeadline(Timestamp? originalDeadline) {
+    final now = DateTime.now();
+    print('DEBUG: 期限計算開始 - 現在時刻: $now');
+
+    if (originalDeadline != null) {
+      final originalDate = originalDeadline.toDate();
+      print('DEBUG: 元の期限: $originalDate');
+
+      // 元の期限の時刻（時・分）を保持
+      final originalHour = originalDate.hour;
+      final originalMinute = originalDate.minute;
+      print('DEBUG: 元の期限の時刻 - ${originalHour}:${originalMinute}');
+
+      // 元の期限から7日後を計算
+      final nextWeekDate = originalDate.add(const Duration(days: 7));
+      final calculatedDeadline = DateTime(
+        nextWeekDate.year,
+        nextWeekDate.month,
+        nextWeekDate.day,
+        originalHour,
+        originalMinute,
+      );
+
+      print('DEBUG: 計算された期限: $calculatedDeadline');
+      print(
+        'DEBUG: 元の期限からの差: ${calculatedDeadline.difference(originalDate).inDays}日',
+      );
+      print('DEBUG: 現在時刻からの差: ${calculatedDeadline.difference(now).inDays}日');
+
+      return calculatedDeadline;
+    } else {
+      // 元の期限がない場合は、現在時刻から7日後
+      final fallbackDeadline = now.add(const Duration(days: 7));
+      print('DEBUG: 元の期限なし - フォールバック期限: $fallbackDeadline');
+      return fallbackDeadline;
+    }
   }
 
   // 今週版クエストを作成
