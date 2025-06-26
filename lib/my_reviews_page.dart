@@ -68,13 +68,9 @@ class _MyReviewsPageState extends ConsumerState<MyReviewsPage> {
       return;
     }
 
-    // reviewsコレクションから自分のレビューを全件取得
-    final query =
-        await FirebaseFirestore.instance
-            .collection('reviews')
-            .where('userId', isEqualTo: user.uid)
-            .get();
-    final myReviews =
+    // reviewsコレクションから全ユーザーのレビューを全件取得
+    final query = await FirebaseFirestore.instance.collection('reviews').get();
+    final allReviews =
         query.docs.map((doc) => doc.data() as Map<String, dynamic>).toList();
 
     // 履修情報を取得
@@ -93,18 +89,18 @@ class _MyReviewsPageState extends ConsumerState<MyReviewsPage> {
       timetableData?['teacherNames'] ?? {},
     );
 
-    // 各授業ごとに自分のレビューを集計
+    // 各授業ごとに全ユーザーのレビューを集計
     final courses = <MyCourseReviewModel>[];
     for (var entry in userCourseIds.entries) {
       final subjectName = entry.key;
       final courseId = entry.value;
       final teacherName = userTeacherNames[courseId] ?? '';
       final reviewsForCourse =
-          myReviews
+          allReviews
               .where(
                 (r) =>
-                    r['lectureName'] == subjectName &&
-                    r['teacherName'] == teacherName,
+                    (r['courseId'] ?? '').toString().trim() ==
+                    courseId.toString().trim(),
               )
               .toList();
       double avgSatisfaction = 0.0;
