@@ -4,9 +4,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ReviewPost extends StatelessWidget {
-  final String? code;
+  final String? courseId;
 
-  const ReviewPost({super.key, this.code});
+  const ReviewPost({super.key, this.courseId});
 
   @override
   Widget build(BuildContext context) {
@@ -16,7 +16,7 @@ class ReviewPost extends StatelessWidget {
         showDialog(
           context: context,
           barrierDismissible: true,
-          builder: (context) => ReviewDialog(),
+          builder: (context) => ReviewDialog(courseId: courseId),
         );
       },
     );
@@ -24,7 +24,9 @@ class ReviewPost extends StatelessWidget {
 }
 
 class ReviewDialog extends StatefulWidget {
-  const ReviewDialog({super.key});
+  final String? courseId;
+
+  const ReviewDialog({Key? key, this.courseId}) : super(key: key);
 
   @override
   State<ReviewDialog> createState() => _ReviewDialogState();
@@ -132,11 +134,30 @@ class _ReviewDialogState extends State<ReviewDialog> {
     String courseId,
     Map<String, dynamic> reviewData,
   ) async {
-    await FirebaseFirestore.instance
-        .collection('courses')
-        .doc(courseId)
-        .collection('reviews')
-        .add(reviewData);
+    await FirebaseFirestore.instance.collection('reviews').add(reviewData);
+  }
+
+  // ユーザーのキャラクター情報を取得
+  Future<String> _getUserCharacter() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return 'adventurer';
+
+    try {
+      final doc =
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .get();
+
+      if (doc.exists) {
+        final data = doc.data() as Map<String, dynamic>?;
+        return data?['character'] ?? 'adventurer';
+      }
+    } catch (e) {
+      print('Error getting user character: $e');
+    }
+
+    return 'adventurer';
   }
 
   @override
@@ -333,6 +354,8 @@ class _ReviewDialogState extends State<ReviewDialog> {
                                     final reviewData = {
                                       'userId': user.uid,
                                       'courseId': selectedCourse!['courseId'],
+                                      'code': widget.courseId,
+                                      'character': await _getUserCharacter(),
                                       'lectureName':
                                           selectedCourse!['description'] ?? '',
                                       'teacherName':

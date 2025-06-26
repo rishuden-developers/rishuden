@@ -20,17 +20,15 @@ import 'credit_review_page.dart'
     show LectureFormat, AttendanceStrictness, ExamType;
 
 class CreditInputPage extends ConsumerStatefulWidget {
-  final String? lectureName;
-  final String? teacherName;
-  final String? courseId;
-  final String? code;
+  final String lectureName;
+  final String teacherName;
+  final String courseId;
 
   const CreditInputPage({
     super.key,
-    this.lectureName,
-    this.teacherName,
-    this.courseId,
-    this.code,
+    required this.lectureName,
+    required this.teacherName,
+    required this.courseId,
   });
 
   @override
@@ -170,6 +168,29 @@ class _CreditInputPageState extends ConsumerState<CreditInputPage> {
     return doc.data()?['teacherName'] ?? '';
   }
 
+  // ユーザーのキャラクター情報を取得
+  Future<String> _getUserCharacter() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return 'adventurer';
+
+    try {
+      final doc =
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .get();
+
+      if (doc.exists) {
+        final data = doc.data() as Map<String, dynamic>?;
+        return data?['character'] ?? 'adventurer';
+      }
+    } catch (e) {
+      print('Error getting user character: $e');
+    }
+
+    return 'adventurer';
+  }
+
   // グローバル教員名保存
   Future<void> _setGlobalTeacherName(
     String courseId,
@@ -184,6 +205,7 @@ class _CreditInputPageState extends ConsumerState<CreditInputPage> {
   }
 
   Future<void> _saveReview() async {
+    print('saveReview呼び出し時のcourseId: \\${widget.courseId}');
     if (!mounted) return;
     setState(() => _isLoading = true);
 
@@ -214,20 +236,30 @@ class _CreditInputPageState extends ConsumerState<CreditInputPage> {
       return;
     }
 
+    final courseId = widget.courseId;
+    if (courseId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('courseIdが取得できません。授業カードから遷移してください。')),
+      );
+      setState(() => _isLoading = false);
+      return;
+    }
+
     try {
-      // 1. lectureNameからcourseIdを取得
+      // 1. lectureNameからcourseIdを取得（ただし保存にはwidget.courseIdを必ず使う）
       final courseMapping = ref.read(globalCourseMappingProvider);
-      final courseId = courseMapping[lectureName];
-      if (courseId != null && courseId.isNotEmpty) {
-        await _setGlobalTeacherName(courseId, editedTeacherName);
+      final mappedCourseId = courseMapping[lectureName];
+      if (mappedCourseId != null && mappedCourseId.isNotEmpty) {
+        await _setGlobalTeacherName(mappedCourseId, editedTeacherName);
       }
 
-      // 2. 保存するレビューデータを作成
+      // 2. 保存するレビューデータを作成（必ずwidget.courseIdを使う）
       final reviewData = {
         'lectureName': lectureName,
         'teacherName': editedTeacherName,
-        'courseId': courseId ?? '', // courseIdがnullの場合は空文字を保存
+        'courseId': widget.courseId, // 必ずwidget.courseIdを直接入れる
         'userId': user.uid,
+        'character': await _getUserCharacter(),
         'overallSatisfaction': _overallSatisfaction,
         'easiness': _easiness,
         'lectureFormat': _classFormat,
@@ -240,6 +272,7 @@ class _CreditInputPageState extends ConsumerState<CreditInputPage> {
         'comment': _commentController.text.trim(),
         'createdAt': FieldValue.serverTimestamp(),
       };
+      print('Firestoreに保存するreviewData: $reviewData');
 
       // reviewsコレクションに直接addで保存
       await FirebaseFirestore.instance.collection('reviews').add(reviewData);
@@ -294,6 +327,7 @@ class _CreditInputPageState extends ConsumerState<CreditInputPage> {
 
   @override
   Widget build(BuildContext context) {
+    print('CreditInputPageでのcourseId: \\${widget.courseId}');
     int reward = 5;
     if (_commentController.text.trim().isNotEmpty) {
       reward += 5;

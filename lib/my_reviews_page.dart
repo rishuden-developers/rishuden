@@ -243,6 +243,7 @@ class _MyReviewsPageState extends ConsumerState<MyReviewsPage> {
             MaterialPageRoute(
               builder:
                   (context) => CreditInputPage(
+                    courseId: result.reviewId,
                     lectureName: result.subjectName,
                     teacherName: result.teacherName,
                   ),
