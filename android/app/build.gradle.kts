@@ -14,6 +14,7 @@ android {
     ndkVersion = "27.0.12077973"
 
     compileOptions {
+        isCoreLibraryDesugaringEnabled = true // Kotlin DSLでは is をつける
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
@@ -44,4 +45,11 @@ android {
 
 flutter {
     source = "../.."
+}
+
+dependencies {
+    // ... その他の依存関係 ...
+
+    // ここに以下1行を追加
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 }
