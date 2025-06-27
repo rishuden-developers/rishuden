@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'credit_review_page.dart';
 import 'components/course_card.dart';
 import 'providers/timetable_provider.dart';
@@ -28,61 +29,104 @@ class _AutumnWinterCourseCardListPageState
   // 秋冬学期の授業データを読み込む
   Future<void> _loadAutumnWinterCourses() async {
     try {
-      final List<Map<String, dynamic>> courses = [];
+      var courses = <Map<String, dynamic>>[];
 
-      // global/course_mappingドキュメントからmappingフィールドを取得
-      final doc =
-          await FirebaseFirestore.instance
-              .collection('global')
-              .doc('course_mapping')
-              .get();
+      // course_dataコレクションから全授業を取得
+      final snapshot =
+          await FirebaseFirestore.instance.collection('course_data').get();
 
-      if (doc.exists) {
-        final data = doc.data()!;
-        final mapping = data['mapping'] as Map<String, dynamic>? ?? {};
+      for (final doc in snapshot.docs) {
+        final data = doc.data();
+        if (data.containsKey('data') &&
+            data['data'] is Map &&
+            data['data']['courses'] is List) {
+          final List<dynamic> courseList = data['data']['courses'];
 
-        // mappingの各エントリを処理
-        for (final entry in mapping.entries) {
-          final courseId = entry.key; // 「講義名|教室|曜日|時限」形式
-          final courseData = entry.value;
+          for (final course in courseList) {
+            if (course is Map<String, dynamic>) {
+              final lectureName = course['lectureName'] ?? course['name'] ?? '';
+              final teacherName =
+                  course['teacherName'] ??
+                  course['instructor'] ??
+                  course['teacher'] ??
+                  '';
+              final classroom = course['classroom'] ?? course['room'] ?? '';
+              final category = course['category'] ?? '';
+              final semester = course['semester'] ?? '';
 
-          // courseIdをパースして講義名と教室を取得
-          String lectureName = '';
-          String classroom = '';
+              // 教員名をtimetableProviderから取得（時間割画面と同期）
+              String finalTeacherName = teacherName;
+              if (lectureName.isNotEmpty) {
+                final timetableTeacherName =
+                    ref.read(timetableProvider)['teacherNames']?[lectureName];
+                if (timetableTeacherName != null &&
+                    timetableTeacherName.isNotEmpty) {
+                  finalTeacherName = timetableTeacherName;
+                }
+              }
 
-          if (courseId.contains('|')) {
-            final parts = courseId.split('|');
-            if (parts.length >= 2) {
-              lectureName = parts[0];
-              classroom = parts[1];
+              courses.add({
+                'lectureName': lectureName,
+                'teacherName': finalTeacherName,
+                'classroom': classroom,
+                'category': category,
+                'semester': semester,
+                'avgSatisfaction': 0.0,
+                'avgEasiness': 0.0,
+                'reviewCount': 0,
+                'hasMyReview': false,
+              });
             }
-          } else {
-            // 古い形式の場合はcourseIdをそのまま講義名として使用
-            lectureName = courseId;
           }
+        }
+      }
 
-          // 教員名をtimetableProviderから取得（時間割画面と同期）
-          String teacherName =
-              courseData['teacherName'] ?? courseData['instructor'] ?? '';
-          if (courseId.isNotEmpty) {
-            final timetableTeacherName =
-                ref.read(timetableProvider)['teacherNames']?[courseId];
-            if (timetableTeacherName != null &&
-                timetableTeacherName.isNotEmpty) {
-              teacherName = timetableTeacherName;
+      // 各授業のレビュー情報を取得（lectureNameとteacherNameで検索）
+      for (int i = 0; i < courses.length; i++) {
+        final lectureName = courses[i]['lectureName'];
+        final teacherName = courses[i]['teacherName'];
+
+        try {
+          final reviewsSnapshot =
+              await FirebaseFirestore.instance
+                  .collection('reviews')
+                  .where('lectureName', isEqualTo: lectureName)
+                  .where('teacherName', isEqualTo: teacherName)
+                  .get();
+
+          final reviews = reviewsSnapshot.docs;
+          if (reviews.isNotEmpty) {
+            double totalSatisfaction = 0.0;
+            double totalEasiness = 0.0;
+            bool hasMyReview = false;
+            final user = FirebaseAuth.instance.currentUser;
+
+            for (final doc in reviews) {
+              final data = doc.data();
+              final satisfaction =
+                  (data['overallSatisfaction'] ?? data['satisfaction'] ?? 0.0) *
+                  1.0;
+              final easiness = (data['easiness'] ?? data['ease'] ?? 0.0) * 1.0;
+
+              totalSatisfaction += satisfaction;
+              totalEasiness += easiness;
+
+              // 自分のレビューがあるかチェック
+              if (user != null && data['userId'] == user.uid) {
+                hasMyReview = true;
+              }
             }
-          }
 
-          courses.add({
-            'courseId': courseId,
-            'lectureName': lectureName,
-            'classroom': classroom,
-            'teacherName': teacherName,
-            'avgSatisfaction': 0.0,
-            'avgEasiness': 0.0,
-            'reviewCount': 0,
-            'hasMyReview': false,
-          });
+            courses[i] = {
+              ...courses[i],
+              'avgSatisfaction': totalSatisfaction / reviews.length,
+              'avgEasiness': totalEasiness / reviews.length,
+              'reviewCount': reviews.length,
+              'hasMyReview': hasMyReview,
+            };
+          }
+        } catch (e) {
+          print('Error fetching reviews for $lectureName ($teacherName): $e');
         }
       }
 
@@ -91,7 +135,7 @@ class _AutumnWinterCourseCardListPageState
         _isLoading = false;
       });
 
-      print('Loaded ${courses.length} courses from course_mapping');
+      print('Loaded ${courses.length} courses from course_data');
     } catch (e) {
       print('Error loading autumn/winter courses: $e');
       setState(() => _isLoading = false);
@@ -144,14 +188,169 @@ class _AutumnWinterCourseCardListPageState
                               alignment: Alignment.center,
                               child: FractionallySizedBox(
                                 widthFactor: 0.80,
-                                child: CourseCard(
-                                  course: _courses[index],
-                                  onTeacherNameChanged: (newTeacherName) {
-                                    _updateTeacherName(
-                                      _courses[index]['courseId'],
-                                      newTeacherName,
-                                    );
-                                  },
+                                child: Card(
+                                  margin: const EdgeInsets.symmetric(
+                                    vertical: 8.0,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(15),
+                                  ),
+                                  elevation: 5,
+                                  color: Colors.white,
+                                  child: InkWell(
+                                    onTap: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder:
+                                              (context) => CreditReviewPage(
+                                                lectureName:
+                                                    _courses[index]['lectureName'],
+                                                teacherName:
+                                                    _courses[index]['teacherName'],
+                                                courseId:
+                                                    null, // 秋冬学期ではcourseIdは使用しない
+                                              ),
+                                        ),
+                                      );
+                                    },
+                                    borderRadius: BorderRadius.circular(15),
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(16.0),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          // 授業名
+                                          Text(
+                                            _courses[index]['lectureName'] ??
+                                                '',
+                                            style: const TextStyle(
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.black,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 8),
+
+                                          // 教室名
+                                          if ((_courses[index]['classroom'] ??
+                                                  '')
+                                              .isNotEmpty)
+                                            Text(
+                                              '教室: ${_courses[index]['classroom']}',
+                                              style: TextStyle(
+                                                fontSize: 14,
+                                                color: Colors.grey[700],
+                                              ),
+                                            ),
+
+                                          // 教員名（表示のみ）
+                                          const SizedBox(height: 8),
+                                          Row(
+                                            children: [
+                                              Text(
+                                                '教員: ',
+                                                style: TextStyle(
+                                                  fontSize: 14,
+                                                  color: Colors.grey[700],
+                                                ),
+                                              ),
+                                              Expanded(
+                                                child: Text(
+                                                  (_courses[index]['teacherName'] ??
+                                                              '')
+                                                          .isNotEmpty
+                                                      ? _courses[index]['teacherName']
+                                                      : '未設定',
+                                                  style: TextStyle(
+                                                    fontSize: 14,
+                                                    color:
+                                                        (_courses[index]['teacherName'] ??
+                                                                    '')
+                                                                .isNotEmpty
+                                                            ? Colors.black
+                                                            : Colors.grey[500],
+                                                    fontStyle:
+                                                        (_courses[index]['teacherName'] ??
+                                                                    '')
+                                                                .isEmpty
+                                                            ? FontStyle.italic
+                                                            : FontStyle.normal,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+
+                                          const SizedBox(height: 12),
+
+                                          // レビュー統計
+                                          Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              Row(
+                                                children: [
+                                                  const Icon(
+                                                    Icons.star,
+                                                    color: Colors.amber,
+                                                    size: 16,
+                                                  ),
+                                                  const SizedBox(width: 4),
+                                                  Text(
+                                                    '${(_courses[index]['avgSatisfaction'] ?? 0.0).toStringAsFixed(1)}',
+                                                    style: const TextStyle(
+                                                      fontSize: 12,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      color: Colors.amber,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                              Row(
+                                                children: [
+                                                  const Icon(
+                                                    Icons.sentiment_satisfied,
+                                                    color: Colors.green,
+                                                    size: 16,
+                                                  ),
+                                                  const SizedBox(width: 4),
+                                                  Text(
+                                                    '${(_courses[index]['avgEasiness'] ?? 0.0).toStringAsFixed(1)}',
+                                                    style: const TextStyle(
+                                                      fontSize: 12,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      color: Colors.green,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                              Row(
+                                                children: [
+                                                  const Icon(
+                                                    Icons.rate_review,
+                                                    color: Colors.blue,
+                                                    size: 16,
+                                                  ),
+                                                  const SizedBox(width: 4),
+                                                  Text(
+                                                    '${_courses[index]['reviewCount'] ?? 0}件',
+                                                    style: const TextStyle(
+                                                      fontSize: 12,
+                                                      color: Colors.blue,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
                                 ),
                               ),
                             );
@@ -170,20 +369,5 @@ class _AutumnWinterCourseCardListPageState
         ),
       ],
     );
-  }
-
-  // 教員名を更新するメソッド
-  void _updateTeacherName(String courseId, String newTeacherName) {
-    setState(() {
-      for (int i = 0; i < _courses.length; i++) {
-        if (_courses[i]['courseId'] == courseId) {
-          _courses[i]['teacherName'] = newTeacherName;
-          break;
-        }
-      }
-    });
-
-    // TODO: 必要に応じてFirestoreにも保存
-    print('Updated teacher name for $courseId to: $newTeacherName');
   }
 }
