@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'character_question_page.dart';
 
 class RegisterPage extends StatefulWidget {
@@ -83,6 +84,37 @@ class _RegisterPageState extends State<RegisterPage> {
     }
   }
 
+  Future<void> _openKoan() async {
+    const String koanUrl =
+        'https://koan.osaka-u.ac.jp/campusweb/campusportal.do?page=main';
+
+    try {
+      final Uri url = Uri.parse(koanUrl);
+      if (await canLaunchUrl(url)) {
+        await launchUrl(url, mode: LaunchMode.externalApplication);
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('KOANを開けませんでした'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      print('Error opening KOAN URL: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('KOANを開けませんでした'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -110,7 +142,7 @@ class _RegisterPageState extends State<RegisterPage> {
             ),
             const SizedBox(height: 12),
             const Text(
-              'KOANの課題ページのURLをコピーして、下の入力欄に貼り付けてください。\n例: https://koan.osaka-u.ac.jp/...\n\n※ 新規発行のカレンダーURLは反映まで最大1日程度かかる場合があります。',
+              'KOANの休講・スケジュールを選び、カレンダー連携を選択し、URLを作成を押した後、コピーして、下の入力欄に貼り付けてください。\n例: https://koan.osaka-u.ac.jp/...\n\n※ 新規発行のカレンダーURLは反映まで最大1日程度かかる場合があります。',
               style: TextStyle(fontSize: 13, color: Colors.black87),
               textAlign: TextAlign.center,
             ),
@@ -119,6 +151,33 @@ class _RegisterPageState extends State<RegisterPage> {
               controller: _calendarUrlController,
               decoration: InputDecoration(labelText: 'カレンダーURL (.ics形式)'),
               keyboardType: TextInputType.url,
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.blue[50],
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.blue[200]!),
+              ),
+              child: Center(
+                child: ElevatedButton.icon(
+                  onPressed: _openKoan,
+                  icon: const Icon(Icons.open_in_new, size: 18),
+                  label: const Text('KOANを開く'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green[600],
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 12,
+                      horizontal: 24,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                  ),
+                ),
+              ),
             ),
             if (_error != null) ...[
               SizedBox(height: 12),
@@ -133,5 +192,13 @@ class _RegisterPageState extends State<RegisterPage> {
         ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    _calendarUrlController.dispose();
+    super.dispose();
   }
 }

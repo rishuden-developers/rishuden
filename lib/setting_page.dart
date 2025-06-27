@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'login_page.dart';
 
 class SettingPage extends StatefulWidget {
@@ -35,15 +36,20 @@ class _SettingPageState extends State<SettingPage> {
               .doc(user.uid)
               .get();
 
-      if (userDoc.exists && userDoc.data()!.containsKey('calendarUrl')) {
-        final url = userDoc.data()!['calendarUrl'] as String? ?? '';
-        setState(() {
-          _currentUrl = url;
-          _urlController.text = url;
-        });
+      if (userDoc.exists) {
+        final data = userDoc.data()!;
+
+        // カレンダーURLを読み込み
+        if (data.containsKey('calendarUrl')) {
+          final url = data['calendarUrl'] as String? ?? '';
+          setState(() {
+            _currentUrl = url;
+            _urlController.text = url;
+          });
+        }
       }
     } catch (e) {
-      print('Error fetching calendar URL from Firestore: $e');
+      print('Error fetching URLs from Firestore: $e');
     }
   }
 
@@ -249,6 +255,51 @@ class _SettingPageState extends State<SettingPage> {
     }
   }
 
+  Future<void> _openKoan() async {
+    const String koanUrl =
+        'https://koan.osaka-u.ac.jp/campusweb/campusportal.do?page=main';
+
+    try {
+      final Uri url = Uri.parse(koanUrl);
+      if (await canLaunchUrl(url)) {
+        await launchUrl(url, mode: LaunchMode.externalApplication);
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text(
+                'URLを開けませんでした',
+                style: TextStyle(fontFamily: 'misaki', color: Colors.white),
+              ),
+              backgroundColor: Colors.black.withOpacity(0.85),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: const BorderSide(color: Colors.white, width: 2.5),
+              ),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      print('Error opening KOAN URL: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text(
+              'KOANを開けませんでした',
+              style: TextStyle(fontFamily: 'misaki', color: Colors.white),
+            ),
+            backgroundColor: Colors.black.withOpacity(0.85),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: const BorderSide(color: Colors.white, width: 2.5),
+            ),
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -310,7 +361,7 @@ class _SettingPageState extends State<SettingPage> {
                             ),
                             const SizedBox(height: 16),
                             const Text(
-                              'KOANの課題ページのURLをコピーして、下の入力欄に貼り付けてください。\n例: https://koan.osaka-u.ac.jp/...\n\n※ 新規発行のカレンダーURLは反映まで最大1日程度かかる場合があります。',
+                              'KOANの休講・スケジュールを選び、カレンダー連携を選択し、URLを作成を押した後、コピーして、下の入力欄に貼り付けてください。\n例: https://koan.osaka-u.ac.jp/...\n\n※ 新規発行のカレンダーURLは反映まで最大1日程度かかる場合があります。',
                               style: TextStyle(
                                 fontSize: 13,
                                 color: Colors.black87,
@@ -369,6 +420,40 @@ class _SettingPageState extends State<SettingPage> {
                             ),
                           ),
                         ),
+                        const SizedBox(height: 16),
+                        // KOANへのリンクセクション
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.blue[50],
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.blue[200]!),
+                          ),
+                          child: Center(
+                            child: ElevatedButton.icon(
+                              onPressed: _openKoan,
+                              icon: const Icon(Icons.open_in_new, size: 20),
+                              label: const Text(
+                                'KOANを開く',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.green[600],
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 16,
+                                  horizontal: 32,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(30),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
                         const SizedBox(height: 24),
                         ExpansionTile(
                           title: Text(
@@ -387,9 +472,9 @@ class _SettingPageState extends State<SettingPage> {
                               ),
                               child: const Text(
                                 '1. 大学のシステム（KOAN等）にログイン\n'
-                                '2. スケジュール/時間割画面を開く\n'
-                                '3. 「カレンダー」または「iCal」タブをクリック\n'
-                                '4. 「iCal」ボタンをクリック\n'
+                                '2. 休講・スケジュールを押す\n'
+                                '3. カレンダー連携を押す\n'
+                                '4. URLを作成を押す\n'
                                 '5. 表示されたURLをコピー',
                                 style: TextStyle(
                                   fontSize: 12,
