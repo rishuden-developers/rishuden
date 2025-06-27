@@ -118,13 +118,6 @@ class _CourseCardState extends ConsumerState<CourseCard> {
               ),
               const SizedBox(height: 8),
 
-              // 教室名
-              if (classroom.isNotEmpty)
-                Text(
-                  '教室: $classroom',
-                  style: TextStyle(fontSize: 14, color: Colors.grey[700]),
-                ),
-
               // 教員名（編集可能）
               const SizedBox(height: 8),
               Row(

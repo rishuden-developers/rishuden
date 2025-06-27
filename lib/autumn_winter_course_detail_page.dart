@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'credit_input_page.dart';
+import 'autumn_winter_review_input_page.dart';
 
 class AutumnWinterCourseDetailPage extends StatefulWidget {
   final String lectureName;
@@ -262,14 +262,18 @@ class _AutumnWinterCourseDetailPageState
                       width: double.infinity,
                       child: ElevatedButton.icon(
                         onPressed: () async {
+                          print('DEBUG: 秋冬学期レビュー投稿ボタンが押されました');
+                          print('DEBUG: lectureName: ${widget.lectureName}');
+                          print('DEBUG: teacherName: ${widget.teacherName}');
+                          print('DEBUG: courseId: ${widget.courseId}');
+
                           await Navigator.push(
                             context,
                             MaterialPageRoute(
                               builder:
-                                  (context) => CreditInputPage(
+                                  (context) => AutumnWinterReviewInputPage(
                                     lectureName: widget.lectureName,
                                     teacherName: widget.teacherName,
-                                    courseId: widget.courseId,
                                   ),
                             ),
                           );

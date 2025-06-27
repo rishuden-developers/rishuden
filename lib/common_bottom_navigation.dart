@@ -14,14 +14,19 @@ class CommonBottomNavigation extends ConsumerWidget {
   final String activeRankingIcon = 'ranking_active.png';
   final String inactiveDressIcon = 'dress_inactive.png';
   final String activeDressIcon = 'dress_active.png';
+  final void Function(AppPage page)? onNavigate;
 
-  const CommonBottomNavigation({super.key});
+  const CommonBottomNavigation({super.key, this.onNavigate});
 
   void _onNavigationButtonPressed({
     required WidgetRef ref,
     required AppPage page,
+    BuildContext? context,
   }) {
     ref.read(currentPageProvider.notifier).state = page;
+    if (onNavigate != null) {
+      onNavigate!(page);
+    }
   }
 
   Widget _buildNavdress({
@@ -72,7 +77,11 @@ class CommonBottomNavigation extends ConsumerWidget {
         onTap:
             isActive
                 ? null
-                : () => _onNavigationButtonPressed(ref: ref, page: page),
+                : () => _onNavigationButtonPressed(
+                  ref: ref,
+                  page: page,
+                  context: context,
+                ),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 250),
           curve: Curves.easeOut,

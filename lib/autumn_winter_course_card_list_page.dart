@@ -6,6 +6,8 @@ import 'credit_review_page.dart';
 import 'components/course_card.dart';
 import 'providers/timetable_provider.dart';
 import 'common_bottom_navigation.dart'; // ボトムナビゲーション用
+import 'main_page.dart';
+import 'providers/current_page_provider.dart';
 
 class AutumnWinterCourseCardListPage extends ConsumerStatefulWidget {
   const AutumnWinterCourseCardListPage({super.key});
@@ -472,7 +474,15 @@ class _AutumnWinterCourseCardListPageState
                 left: 0,
                 right: 0,
                 bottom: 0,
-                child: const CommonBottomNavigation(),
+                child: CommonBottomNavigation(
+                  onNavigate: (page) {
+                    ref.read(currentPageProvider.notifier).state = page;
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (context) => MainPage()),
+                    );
+                  },
+                ),
               ),
             ],
           ),

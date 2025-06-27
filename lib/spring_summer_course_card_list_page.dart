@@ -17,13 +17,24 @@ class SpringSummerCourseCardListPage extends ConsumerStatefulWidget {
 
 class _SpringSummerCourseCardListPageState
     extends ConsumerState<SpringSummerCourseCardListPage> {
-  List<Map<String, dynamic>> _courses = [];
+  List<Map<String, dynamic>> _allCourses = [];
+  List<Map<String, dynamic>> _pagedCourses = [];
   bool _isLoading = true;
+  static const int pageSize = 20;
+  int _currentPage = 1;
+  late PageController _pageController;
 
   @override
   void initState() {
     super.initState();
+    _pageController = PageController();
     _loadSpringSummerCourses();
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
   }
 
   // 春夏学期の授業データを読み込む
@@ -153,7 +164,8 @@ class _SpringSummerCourseCardListPageState
       }
 
       setState(() {
-        _courses = courses;
+        _allCourses = courses;
+        _pagedCourses = _getPagedCourses(1);
         _isLoading = false;
       });
 
@@ -164,10 +176,48 @@ class _SpringSummerCourseCardListPageState
     }
   }
 
+  List<Map<String, dynamic>> _getPagedCourses(int page) {
+    final start = (page - 1) * pageSize;
+    final end =
+        (start + pageSize) > _allCourses.length
+            ? _allCourses.length
+            : (start + pageSize);
+    return _allCourses.sublist(start, end);
+  }
+
+  void _nextPage() {
+    if (_currentPage * pageSize < _allCourses.length) {
+      setState(() {
+        _currentPage++;
+        _pagedCourses = _getPagedCourses(_currentPage);
+      });
+      _pageController.animateToPage(
+        _currentPage - 1,
+        duration: Duration(milliseconds: 300),
+        curve: Curves.ease,
+      );
+    }
+  }
+
+  void _prevPage() {
+    if (_currentPage > 1) {
+      setState(() {
+        _currentPage--;
+        _pagedCourses = _getPagedCourses(_currentPage);
+      });
+      _pageController.animateToPage(
+        _currentPage - 1,
+        duration: Duration(milliseconds: 300),
+        curve: Curves.ease,
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final double topOffset =
         kToolbarHeight + MediaQuery.of(context).padding.top;
+    final int totalPages = (_allCourses.length / pageSize).ceil();
     const double bottomNavHeight = 95.0;
     return Stack(
       children: [
@@ -191,7 +241,7 @@ class _SpringSummerCourseCardListPageState
                   foregroundColor: Colors.white,
                 ),
               ),
-              // ListView（AppBarの下からボトムナビの上まで）
+              // ページネーション＋PageView
               Positioned(
                 top: topOffset,
                 left: 0,
@@ -202,40 +252,134 @@ class _SpringSummerCourseCardListPageState
                         ? const Center(
                           child: CircularProgressIndicator(color: Colors.white),
                         )
-                        : ListView.builder(
-                          physics: ClampingScrollPhysics(),
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          itemCount: _courses.length,
-                          itemBuilder: (context, index) {
-                            final course = _courses[index];
-                            return Align(
-                              alignment: Alignment.center,
-                              child: FractionallySizedBox(
-                                widthFactor: 0.80,
-                                child: CourseCard(
-                                  key: ValueKey(course['courseId']),
-                                  course: course,
-                                  onTeacherNameChanged: (newTeacherName) {
-                                    final idx = _courses.indexWhere(
-                                      (c) =>
-                                          c['courseId'] == course['courseId'],
-                                    );
-                                    if (idx != -1) {
-                                      setState(() {
-                                        _courses[idx] = {
-                                          ..._courses[idx],
-                                          'teacherName': newTeacherName,
-                                        };
-                                      });
-                                      print(
-                                        'Updated teacher name for \\${course['courseId']} to: \\$newTeacherName',
-                                      );
-                                    }
-                                  },
-                                ),
+                        : Column(
+                          children: [
+                            // ページネーションUI
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 8.0,
                               ),
-                            );
-                          },
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  TextButton.icon(
+                                    style: TextButton.styleFrom(
+                                      minimumSize: Size(32, 32),
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 4,
+                                      ),
+                                      tapTargetSize:
+                                          MaterialTapTargetSize.shrinkWrap,
+                                    ),
+                                    onPressed:
+                                        _currentPage > 1 ? _prevPage : null,
+                                    icon: const Icon(
+                                      Icons.chevron_left,
+                                      size: 18,
+                                    ),
+                                    label: const Text(
+                                      '',
+                                      style: TextStyle(fontSize: 12),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    '${((_currentPage - 1) * pageSize + 1)}-${((_currentPage - 1) * pageSize + _pagedCourses.length)}件 / 全${_allCourses.length}件',
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      color: Colors.grey,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  TextButton.icon(
+                                    style: TextButton.styleFrom(
+                                      minimumSize: Size(32, 32),
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 4,
+                                      ),
+                                      tapTargetSize:
+                                          MaterialTapTargetSize.shrinkWrap,
+                                    ),
+                                    onPressed:
+                                        _currentPage * pageSize <
+                                                _allCourses.length
+                                            ? _nextPage
+                                            : null,
+                                    icon: const Icon(
+                                      Icons.chevron_right,
+                                      size: 18,
+                                    ),
+                                    label: const Text(
+                                      '',
+                                      style: TextStyle(fontSize: 12),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            // 横スクロールPageView
+                            Expanded(
+                              child: PageView.builder(
+                                controller: _pageController,
+                                itemCount: totalPages,
+                                onPageChanged: (pageIdx) {
+                                  setState(() {
+                                    _currentPage = pageIdx + 1;
+                                    _pagedCourses = _getPagedCourses(
+                                      _currentPage,
+                                    );
+                                  });
+                                },
+                                itemBuilder: (context, pageIdx) {
+                                  final paged = _getPagedCourses(pageIdx + 1);
+                                  return ListView.builder(
+                                    physics: ClampingScrollPhysics(),
+                                    padding: const EdgeInsets.only(
+                                      bottom: 80,
+                                      top: 0,
+                                      left: 16,
+                                      right: 16,
+                                    ),
+                                    itemCount: paged.length,
+                                    itemBuilder: (context, index) {
+                                      final course = paged[index];
+                                      return Align(
+                                        alignment: Alignment.center,
+                                        child: FractionallySizedBox(
+                                          widthFactor: 0.80,
+                                          child: CourseCard(
+                                            key: ValueKey(course['courseId']),
+                                            course: course,
+                                            onTeacherNameChanged: (
+                                              newTeacherName,
+                                            ) {
+                                              final idx = _allCourses
+                                                  .indexWhere(
+                                                    (c) =>
+                                                        c['courseId'] ==
+                                                        course['courseId'],
+                                                  );
+                                              if (idx != -1) {
+                                                setState(() {
+                                                  _allCourses[idx] = {
+                                                    ..._allCourses[idx],
+                                                    'teacherName':
+                                                        newTeacherName,
+                                                  };
+                                                });
+                                              }
+                                            },
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  );
+                                },
+                              ),
+                            ),
+                          ],
                         ),
               ),
               // ボトムナビ
@@ -255,9 +399,9 @@ class _SpringSummerCourseCardListPageState
   // 教員名を更新するメソッド
   void _updateTeacherName(String courseId, String newTeacherName) {
     setState(() {
-      for (int i = 0; i < _courses.length; i++) {
-        if (_courses[i]['courseId'] == courseId) {
-          _courses[i] = {..._courses[i], 'teacherName': newTeacherName};
+      for (int i = 0; i < _allCourses.length; i++) {
+        if (_allCourses[i]['courseId'] == courseId) {
+          _allCourses[i] = {..._allCourses[i], 'teacherName': newTeacherName};
           break;
         }
       }
