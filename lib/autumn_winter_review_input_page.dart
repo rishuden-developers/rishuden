@@ -1,59 +1,45 @@
-// credit_input_page.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'credit_explore_page.dart';
-import 'credit_result_page.dart';
-import 'common_bottom_navigation.dart'; // 共通フッターウィジェット
-import 'park_page.dart';
-import 'time_schedule_page.dart';
-import 'ranking_page.dart';
-import 'item_page.dart';
-import 'package:flutter_rating_bar/flutter_rating_bar.dart'; // ★レート表示に利用するパッケージをインポート
-import 'providers/global_review_mapping_provider.dart';
-import 'providers/timetable_provider.dart';
-import 'providers/global_course_mapping_provider.dart';
-import 'providers/current_page_provider.dart';
+import 'package:flutter_rating_bar/flutter_rating_bar.dart';
+import 'common_bottom_navigation.dart';
 import 'main_page.dart';
+import 'providers/current_page_provider.dart';
 
-// credit_review_page.dartからEnumをインポート（同じ定義を持つか、共通ファイルに移動）
-import 'credit_review_page.dart'
-    show LectureFormat, AttendanceStrictness, ExamType;
-
-class CreditInputPage extends ConsumerStatefulWidget {
+class AutumnWinterReviewInputPage extends ConsumerStatefulWidget {
   final String lectureName;
   final String teacherName;
-  final String? courseId;
 
-  const CreditInputPage({
+  const AutumnWinterReviewInputPage({
     super.key,
     required this.lectureName,
     required this.teacherName,
-    this.courseId,
   });
 
   @override
-  ConsumerState<CreditInputPage> createState() => _CreditInputPageState();
+  ConsumerState<AutumnWinterReviewInputPage> createState() =>
+      _AutumnWinterReviewInputPageState();
 }
 
-class _CreditInputPageState extends ConsumerState<CreditInputPage> {
+class _AutumnWinterReviewInputPageState
+    extends ConsumerState<AutumnWinterReviewInputPage> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-
-  // State variables for the form
-  String _selectedLectureName = '';
-  late final TextEditingController _teacherNameController;
+  final TextEditingController _teacherNameController = TextEditingController();
   final TextEditingController _commentController = TextEditingController();
+
   double _overallSatisfaction = 3.0;
   double _easiness = 3.0;
   String? _selectedExamType;
   String? _selectedAttendance;
-
-  List<String> _selectedTraits = [];
-  List<String> _selectedTags = []; // 授業のタグ用
   String? _classFormat;
 
-  // Options for dropdowns and chips
+  List<String> _selectedTraits = [];
+  List<String> _selectedTags = [];
+
+  bool _isLoading = false;
+
+  // オプション
   final List<String> _examOptions = ['レポート', '筆記', '出席点', 'その他'];
   final List<String> _attendanceOptions = ['自由', '毎回点呼', '出席点あり', 'その他'];
   final List<String> _traitsOptions = [
@@ -84,25 +70,12 @@ class _CreditInputPageState extends ConsumerState<CreditInputPage> {
   ];
   final List<String> _classFormats = ['対面', 'オンデマンド', 'Zoom', 'その他'];
 
-  bool _isLoading = false;
-  List<Map<String, String>> _dynamicLectures = [];
-
   @override
   void initState() {
     super.initState();
-    _teacherNameController = TextEditingController(
-      text: widget.teacherName ?? '',
-    );
-    // 秋冬学期ではcourseIdがnullでもOK
-    if (widget.lectureName != null && widget.teacherName != null) {
-      _selectedLectureName = widget.lectureName!;
-    }
-    // courseIdがある場合のみ時間割から読み込み
-    if (widget.courseId != null) {
-      _loadLecturesFromTimetable();
-    }
+    _teacherNameController.text = widget.teacherName;
     _commentController.addListener(() {
-      setState(() {}); // To update reward display
+      setState(() {}); // 報酬表示の更新
     });
   }
 
@@ -111,69 +84,6 @@ class _CreditInputPageState extends ConsumerState<CreditInputPage> {
     _teacherNameController.dispose();
     _commentController.dispose();
     super.dispose();
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    // 依存関係が変更された時に最新の教員一覧を取得（courseIdがある場合のみ）
-    if (widget.courseId != null) {
-      _loadLecturesFromTimetable();
-    }
-  }
-
-  // 時間割から講義と教員名を取得
-  void _loadLecturesFromTimetable() {
-    try {
-      // TimetableProviderから教員名付き講義一覧を取得
-      final lecturesWithTeachers =
-          ref.read(timetableProvider.notifier).getLecturesWithTeachers();
-
-      print('DEBUG: 時間割から取得した講義一覧: $lecturesWithTeachers');
-
-      // courseIdと紐付けされた授業のみをフィルタリング
-      final courseMapping = ref.read(globalCourseMappingProvider);
-      print('DEBUG: courseMappingの内容: $courseMapping');
-      print('DEBUG: courseMappingのキー一覧: ${courseMapping.keys.toList()}');
-
-      final filteredLectures = <Map<String, String>>[];
-
-      for (final lecture in lecturesWithTeachers) {
-        final lectureName = lecture['name'] ?? '';
-        print('DEBUG: チェック中の講義名: "$lectureName"');
-        print(
-          'DEBUG: courseMappingに存在するか: ${courseMapping.containsKey(lectureName)}',
-        );
-        if (courseMapping.containsKey(lectureName)) {
-          filteredLectures.add(lecture);
-          print('DEBUG: 追加された講義: $lecture');
-        }
-      }
-
-      setState(() {
-        _dynamicLectures = filteredLectures;
-      });
-
-      print('DEBUG: courseIdと紐付けされた講義を読み込みました: ${_dynamicLectures.length}件');
-      print('DEBUG: 教員名付き講義一覧: $_dynamicLectures');
-    } catch (e) {
-      print('Error loading lectures from timetable: $e');
-      setState(() {
-        _dynamicLectures = [];
-      });
-    }
-  }
-
-  // グローバル教員名取得
-  Future<String> _getGlobalTeacherName(String courseId) async {
-    final doc =
-        await FirebaseFirestore.instance
-            .collection('courses')
-            .doc(courseId)
-            .collection('meta')
-            .doc('info')
-            .get();
-    return doc.data()?['teacherName'] ?? '';
   }
 
   // ユーザーのキャラクター情報を取得
@@ -195,40 +105,21 @@ class _CreditInputPageState extends ConsumerState<CreditInputPage> {
     } catch (e) {
       print('Error getting user character: $e');
     }
-
     return 'adventurer';
   }
 
-  // グローバル教員名保存
-  Future<void> _setGlobalTeacherName(
-    String courseId,
-    String teacherName,
-  ) async {
-    await FirebaseFirestore.instance
-        .collection('courses')
-        .doc(courseId)
-        .collection('meta')
-        .doc('info')
-        .set({'teacherName': teacherName}, SetOptions(merge: true));
-  }
-
+  // レビュー保存
   Future<void> _saveReview() async {
-    print('saveReview呼び出し時のcourseId: \\${widget.courseId}');
     if (!mounted) return;
-
-    // 既にローディング中の場合は処理をスキップ（二重クリック防止）
-    if (_isLoading) {
-      print('既にローディング中のため、処理をスキップします');
-      return;
-    }
+    if (_isLoading) return;
 
     setState(() => _isLoading = true);
 
     final lectureName = widget.lectureName;
-    if (lectureName == null) {
+    if (lectureName.isEmpty) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('講義が選択されていません。')));
+      ).showSnackBar(const SnackBar(content: Text('講義名が取得できません。')));
       setState(() => _isLoading = false);
       return;
     }
@@ -242,32 +133,12 @@ class _CreditInputPageState extends ConsumerState<CreditInputPage> {
       return;
     }
 
-    final courseId = widget.courseId;
-    // 秋冬学期ではcourseIdがnullでもOK
-    // if (courseId == null || courseId.isEmpty) {
-    //   ScaffoldMessenger.of(context).showSnackBar(
-    //     const SnackBar(content: Text('courseIdが取得できません。授業カードから遷移してください。')),
-    //   );
-    //   setState(() => _isLoading = false);
-    //   return;
-    // }
-
     try {
-      // 1. lectureNameからcourseIdを取得（ただし保存にはwidget.courseIdを必ず使う）
-      final courseMapping = ref.read(globalCourseMappingProvider);
-      final mappedCourseId = courseMapping[lectureName];
-      if (mappedCourseId != null && mappedCourseId.isNotEmpty) {
-        await _setGlobalTeacherName(
-          mappedCourseId,
-          _teacherNameController.text.trim(),
-        );
-      }
-
-      // 2. 保存するレビューデータを作成（courseIdがnullの場合は空文字を使用）
+      // レビューデータを作成
       final reviewData = {
         'lectureName': lectureName,
         'teacherName': _teacherNameController.text.trim(),
-        'courseId': courseId ?? '', // courseIdがnullの場合は空文字
+        'courseId': '', // 秋冬学期は空文字
         'userId': user.uid,
         'character': await _getUserCharacter(),
         'overallSatisfaction': _overallSatisfaction,
@@ -282,12 +153,13 @@ class _CreditInputPageState extends ConsumerState<CreditInputPage> {
         'comment': _commentController.text.trim(),
         'createdAt': FieldValue.serverTimestamp(),
       };
-      print('Firestoreに保存するreviewData: $reviewData');
 
-      // reviewsコレクションに直接addで保存
+      print('秋冬学期レビュー投稿: $reviewData');
+
+      // reviewsコレクションに保存
       await FirebaseFirestore.instance.collection('reviews').add(reviewData);
 
-      // 6. 報酬の計算と付与
+      // 報酬の計算と付与
       int reward = 5;
       if (_commentController.text.trim().isNotEmpty) {
         reward += 5;
@@ -298,11 +170,11 @@ class _CreditInputPageState extends ConsumerState<CreditInputPage> {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('レビューを保存しました！たこ焼き$reward個GET！')));
-        setState(() => _isLoading = false); // ローディング状態を解除
-        Navigator.pop(context, true); // 正常に保存されたことを示す
+        setState(() => _isLoading = false);
+        Navigator.pop(context, true);
       }
     } catch (e, st) {
-      print('レビュー投稿エラー: $e');
+      print('秋冬学期レビュー投稿エラー: $e');
       print(st);
       if (mounted) {
         ScaffoldMessenger.of(
@@ -310,13 +182,14 @@ class _CreditInputPageState extends ConsumerState<CreditInputPage> {
         ).showSnackBar(SnackBar(content: Text('レビュー投稿に失敗: $e')));
         setState(() => _isLoading = false);
       }
-      return;
     }
   }
 
+  // たこ焼き報酬付与
   Future<void> _giveTakoyakiReward(int amount) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
+
     try {
       final userRef = FirebaseFirestore.instance
           .collection('users')
@@ -333,14 +206,8 @@ class _CreditInputPageState extends ConsumerState<CreditInputPage> {
     }
   }
 
-  String _formatEnum(dynamic enumValue) {
-    if (enumValue == null) return '選択してください';
-    return enumValue.toString().split('.').last;
-  }
-
   @override
   Widget build(BuildContext context) {
-    print('CreditInputPageでのcourseId: \\${widget.courseId}');
     int reward = 5;
     if (_commentController.text.trim().isNotEmpty) {
       reward += 5;
@@ -348,6 +215,7 @@ class _CreditInputPageState extends ConsumerState<CreditInputPage> {
 
     final double topOffset =
         kToolbarHeight + MediaQuery.of(context).padding.top;
+
     return Stack(
       children: [
         Positioned.fill(
@@ -364,12 +232,12 @@ class _CreditInputPageState extends ConsumerState<CreditInputPage> {
                 left: 0,
                 right: 0,
                 child: AppBar(
-                  title: const Text('レビューを投稿'),
+                  title: const Text('秋冬学期レビュー投稿'),
                   backgroundColor: const Color.fromARGB(0, 255, 255, 255),
                   elevation: 0,
                 ),
               ),
-              // SingleChildScrollView（AppBarの下から画面の一番下まで）
+              // メインコンテンツ
               Positioned(
                 top: topOffset,
                 left: 0,
@@ -482,7 +350,7 @@ class _CreditInputPageState extends ConsumerState<CreditInputPage> {
                                     ),
                           ),
                         ),
-                        const SizedBox(height: 100), // ボタンの下に空白を追加
+                        const SizedBox(height: 100),
                       ],
                     ),
                   ),
@@ -510,8 +378,7 @@ class _CreditInputPageState extends ConsumerState<CreditInputPage> {
     );
   }
 
-  // --- Helper Widgets ---
-
+  // ヘルパーメソッド
   Widget _buildSectionTitle(String title, IconData icon) {
     return Row(
       children: [
@@ -538,7 +405,7 @@ class _CreditInputPageState extends ConsumerState<CreditInputPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              widget.lectureName ?? '講義を選択',
+              widget.lectureName,
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
@@ -706,42 +573,5 @@ class _CreditInputPageState extends ConsumerState<CreditInputPage> {
         ),
       ),
     );
-  }
-
-  // 講義選択時にグローバル教員名をセット
-  void _showLectureSelectionDialog() async {
-    final Map<String, String> allCourses = ref.read(
-      globalCourseMappingProvider,
-    );
-
-    // Create a list of lecture names for the dialog
-    final lectures = allCourses.keys.toList();
-
-    final String? selected = await showDialog(
-      context: context,
-      builder: (context) {
-        return SimpleDialog(
-          title: const Text('講義を選択'),
-          children:
-              lectures.map((lecture) {
-                return SimpleDialogOption(
-                  onPressed: () => Navigator.pop(context, lecture),
-                  child: Text(lecture),
-                );
-              }).toList(),
-        );
-      },
-    );
-
-    if (selected != null) {
-      setState(() {
-        _selectedLectureName = selected;
-      });
-      final courseId = allCourses[selected];
-      if (courseId != null) {
-        final teacherName = await _getGlobalTeacherName(courseId);
-        _teacherNameController.text = teacherName;
-      }
-    }
   }
 }

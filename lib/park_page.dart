@@ -149,11 +149,7 @@ class _ParkPageState extends ConsumerState<ParkPage> {
     _rpgMessageTimer = Timer(const Duration(milliseconds: 1500), () {
       if (!mounted) return;
       setState(() {
-        _dialogueMessages = [
-          "課題「${taskData['name']}」は期限切れ...",
-          "期限を過ぎた課題には報酬はない...",
-          "次は期限を守るのだ、冒険者よ...",
-        ];
+        _dialogueMessages = ["課題「${taskData['name']}」は期限切れ..."];
         _currentMessageIndex = 0;
       });
     });

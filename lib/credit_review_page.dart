@@ -16,6 +16,9 @@ import 'character_data.dart'; // キャラクターデータをインポート
 import 'package:intl/intl.dart';
 import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'providers/timetable_provider.dart';
+import 'main_page.dart';
+import 'providers/current_page_provider.dart';
 
 // ★★★★ 補足: flutter_rating_bar パッケージの追加 ★★★★
 // pubspec.yaml ファイルの dependencies: の下に追加してください。
@@ -328,7 +331,15 @@ class _CreditReviewPageState extends ConsumerState<CreditReviewPage> {
                 left: 0,
                 right: 0,
                 bottom: 0,
-                child: const CommonBottomNavigation(),
+                child: CommonBottomNavigation(
+                  onNavigate: (page) {
+                    ref.read(currentPageProvider.notifier).state = page;
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (context) => MainPage()),
+                    );
+                  },
+                ),
               ),
             ],
           ),
@@ -358,13 +369,9 @@ class _CreditReviewPageState extends ConsumerState<CreditReviewPage> {
               ),
             ),
             const SizedBox(height: 4),
-            Text(
-              widget.teacherName,
-              style: TextStyle(
-                fontSize: 18,
-                color: Colors.grey[700],
-                fontFamily: 'NotoSansJP',
-              ),
+            _EditableTeacherName(
+              courseId: widget.courseId,
+              initialTeacherName: widget.teacherName,
             ),
             if (widget.initialDescription != null) ...[
               const SizedBox(height: 12),
@@ -831,5 +838,94 @@ extension FirstWhereOrNullExtension<E> on Iterable<E> {
       if (test(element)) return element;
     }
     return null;
+  }
+}
+
+// 教員名編集用Widget
+class _EditableTeacherName extends StatefulWidget {
+  final String? courseId;
+  final String initialTeacherName;
+  const _EditableTeacherName({this.courseId, required this.initialTeacherName});
+
+  @override
+  State<_EditableTeacherName> createState() => _EditableTeacherNameState();
+}
+
+class _EditableTeacherNameState extends State<_EditableTeacherName> {
+  late TextEditingController _controller;
+  bool _isEditing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.initialTeacherName);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final teacherName = _controller.text;
+    return _isEditing
+        ? Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: _controller,
+                autofocus: true,
+                style: const TextStyle(fontSize: 18, fontFamily: 'NotoSansJP'),
+                decoration: const InputDecoration(
+                  hintText: '教員名を入力してください',
+                  border: InputBorder.none,
+                  isDense: true,
+                  contentPadding: EdgeInsets.zero,
+                ),
+                onSubmitted: (value) => _save(value),
+                onEditingComplete: () => _save(_controller.text),
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.check, size: 20),
+              onPressed: () => _save(_controller.text),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+            ),
+          ],
+        )
+        : GestureDetector(
+          onTap: () {
+            setState(() {
+              _isEditing = true;
+            });
+          },
+          child: Text(
+            teacherName.isNotEmpty ? teacherName : '未設定',
+            style: TextStyle(
+              fontSize: 18,
+              color:
+                  teacherName.isNotEmpty ? Colors.grey[700] : Colors.grey[500],
+              fontStyle:
+                  teacherName.isEmpty ? FontStyle.italic : FontStyle.normal,
+              fontFamily: 'NotoSansJP',
+            ),
+          ),
+        );
+  }
+
+  void _save(String value) async {
+    setState(() {
+      _isEditing = false;
+    });
+    if (widget.courseId != null && widget.courseId!.isNotEmpty) {
+      // timetableProviderに保存
+      final container = ProviderScope.containerOf(context, listen: false);
+      container
+          .read(timetableProvider.notifier)
+          .setTeacherName(widget.courseId!, value);
+    }
   }
 }

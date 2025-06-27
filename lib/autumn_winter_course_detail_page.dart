@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'credit_input_page.dart';
+import 'autumn_winter_review_input_page.dart';
 
 class AutumnWinterCourseDetailPage extends StatefulWidget {
   final String lectureName;
@@ -31,20 +31,31 @@ class _AutumnWinterCourseDetailPageState
   bool _loading = true;
   List<Map<String, dynamic>> _allReviews = [];
 
+  // ページネーション用
+  static const int pageSize = 10;
+  List<DocumentSnapshot> _currentPageDocs = [];
+  DocumentSnapshot? _lastDoc;
+  DocumentSnapshot? _firstDoc;
+  int _currentPage = 1;
+  bool _hasNextPage = true;
+  bool _hasPrevPage = false;
+
   @override
   void initState() {
     super.initState();
     _fetchStatsAndReviews();
+    _fetchPage();
   }
 
+  // サマリー用（全件取得）
   Future<void> _fetchStatsAndReviews() async {
     setState(() => _loading = true);
     try {
       final query =
           await FirebaseFirestore.instance
               .collection('reviews')
-              .where('courseId', isEqualTo: widget.courseId)
-              .orderBy('createdAt', descending: true)
+              .where('lectureName', isEqualTo: widget.lectureName)
+              .where('teacherName', isEqualTo: widget.teacherName)
               .get();
       final reviews =
           query.docs.map((doc) => doc.data() as Map<String, dynamic>).toList();
@@ -65,6 +76,50 @@ class _AutumnWinterCourseDetailPageState
     } catch (e) {
       print('Error fetching reviews: $e');
       setState(() => _loading = false);
+    }
+  }
+
+  // ページごとのレビュー取得
+  Future<void> _fetchPage({bool next = false, bool prev = false}) async {
+    setState(() => _loading = true);
+    try {
+      Query query = FirebaseFirestore.instance
+          .collection('reviews')
+          .where('lectureName', isEqualTo: widget.lectureName)
+          .where('teacherName', isEqualTo: widget.teacherName)
+          .orderBy('createdAt', descending: true)
+          .limit(pageSize);
+      if (next && _lastDoc != null) {
+        query = query.startAfterDocument(_lastDoc!);
+      } else if (prev && _firstDoc != null) {
+        query = query.endBeforeDocument(_firstDoc!);
+      }
+      final snapshot = await query.get();
+      setState(() {
+        _currentPageDocs = snapshot.docs;
+        _firstDoc = snapshot.docs.isNotEmpty ? snapshot.docs.first : null;
+        _lastDoc = snapshot.docs.isNotEmpty ? snapshot.docs.last : null;
+        _hasNextPage = snapshot.docs.length == pageSize;
+        _hasPrevPage = _currentPage > 1;
+        _loading = false;
+      });
+    } catch (e) {
+      print('Error fetching page: $e');
+      setState(() => _loading = false);
+    }
+  }
+
+  void _nextPage() {
+    if (_hasNextPage) {
+      setState(() => _currentPage++);
+      _fetchPage(next: true);
+    }
+  }
+
+  void _prevPage() {
+    if (_hasPrevPage && _currentPage > 1) {
+      setState(() => _currentPage--);
+      _fetchPage(prev: true);
     }
   }
 
@@ -207,14 +262,18 @@ class _AutumnWinterCourseDetailPageState
                       width: double.infinity,
                       child: ElevatedButton.icon(
                         onPressed: () async {
+                          print('DEBUG: 秋冬学期レビュー投稿ボタンが押されました');
+                          print('DEBUG: lectureName: ${widget.lectureName}');
+                          print('DEBUG: teacherName: ${widget.teacherName}');
+                          print('DEBUG: courseId: ${widget.courseId}');
+
                           await Navigator.push(
                             context,
                             MaterialPageRoute(
                               builder:
-                                  (context) => CreditInputPage(
+                                  (context) => AutumnWinterReviewInputPage(
                                     lectureName: widget.lectureName,
                                     teacherName: widget.teacherName,
-                                    courseId: widget.courseId,
                                   ),
                             ),
                           );
@@ -241,7 +300,7 @@ class _AutumnWinterCourseDetailPageState
                       ),
                     ),
                     const SizedBox(height: 18),
-                    if (_allReviews.isNotEmpty)
+                    if (_currentPageDocs.isNotEmpty)
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
@@ -254,8 +313,9 @@ class _AutumnWinterCourseDetailPageState
                             ),
                           ),
                           const SizedBox(height: 8),
-                          ..._allReviews.map(
-                            (review) => FutureBuilder<DocumentSnapshot>(
+                          ..._currentPageDocs.map((doc) {
+                            final review = doc.data() as Map<String, dynamic>;
+                            return FutureBuilder<DocumentSnapshot>(
                               future:
                                   FirebaseFirestore.instance
                                       .collection('users')
@@ -359,32 +419,32 @@ class _AutumnWinterCourseDetailPageState
                                               ),
                                               const SizedBox(height: 4),
                                               Text(
-                                                '形式: ${review['lectureFormat'] ?? ''}',
+                                                '形式: \\${review['lectureFormat'] ?? ''}',
                                                 style: const TextStyle(
                                                   fontSize: 13,
                                                 ),
                                               ),
                                               Text(
-                                                '出席: ${review['attendanceStrictness'] ?? ''}',
+                                                '出席: \\${review['attendanceStrictness'] ?? ''}',
                                                 style: const TextStyle(
                                                   fontSize: 13,
                                                 ),
                                               ),
                                               Text(
-                                                '試験: ${review['examType'] ?? ''}',
+                                                '試験: \\${review['examType'] ?? ''}',
                                                 style: const TextStyle(
                                                   fontSize: 13,
                                                 ),
                                               ),
                                               Text(
-                                                '教員特徴: ${review['teacherFeature'] ?? ''}',
+                                                '教員特徴: \\${review['teacherFeature'] ?? ''}',
                                                 style: const TextStyle(
                                                   fontSize: 13,
                                                 ),
                                               ),
                                               const SizedBox(height: 4),
                                               Text(
-                                                'コメント: ${review['comment'] ?? ''}',
+                                                'コメント: \\${review['comment'] ?? ''}',
                                                 style: const TextStyle(
                                                   fontSize: 13,
                                                 ),
@@ -421,7 +481,24 @@ class _AutumnWinterCourseDetailPageState
                                   ),
                                 );
                               },
-                            ),
+                            );
+                          }),
+                          const SizedBox(height: 12),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              ElevatedButton(
+                                onPressed: _hasPrevPage ? _prevPage : null,
+                                child: const Text('前へ'),
+                              ),
+                              const SizedBox(width: 16),
+                              Text('$_currentPageページ'),
+                              const SizedBox(width: 16),
+                              ElevatedButton(
+                                onPressed: _hasNextPage ? _nextPage : null,
+                                child: const Text('次へ'),
+                              ),
+                            ],
                           ),
                         ],
                       ),

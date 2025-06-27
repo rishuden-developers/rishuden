@@ -15,6 +15,7 @@ import 'package:rishuden/providers/global_course_mapping_provider.dart';
 import 'package:rishuden/providers/global_review_mapping_provider.dart';
 import 'current_semester_reviews_page.dart' show _CourseCard;
 import 'components/course_card.dart';
+import 'package:rishuden/providers/timetable_provider.dart';
 
 // 検索結果の各講義を表すデータモデル
 class LectureSearchResult {
@@ -374,6 +375,12 @@ class _CreditResultPageState extends ConsumerState<CreditResultPage> {
                                     'reviewCount': model.reviewCount,
                                     'hasMyReview': model.hasMyReview,
                                   },
+                                  onTeacherNameChanged: (newTeacherName) {
+                                    _updateTeacherName(
+                                      model.courseId,
+                                      newTeacherName,
+                                    );
+                                  },
                                 ),
                               ),
                           ],
@@ -395,15 +402,25 @@ class _CreditResultPageState extends ConsumerState<CreditResultPage> {
 
   Widget _buildCourseCard(Map<String, dynamic> course) {
     final lectureName = course['lectureName'] ?? course['name'] ?? '';
-    final teacherName =
+
+    // 教員名をtimetableProviderから取得（時間割画面と同期）
+    final courseId = course['courseId'] ?? '';
+    String teacherName =
         course['teacherName'] ??
         course['instructor'] ??
         course['teacher'] ??
         '';
+    if (courseId.isNotEmpty) {
+      final timetableTeacherName =
+          ref.watch(timetableProvider)['teacherNames']?[courseId];
+      if (timetableTeacherName != null && timetableTeacherName.isNotEmpty) {
+        teacherName = timetableTeacherName;
+      }
+    }
+
     final period = course['period'] ?? '';
     final semester = course['semester'] ?? '';
     final category = course['category'] ?? course['subject'] ?? '';
-    final courseId = course['courseId'] ?? '';
 
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 8.0),
@@ -449,8 +466,18 @@ class _CreditResultPageState extends ConsumerState<CreditResultPage> {
                   const SizedBox(width: 4),
                   Expanded(
                     child: Text(
-                      teacherName,
-                      style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+                      teacherName.isNotEmpty ? teacherName : '未設定',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color:
+                            teacherName.isNotEmpty
+                                ? Colors.grey[700]
+                                : Colors.grey[500],
+                        fontStyle:
+                            teacherName.isEmpty
+                                ? FontStyle.italic
+                                : FontStyle.normal,
+                      ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -629,5 +656,37 @@ class _CreditResultPageState extends ConsumerState<CreditResultPage> {
       print('Error getting review stats: $e');
       return {'reviewCount': 0, 'avgSatisfaction': 0.0, 'avgEasiness': 0.0};
     }
+  }
+
+  // 教員名を更新するメソッド
+  void _updateTeacherName(String courseId, String newTeacherName) {
+    setState(() {
+      // _allCoursesの該当する講義の教員名を更新
+      for (int i = 0; i < _allCourses.length; i++) {
+        if (_allCourses[i]['courseId'] == courseId) {
+          _allCourses[i]['teacherName'] = newTeacherName;
+          break;
+        }
+      }
+
+      // _courseCardModelsの該当する講義の教員名を更新
+      for (int i = 0; i < _courseCardModels.length; i++) {
+        if (_courseCardModels[i].courseId == courseId) {
+          _courseCardModels[i] = CourseCardModel(
+            courseId: _courseCardModels[i].courseId,
+            lectureName: _courseCardModels[i].lectureName,
+            teacherName: newTeacherName,
+            avgSatisfaction: _courseCardModels[i].avgSatisfaction,
+            avgEasiness: _courseCardModels[i].avgEasiness,
+            reviewCount: _courseCardModels[i].reviewCount,
+            hasMyReview: _courseCardModels[i].hasMyReview,
+          );
+          break;
+        }
+      }
+    });
+
+    // TODO: 必要に応じてFirestoreにも保存
+    print('Updated teacher name for $courseId to: $newTeacherName');
   }
 }

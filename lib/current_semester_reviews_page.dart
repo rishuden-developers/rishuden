@@ -6,17 +6,20 @@ import 'character_data.dart';
 import 'credit_review_page.dart';
 import 'components/course_card.dart';
 import 'common_bottom_navigation.dart'; // ボトムナビゲーション用
+import 'main_page.dart';
+import 'providers/current_page_provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class CurrentSemesterReviewsPage extends StatefulWidget {
+class CurrentSemesterReviewsPage extends ConsumerStatefulWidget {
   const CurrentSemesterReviewsPage({super.key});
 
   @override
-  State<CurrentSemesterReviewsPage> createState() =>
+  ConsumerState<CurrentSemesterReviewsPage> createState() =>
       _CurrentSemesterReviewsPageState();
 }
 
 class _CurrentSemesterReviewsPageState
-    extends State<CurrentSemesterReviewsPage> {
+    extends ConsumerState<CurrentSemesterReviewsPage> {
   late Future<List<Map<String, dynamic>>> _coursesFuture;
 
   @override
@@ -77,10 +80,10 @@ class _CurrentSemesterReviewsPageState
 
       for (final courseId in userCourses) {
         try {
-          // courseIdから講義名と教員名を抽出
+          // courseIdから講義名を抽出
           final parts = courseId.split('|');
           final lectureName = parts.isNotEmpty ? parts[0] : courseId;
-          final teacherName = parts.length > 1 ? parts[1] : '';
+          final teacherName = '';
 
           // その授業のレビューを取得（courseIdで検索）
           final reviewsSnapshot =
@@ -230,7 +233,13 @@ class _CurrentSemesterReviewsPageState
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       itemCount: courses.length,
                       itemBuilder: (context, index) {
-                        return CourseCard(course: courses[index]);
+                        return CourseCard(
+                          course: courses[index],
+                          onTeacherNameChanged: (newTeacherName) {
+                            // coursesリストの該当courseのteacherNameを更新
+                            courses[index]['teacherName'] = newTeacherName;
+                          },
+                        );
                       },
                     );
                   },
@@ -241,7 +250,15 @@ class _CurrentSemesterReviewsPageState
                 left: 0,
                 right: 0,
                 bottom: 0,
-                child: const CommonBottomNavigation(),
+                child: CommonBottomNavigation(
+                  onNavigate: (page) {
+                    ref.read(currentPageProvider.notifier).state = page;
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (context) => MainPage()),
+                    );
+                  },
+                ),
               ),
             ],
           ),
@@ -253,8 +270,9 @@ class _CurrentSemesterReviewsPageState
 
 class _CourseCard extends StatelessWidget {
   final Map<String, dynamic> course;
+  final Function(String) onTeacherNameChanged;
 
-  const _CourseCard({required this.course});
+  const _CourseCard({required this.course, required this.onTeacherNameChanged});
 
   @override
   Widget build(BuildContext context) {
