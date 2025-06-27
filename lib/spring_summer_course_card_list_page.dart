@@ -5,6 +5,7 @@ import 'credit_review_page.dart';
 import 'components/course_card.dart';
 import 'providers/timetable_provider.dart';
 import 'common_bottom_navigation.dart'; // ボトムナビゲーション用
+import 'package:firebase_auth/firebase_auth.dart';
 
 class SpringSummerCourseCardListPage extends ConsumerStatefulWidget {
   const SpringSummerCourseCardListPage({super.key});
@@ -28,7 +29,7 @@ class _SpringSummerCourseCardListPageState
   // 春夏学期の授業データを読み込む
   Future<void> _loadSpringSummerCourses() async {
     try {
-      final List<Map<String, dynamic>> courses = [];
+      var courses = <Map<String, dynamic>>[];
 
       // global/course_mappingドキュメントからmappingフィールドを取得
       final doc =
@@ -40,11 +41,16 @@ class _SpringSummerCourseCardListPageState
       if (doc.exists) {
         final data = doc.data()!;
         final mapping = data['mapping'] as Map<String, dynamic>? ?? {};
+        print('mapping runtimeType: \\${mapping.runtimeType}');
 
         // mappingの各エントリを処理
         for (final entry in mapping.entries) {
           final courseId = entry.key; // 「講義名|教室|曜日|時限」形式
           final courseData = entry.value;
+
+          print(
+            'courseData for $courseId: $courseData (type: ${courseData.runtimeType})',
+          );
 
           // courseIdをパースして講義名と教室を取得
           String lectureName = '';
@@ -62,8 +68,14 @@ class _SpringSummerCourseCardListPageState
           }
 
           // 教員名をtimetableProviderから取得（時間割画面と同期）
-          String teacherName =
-              courseData['teacherName'] ?? courseData['instructor'] ?? '';
+          String teacherName = '';
+
+          // courseDataがMap型の場合のみアクセス
+          if (courseData is Map<String, dynamic>) {
+            teacherName =
+                courseData['teacherName'] ?? courseData['instructor'] ?? '';
+          }
+
           if (courseId.isNotEmpty) {
             final timetableTeacherName =
                 ref.read(timetableProvider)['teacherNames']?[courseId];
@@ -84,6 +96,60 @@ class _SpringSummerCourseCardListPageState
             'hasMyReview': false,
           });
         }
+      }
+
+      // 各授業のレビュー情報を取得
+      for (int i = 0; i < courses.length; i++) {
+        final courseId = courses[i]['courseId'];
+        try {
+          final reviewsSnapshot =
+              await FirebaseFirestore.instance
+                  .collection('reviews')
+                  .where('courseId', isEqualTo: courseId)
+                  .get();
+
+          final reviews = reviewsSnapshot.docs;
+          if (reviews.isNotEmpty) {
+            double totalSatisfaction = 0.0;
+            double totalEasiness = 0.0;
+            bool hasMyReview = false;
+            final user = FirebaseAuth.instance.currentUser;
+
+            for (final doc in reviews) {
+              final data = doc.data();
+              final satisfaction =
+                  (data['overallSatisfaction'] ?? data['satisfaction'] ?? 0.0) *
+                  1.0;
+              final easiness = (data['easiness'] ?? data['ease'] ?? 0.0) * 1.0;
+
+              totalSatisfaction += satisfaction;
+              totalEasiness += easiness;
+
+              // 自分のレビューがあるかチェック
+              if (user != null && data['userId'] == user.uid) {
+                hasMyReview = true;
+              }
+            }
+
+            courses[i] = {
+              ...courses[i],
+              'avgSatisfaction': totalSatisfaction / reviews.length,
+              'avgEasiness': totalEasiness / reviews.length,
+              'reviewCount': reviews.length,
+              'hasMyReview': hasMyReview,
+            };
+          }
+        } catch (e) {
+          print('Error fetching reviews for $courseId: $e');
+        }
+      }
+
+      print('courses runtimeType before setState: \\${courses.runtimeType}');
+      if (courses is Map) {
+        print('courses is Map! Converting to List.');
+        // 念のためvaluesをtoList
+        // ignore: prefer_collection_literals
+        courses = List<Map<String, dynamic>>.from((courses as Map).values);
       }
 
       setState(() {
