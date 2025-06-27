@@ -3,7 +3,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'login_page.dart';
-import 'welcome_page.dart';
 
 class SettingPage extends StatefulWidget {
   const SettingPage({super.key});
@@ -224,7 +223,7 @@ class _SettingPageState extends State<SettingPage> {
 
       // Navigate to login page
       Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (context) => WelcomePage()),
+        MaterialPageRoute(builder: (context) => LoginPage()),
         (Route<dynamic> route) => false,
       );
 
@@ -483,22 +482,6 @@ class _SettingPageState extends State<SettingPage> {
                             foregroundColor: Colors.white,
                           ),
                           child: const Text('アカウントを削除する'),
-                        ),
-                        const SizedBox(height: 12),
-                        ElevatedButton(
-                          onPressed: () {
-                            Navigator.of(context).pushAndRemoveUntil(
-                              MaterialPageRoute(
-                                builder: (context) => WelcomePage(),
-                              ),
-                              (Route<dynamic> route) => false,
-                            );
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.blueGrey,
-                            foregroundColor: Colors.white,
-                          ),
-                          child: const Text('最初のログイン画面に戻る（テスト用）'),
                         ),
                       ],
                     ),

@@ -242,15 +242,6 @@ class _CreditInputPageState extends ConsumerState<CreditInputPage> {
       return;
     }
 
-    final editedTeacherName = _teacherNameController.text.trim();
-    if (editedTeacherName.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('教員名を入力してください。')));
-      setState(() => _isLoading = false);
-      return;
-    }
-
     final courseId = widget.courseId;
     // 秋冬学期ではcourseIdがnullでもOK
     // if (courseId == null || courseId.isEmpty) {
@@ -266,13 +257,16 @@ class _CreditInputPageState extends ConsumerState<CreditInputPage> {
       final courseMapping = ref.read(globalCourseMappingProvider);
       final mappedCourseId = courseMapping[lectureName];
       if (mappedCourseId != null && mappedCourseId.isNotEmpty) {
-        await _setGlobalTeacherName(mappedCourseId, editedTeacherName);
+        await _setGlobalTeacherName(
+          mappedCourseId,
+          _teacherNameController.text.trim(),
+        );
       }
 
       // 2. 保存するレビューデータを作成（courseIdがnullの場合は空文字を使用）
       final reviewData = {
         'lectureName': lectureName,
-        'teacherName': editedTeacherName,
+        'teacherName': _teacherNameController.text.trim(),
         'courseId': courseId ?? '', // courseIdがnullの場合は空文字
         'userId': user.uid,
         'character': await _getUserCharacter(),
@@ -304,6 +298,7 @@ class _CreditInputPageState extends ConsumerState<CreditInputPage> {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('レビューを保存しました！たこ焼き$reward個GET！')));
+        setState(() => _isLoading = false); // ローディング状態を解除
         Navigator.pop(context, true); // 正常に保存されたことを示す
       }
     } catch (e, st) {

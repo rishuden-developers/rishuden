@@ -133,20 +133,11 @@ class _AutumnWinterReviewInputPageState
       return;
     }
 
-    final editedTeacherName = _teacherNameController.text.trim();
-    if (editedTeacherName.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('教員名を入力してください。')));
-      setState(() => _isLoading = false);
-      return;
-    }
-
     try {
       // レビューデータを作成
       final reviewData = {
         'lectureName': lectureName,
-        'teacherName': editedTeacherName,
+        'teacherName': _teacherNameController.text.trim(),
         'courseId': '', // 秋冬学期は空文字
         'userId': user.uid,
         'character': await _getUserCharacter(),
@@ -179,6 +170,7 @@ class _AutumnWinterReviewInputPageState
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('レビューを保存しました！たこ焼き$reward個GET！')));
+        setState(() => _isLoading = false);
         Navigator.pop(context, true);
       }
     } catch (e, st) {

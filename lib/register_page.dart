@@ -13,72 +13,8 @@ class _RegisterPageState extends State<RegisterPage> {
   final _passwordController = TextEditingController();
   final _calendarUrlController = TextEditingController();
   String? _error;
-  bool _agreedToTerms = false; // 利用規約同意フラグ
-
-  void _showTermsDialog() {
-    showDialog(
-      context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text(
-              '利用規約',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            content: SingleChildScrollView(
-              child: const Text(
-                '履修伝説（以下「当アプリ」）は、ユーザーのプライバシーを尊重し、個人情報の保護に努めます。\n\n'
-                '**1. 収集する情報**\n'
-                '当アプリでは、以下の情報を収集することがあります。\n'
-                '• メールアドレス（Google認証時）\n'
-                '• ユーザー名・学部名など（任意）\n'
-                '• アプリ内の利用履歴・課題提出状況\n\n'
-                '**2. 利用目的**\n'
-                '収集した情報は以下の目的で使用します。\n'
-                '• ユーザー識別とアカウント管理\n'
-                '• 履修サポート機能の提供\n'
-                '• ユーザー同士のクエスト・投稿機能の提供\n'
-                '• アプリ改善のための分析\n\n'
-                '**3. 情報の共有**\n'
-                '取得した情報は、法令に基づく場合を除き、第三者に提供・共有することはありません。\n\n'
-                '**4. クッキー（Cookies）について**\n'
-                '当アプリでは、利用状況を分析するためにクッキー等を使用する場合があります。\n\n'
-                '**5. プライバシーポリシーの変更**\n'
-                '必要に応じて、本ポリシーの内容を変更することがあります。変更後はNotionページにて随時更新します。\n\n'
-                '**6. お問い合わせ**\n'
-                'ご質問・ご不明点がある場合は以下のフォームよりお問い合わせください：\n'
-                'https://forms.gle/T8zCqjtdwGMA2xGZ7',
-                style: TextStyle(fontSize: 14, height: 1.5),
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('閉じる'),
-              ),
-            ],
-          ),
-    );
-  }
 
   Future<void> _register() async {
-    // 必須項目の入力チェック
-    if (_emailController.text.trim().isEmpty ||
-        _passwordController.text.trim().isEmpty ||
-        _calendarUrlController.text.trim().isEmpty) {
-      setState(() {
-        _error = 'すべての項目を入力してください';
-      });
-      return;
-    }
-
-    // 利用規約に同意していない場合はエラーメッセージを表示
-    if (!_agreedToTerms) {
-      setState(() {
-        _error = '利用規約に同意してください';
-      });
-      return;
-    }
-
     setState(() {
       _error = null;
     });
@@ -100,61 +36,42 @@ class _RegisterPageState extends State<RegisterPage> {
 
       await userCredential.user!.sendEmailVerification();
       // メール送信後は認証を促す
-      if (mounted) {
-        // mounted checkを追加
-        showDialog(
-          context: context,
-          builder:
-              (context) => AlertDialog(
-                title: const Text(
-                  '仮登録完了',
-                  style: TextStyle(color: Colors.black),
-                ), // ダイアログタイトル色
-                content: const Text(
-                  '認証メールを送信しました。メール内のリンクをクリックして本登録を完了してください。',
-                  style: TextStyle(color: Colors.black87),
-                ), // ダイアログコンテンツ色
-                actions: [
-                  TextButton(
-                    onPressed:
-                        () async =>
-                            await userCredential.user!.sendEmailVerification(),
-                    child: const Text(
-                      '再送信',
-                      style: TextStyle(color: Color(0xFF3498DB)),
-                    ), // ボタン色
-                  ),
-                  TextButton(
-                    onPressed: () async {
-                      await userCredential.user!.reload();
-                      final user = FirebaseAuth.instance.currentUser;
-                      if (user != null && user.emailVerified) {
-                        if (mounted) Navigator.of(context).pop(); // ダイアログを閉じる
-                        // 認証済みなら次の画面へ遷移
-                        if (mounted) {
-                          Navigator.of(context).pushReplacement(
-                            MaterialPageRoute(
-                              builder: (_) => CharacterQuestionPage(),
-                            ),
-                          );
-                        }
-                      } else {
-                        if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('まだ認証が完了していません')),
-                          );
-                        }
-                      }
-                    },
-                    child: const Text(
-                      '次へ',
-                      style: TextStyle(color: Color(0xFF3498DB)),
-                    ), // ボタン色
-                  ),
-                ],
-              ),
-        );
-      }
+      showDialog(
+        context: context,
+        builder:
+            (context) => AlertDialog(
+              title: Text('仮登録完了'),
+              content: Text('認証メールを送信しました。メール内のリンクをクリックして本登録を完了してください。'),
+              actions: [
+                TextButton(
+                  onPressed:
+                      () async =>
+                          await userCredential.user!.sendEmailVerification(),
+                  child: Text('再送信'),
+                ),
+                TextButton(
+                  onPressed: () async {
+                    await userCredential.user!.reload();
+                    final user = FirebaseAuth.instance.currentUser;
+                    if (user != null && user.emailVerified) {
+                      Navigator.of(context).pop(); // ダイアログを閉じる
+                      // 認証済みなら次の画面へ遷移
+                      Navigator.of(context).pushReplacement(
+                        MaterialPageRoute(
+                          builder: (_) => CharacterQuestionPage(),
+                        ),
+                      );
+                    } else {
+                      ScaffoldMessenger.of(
+                        context,
+                      ).showSnackBar(SnackBar(content: Text('まだ認証が完了していません')));
+                    }
+                  },
+                  child: Text('次へ'),
+                ),
+              ],
+            ),
+      );
     } catch (e) {
       String msg = e.toString();
       if (e is FirebaseAuthException && e.code == 'email-already-in-use') {
@@ -169,189 +86,52 @@ class _RegisterPageState extends State<RegisterPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF2C3E50), // 暗い青色色調の背景
-      appBar: AppBar(
-        title: const Text(
-          'アカウント作成',
-          style: TextStyle(color: Colors.white),
-        ), // タイトル色を白に
-        backgroundColor: const Color(0xFF2C3E50), // AppBarの背景色を合わせる
-        iconTheme: const IconThemeData(color: Colors.white), // 戻るボタンのアイコン色を白に
-        elevation: 0, // AppBarの影をなくす
-      ),
-      body: SingleChildScrollView(
-        // スクロール可能にする
+      appBar: AppBar(title: Text('アカウント作成')),
+      body: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.stretch, // 子要素を水平方向に伸ばす
           children: [
-            const SizedBox(height: 20), // 上部の余白
-            // Email入力フィールド
             TextField(
               controller: _emailController,
-              decoration: InputDecoration(
-                labelText: 'Email', // ラベルテキストを簡潔に
-                labelStyle: const TextStyle(color: Colors.white70),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: const BorderSide(color: Colors.white54),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderSide: const BorderSide(color: Colors.blueAccent),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                fillColor: Colors.white.withOpacity(0.1),
-                filled: true,
-              ),
-              style: const TextStyle(color: Colors.white),
-              keyboardType: TextInputType.emailAddress,
+              decoration: InputDecoration(labelText: '大学のメールアドレス'),
             ),
-            const SizedBox(height: 16),
-            // Password入力フィールド
             TextField(
               controller: _passwordController,
-              decoration: InputDecoration(
-                labelText: 'Password', // ラベルテキストを簡潔に
-                labelStyle: const TextStyle(color: Colors.white70),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: const BorderSide(color: Colors.white54),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderSide: const BorderSide(color: Colors.blueAccent),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                fillColor: Colors.white.withOpacity(0.1),
-                filled: true,
-              ),
-              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(labelText: 'パスワード'),
               obscureText: true,
             ),
             const SizedBox(height: 24),
-
-            // カレンダー画像と説明
-            Center(
-              // 画像を中央に配置
-              child: Image.asset(
-                'assets/calender.png', // assetsフォルダに画像があることを前提
-                width: 320, // 280から320にさらに拡大
-                height: 150, // 120から150に拡大
-                fit: BoxFit.contain,
-              ),
+            Image.asset(
+              'assets/calender.png',
+              width: 220,
+              height: 120,
+              fit: BoxFit.contain,
             ),
             const SizedBox(height: 12),
             const Text(
               'KOANの課題ページのURLをコピーして、下の入力欄に貼り付けてください。\n例: https://koan.osaka-u.ac.jp/...\n\n※ 新規発行のカレンダーURLは反映まで最大1日程度かかる場合があります。',
-              style: TextStyle(fontSize: 13, color: Colors.white70), // テキスト色を白に
+              style: TextStyle(fontSize: 13, color: Colors.black87),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 12),
-
-            // カレンダーURL入力フィールド
             TextField(
               controller: _calendarUrlController,
-              decoration: InputDecoration(
-                labelText: 'カレンダーURL (.ics形式)',
-                labelStyle: const TextStyle(color: Colors.white70),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: const BorderSide(color: Colors.white54),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderSide: const BorderSide(color: Colors.blueAccent),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                fillColor: Colors.white.withOpacity(0.1),
-                filled: true,
-              ),
-              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(labelText: 'カレンダーURL (.ics形式)'),
               keyboardType: TextInputType.url,
             ),
-            const SizedBox(height: 16),
-
-            // 利用規約リンク
-            Center(
-              child: GestureDetector(
-                onTap: _showTermsDialog,
-                child: const Text(
-                  '利用規約',
-                  style: TextStyle(
-                    color: Colors.blueAccent,
-                    decoration: TextDecoration.underline,
-                    decorationColor: Colors.blueAccent, // 下線を青色に
-                    fontSize: 16,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 8),
-
-            // 利用規約同意チェックボックス
-            Center(
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Checkbox(
-                    value: _agreedToTerms,
-                    onChanged: (value) {
-                      setState(() {
-                        _agreedToTerms = value ?? false;
-                      });
-                    },
-                    activeColor: Colors.blueAccent,
-                  ),
-                  const Text(
-                    '利用規約に同意する',
-                    style: TextStyle(color: Colors.white70, fontSize: 16),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-
             if (_error != null) ...[
-              const SizedBox(height: 12),
-              Text(
-                _error!,
-                style: const TextStyle(color: Colors.redAccent), // エラーテキスト色
-                textAlign: TextAlign.center,
-              ),
+              SizedBox(height: 12),
+              Text(_error!, style: TextStyle(color: Colors.red)),
             ],
-            const SizedBox(height: 24),
-
-            // 同意して仮登録ボタン
+            SizedBox(height: 24),
             ElevatedButton(
-              child: const Text(
-                '同意して仮登録（メールに2段階認証完了通知が送られます）',
-                style: TextStyle(
-                  color: Colors.white, // 白いテキスト
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-                textAlign: TextAlign.center, // テキストが長いので中央寄せ
-              ),
-              onPressed: _register, // 常に有効化
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF3498DB), // 常に青色
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
+              child: Text('同意して仮登録（メールに2段階認証完了通知が送られます）'),
+              onPressed: _register,
             ),
-            const SizedBox(height: 20), // 下部の余白
           ],
         ),
       ),
     );
-  }
-
-  @override
-  void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
-    _calendarUrlController.dispose();
-    super.dispose();
   }
 }

@@ -83,103 +83,45 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF2C3E50), // 暗い青色色調の背景
+      appBar: AppBar(title: const Text('ログイン'), backgroundColor: Colors.brown),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.stretch, // 子要素を水平方向に伸ばす
           children: [
-            const SizedBox(height: 100), // 上部の余白
-            // アプリ名
-            const Text(
-              '履修伝説',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 48,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 8),
-            // サブタイトル/キャッチフレーズ
-            const Text(
-              'Let’s get started',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.white70, fontSize: 18),
-            ),
-            const SizedBox(height: 64),
-            // Email入力フィールド
             TextField(
               controller: _emailController,
-              decoration: InputDecoration(
-                labelText: 'Email',
-                labelStyle: const TextStyle(color: Colors.white70),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: const BorderSide(color: Colors.white54),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderSide: const BorderSide(color: Colors.blueAccent),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                fillColor: Colors.white.withOpacity(0.1),
-                filled: true,
+              decoration: const InputDecoration(
+                labelText: '大学のメールアドレス',
+                border: OutlineInputBorder(),
               ),
-              style: const TextStyle(color: Colors.white),
-              keyboardType: TextInputType.emailAddress,
             ),
             const SizedBox(height: 16),
-            // Password入力フィールド
             TextField(
               controller: _passwordController,
-              decoration: InputDecoration(
-                labelText: 'Password',
-                labelStyle: const TextStyle(color: Colors.white70),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: const BorderSide(color: Colors.white54),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderSide: const BorderSide(color: Colors.blueAccent),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                fillColor: Colors.white.withOpacity(0.1),
-                filled: true,
+              decoration: const InputDecoration(
+                labelText: 'パスワードを作成',
+                border: OutlineInputBorder(),
               ),
-              style: const TextStyle(color: Colors.white),
               obscureText: true,
             ),
             if (_error != null) ...[
               const SizedBox(height: 16),
-              Text(
-                _error!,
-                style: const TextStyle(color: Colors.redAccent),
-                textAlign: TextAlign.center,
-              ),
+              Text(_error!, style: const TextStyle(color: Colors.red)),
             ],
             const SizedBox(height: 24),
-            // SIGN IN ボタン
             ElevatedButton(
               onPressed: _login,
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF3498DB), // 青色基調
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
+                backgroundColor: Colors.brown,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 32,
+                  vertical: 16,
                 ),
               ),
-              child: const Text(
-                'SIGN IN',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+              child: const Text('ログイン', style: TextStyle(color: Colors.white)),
             ),
             const SizedBox(height: 16),
-            // アカウントを作成するリンク
             TextButton(
               onPressed: () {
                 Navigator.push(
@@ -187,10 +129,7 @@ class _LoginPageState extends State<LoginPage> {
                   MaterialPageRoute(builder: (context) => RegisterPage()),
                 );
               },
-              child: const Text(
-                'アカウントを作成する',
-                style: TextStyle(color: Colors.white70),
-              ),
+              child: const Text('新規登録はこちら'),
             ),
           ],
         ),

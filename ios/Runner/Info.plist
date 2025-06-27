@@ -47,5 +47,9 @@
 	</array>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>このアプリではプロフィール画像の設定等のために写真ライブラリへのアクセス許可が必要です。</string>
+	<key>UIDeviceFamily</key>
+	<array>
+		<integer>1</integer>
+	</array>
 </dict>
 </plist>
