@@ -14,6 +14,8 @@ import 'package:flutter_rating_bar/flutter_rating_bar.dart'; // ★レート表�
 import 'providers/global_review_mapping_provider.dart';
 import 'providers/timetable_provider.dart';
 import 'providers/global_course_mapping_provider.dart';
+import 'providers/current_page_provider.dart';
+import 'main_page.dart';
 
 // credit_review_page.dartからEnumをインポート（同じ定義を持つか、共通ファイルに移動）
 import 'credit_review_page.dart'
@@ -496,7 +498,15 @@ class _CreditInputPageState extends ConsumerState<CreditInputPage> {
                 left: 0,
                 right: 0,
                 bottom: 0,
-                child: const CommonBottomNavigation(),
+                child: CommonBottomNavigation(
+                  onNavigate: (page) {
+                    ref.read(currentPageProvider.notifier).state = page;
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (context) => MainPage()),
+                    );
+                  },
+                ),
               ),
             ],
           ),

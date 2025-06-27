@@ -6,17 +6,20 @@ import 'character_data.dart';
 import 'credit_review_page.dart';
 import 'components/course_card.dart';
 import 'common_bottom_navigation.dart'; // ボトムナビゲーション用
+import 'main_page.dart';
+import 'providers/current_page_provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class CurrentSemesterReviewsPage extends StatefulWidget {
+class CurrentSemesterReviewsPage extends ConsumerStatefulWidget {
   const CurrentSemesterReviewsPage({super.key});
 
   @override
-  State<CurrentSemesterReviewsPage> createState() =>
+  ConsumerState<CurrentSemesterReviewsPage> createState() =>
       _CurrentSemesterReviewsPageState();
 }
 
 class _CurrentSemesterReviewsPageState
-    extends State<CurrentSemesterReviewsPage> {
+    extends ConsumerState<CurrentSemesterReviewsPage> {
   late Future<List<Map<String, dynamic>>> _coursesFuture;
 
   @override
@@ -247,7 +250,15 @@ class _CurrentSemesterReviewsPageState
                 left: 0,
                 right: 0,
                 bottom: 0,
-                child: const CommonBottomNavigation(),
+                child: CommonBottomNavigation(
+                  onNavigate: (page) {
+                    ref.read(currentPageProvider.notifier).state = page;
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (context) => MainPage()),
+                    );
+                  },
+                ),
               ),
             ],
           ),

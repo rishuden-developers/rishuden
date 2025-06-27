@@ -17,6 +17,8 @@ import 'package:intl/intl.dart';
 import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'providers/timetable_provider.dart';
+import 'main_page.dart';
+import 'providers/current_page_provider.dart';
 
 // ★★★★ 補足: flutter_rating_bar パッケージの追加 ★★★★
 // pubspec.yaml ファイルの dependencies: の下に追加してください。
@@ -329,7 +331,15 @@ class _CreditReviewPageState extends ConsumerState<CreditReviewPage> {
                 left: 0,
                 right: 0,
                 bottom: 0,
-                child: const CommonBottomNavigation(),
+                child: CommonBottomNavigation(
+                  onNavigate: (page) {
+                    ref.read(currentPageProvider.notifier).state = page;
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (context) => MainPage()),
+                    );
+                  },
+                ),
               ),
             ],
           ),

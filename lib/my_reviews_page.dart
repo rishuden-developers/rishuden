@@ -10,6 +10,8 @@ import 'providers/global_course_mapping_provider.dart';
 import 'providers/global_review_mapping_provider.dart';
 import 'credit_input_page.dart'; // ★ 遷移先として追加
 import 'common_bottom_navigation.dart'; // ボトムナビゲーション用
+import 'main_page.dart';
+import 'providers/current_page_provider.dart';
 
 // ページの状態で使用するデータモデル
 class MyCourseReviewModel {
@@ -250,7 +252,18 @@ class _MyReviewsPageState extends ConsumerState<MyReviewsPage> {
                 left: 0,
                 right: 0,
                 bottom: 0,
-                child: const CommonBottomNavigation(),
+                child: CommonBottomNavigation(
+                  onNavigate: (page) {
+                    ref.read(currentPageProvider.notifier).state = page;
+                    Navigator.of(
+                      context,
+                      rootNavigator: true,
+                    ).pushAndRemoveUntil(
+                      MaterialPageRoute(builder: (context) => MainPage()),
+                      (route) => false,
+                    );
+                  },
+                ),
               ),
             ],
           ),

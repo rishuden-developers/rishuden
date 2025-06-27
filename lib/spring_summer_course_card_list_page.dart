@@ -6,6 +6,8 @@ import 'components/course_card.dart';
 import 'providers/timetable_provider.dart';
 import 'common_bottom_navigation.dart'; // ボトムナビゲーション用
 import 'package:firebase_auth/firebase_auth.dart';
+import 'main_page.dart';
+import 'providers/current_page_provider.dart';
 
 class SpringSummerCourseCardListPage extends ConsumerStatefulWidget {
   const SpringSummerCourseCardListPage({super.key});
@@ -387,7 +389,15 @@ class _SpringSummerCourseCardListPageState
                 left: 0,
                 right: 0,
                 bottom: 0,
-                child: const CommonBottomNavigation(),
+                child: CommonBottomNavigation(
+                  onNavigate: (page) {
+                    ref.read(currentPageProvider.notifier).state = page;
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (context) => MainPage()),
+                    );
+                  },
+                ),
               ),
             ],
           ),
