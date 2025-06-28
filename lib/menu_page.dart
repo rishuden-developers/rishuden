@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'mail_page.dart';
 import 'player_log_page.dart';
-import 'setting_page.dart';
+import 'setting_page/setting_page.dart';
 
 class MenuPage extends StatelessWidget {
   const MenuPage({super.key});
