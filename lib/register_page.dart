@@ -88,31 +88,8 @@ class _RegisterPageState extends State<RegisterPage> {
     const String koanUrl =
         'https://koan.osaka-u.ac.jp/campusweb/campusportal.do?page=main';
 
-    try {
-      final Uri url = Uri.parse(koanUrl);
-      if (await canLaunchUrl(url)) {
-        await launchUrl(url, mode: LaunchMode.externalApplication);
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('KOANを開けませんでした'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      print('Error opening KOAN URL: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('KOANを開けませんでした'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
+    final Uri url = Uri.parse(koanUrl);
+    await launchUrl(url, mode: LaunchMode.externalApplication);
   }
 
   @override
