@@ -154,16 +154,7 @@ class _CharacterQuestionPageState extends State<CharacterQuestionPage> {
     super.initState();
     _isQuestionAnswered = List.generate(_totalQuestions, (_) => false);
     answers = List.generate(_totalQuestions, (index) {
-      if (index >= 6 && index <= 9) {
-        // Q7-Q10 (index 6-9)
-        return 1;
-      } else if (index >= 0 && index <= 5) {
-        // Q1-Q6 (index 0-5)
-        return 0;
-      } else {
-        // Q11-Q20 (index 10-19)
-        return null;
-      }
+      return null;
     });
     _updateAnsweredCount();
   }
