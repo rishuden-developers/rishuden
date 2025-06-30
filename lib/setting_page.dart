@@ -61,7 +61,7 @@ class _SettingPageState extends State<SettingPage> {
           SnackBar(
             content: const Text(
               'ログインが必要です',
-              style: TextStyle(fontFamily: 'misaki', color: Colors.white),
+              style: TextStyle(fontFamily: 'NotoSansJP', color: Colors.white),
             ),
             backgroundColor: Colors.black.withOpacity(0.85),
             shape: RoundedRectangleBorder(
@@ -86,7 +86,7 @@ class _SettingPageState extends State<SettingPage> {
             SnackBar(
               content: const Text(
                 'カレンダーURLを保存しました！\n新規発行のURLは反映まで最大1日程度かかる場合があります。',
-                style: TextStyle(fontFamily: 'misaki', color: Colors.white),
+                style: TextStyle(fontFamily: 'NotoSansJP', color: Colors.white),
               ),
               backgroundColor: Colors.black.withOpacity(0.85),
               shape: RoundedRectangleBorder(
@@ -107,7 +107,7 @@ class _SettingPageState extends State<SettingPage> {
             SnackBar(
               content: const Text(
                 '保存に失敗しました',
-                style: TextStyle(fontFamily: 'misaki', color: Colors.white),
+                style: TextStyle(fontFamily: 'NotoSansJP', color: Colors.white),
               ),
               backgroundColor: Colors.black.withOpacity(0.85),
               shape: RoundedRectangleBorder(
@@ -124,7 +124,7 @@ class _SettingPageState extends State<SettingPage> {
           SnackBar(
             content: const Text(
               'URLを入力してください',
-              style: TextStyle(fontFamily: 'misaki', color: Colors.white),
+              style: TextStyle(fontFamily: 'NotoSansJP', color: Colors.white),
             ),
             backgroundColor: Colors.black.withOpacity(0.85),
             shape: RoundedRectangleBorder(
@@ -269,7 +269,7 @@ class _SettingPageState extends State<SettingPage> {
             SnackBar(
               content: const Text(
                 'URLを開けませんでした',
-                style: TextStyle(fontFamily: 'misaki', color: Colors.white),
+                style: TextStyle(fontFamily: 'NotoSansJP', color: Colors.white),
               ),
               backgroundColor: Colors.black.withOpacity(0.85),
               shape: RoundedRectangleBorder(
@@ -287,7 +287,7 @@ class _SettingPageState extends State<SettingPage> {
           SnackBar(
             content: const Text(
               'KOANを開けませんでした',
-              style: TextStyle(fontFamily: 'misaki', color: Colors.white),
+              style: TextStyle(fontFamily: 'NotoSansJP', color: Colors.white),
             ),
             backgroundColor: Colors.black.withOpacity(0.85),
             shape: RoundedRectangleBorder(
@@ -309,7 +309,7 @@ class _SettingPageState extends State<SettingPage> {
           style: TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
-            fontFamily: 'misaki',
+            fontFamily: 'NotoSansJP',
           ),
         ),
         backgroundColor: Colors.indigo[800],

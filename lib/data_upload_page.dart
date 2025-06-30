@@ -63,7 +63,7 @@ class _DataUploadPageState extends State<DataUploadPage> {
       appBar: AppBar(
         title: const Text(
           'コースデータアップロード',
-          style: TextStyle(fontFamily: 'misaki', color: Colors.white),
+          style: TextStyle(fontFamily: 'NotoSansJP', color: Colors.white),
         ),
         backgroundColor: Colors.blue[800],
       ),
@@ -89,7 +89,7 @@ class _DataUploadPageState extends State<DataUploadPage> {
                         style: TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
-                          fontFamily: 'misaki',
+                          fontFamily: 'NotoSansJP',
                         ),
                       ),
                       SizedBox(height: 16),
@@ -121,7 +121,7 @@ class _DataUploadPageState extends State<DataUploadPage> {
                 icon: const Icon(Icons.upload_file),
                 label: const Text(
                   'アップロード',
-                  style: TextStyle(fontFamily: 'misaki'),
+                  style: TextStyle(fontFamily: 'NotoSansJP'),
                 ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.blue[600],

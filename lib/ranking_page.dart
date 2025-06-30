@@ -36,7 +36,7 @@ class RankingPage extends StatelessWidget {
           textStyle: const TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
-            fontFamily: 'misaki',
+            fontFamily: 'NotoSansJP',
           ),
         ),
         child: Text(text),
@@ -79,7 +79,7 @@ class RankingPage extends StatelessWidget {
                           fontSize: 28,
                           fontWeight: FontWeight.bold,
                           color: Colors.white,
-                          fontFamily: 'misaki',
+                          fontFamily: 'NotoSansJP',
                           shadows: [
                             Shadow(
                               blurRadius: 5.0,
@@ -150,7 +150,7 @@ class RankingPage extends StatelessWidget {
                         const Text(
                           'Ver.2.0で実装予定！',
                           style: TextStyle(
-                            fontFamily: 'misaki',
+                            fontFamily: 'NotoSansJP',
                             fontSize: 28,
                             fontWeight: FontWeight.bold,
                             color: Colors.white,
@@ -160,7 +160,7 @@ class RankingPage extends StatelessWidget {
                         const Text(
                           '現在、アプリのバージョン2.0を開発中です。\nみんなが欲しい機能や改善点など、ぜひご意見をお聞かせください！',
                           style: TextStyle(
-                            fontFamily: 'misaki',
+                            fontFamily: 'NotoSansJP',
                             fontSize: 16,
                             color: Colors.white,
                             height: 1.5,
@@ -173,7 +173,7 @@ class RankingPage extends StatelessWidget {
                             backgroundColor: Colors.orangeAccent,
                             foregroundColor: Colors.white,
                             textStyle: const TextStyle(
-                              fontFamily: 'misaki',
+                              fontFamily: 'NotoSansJP',
                               fontWeight: FontWeight.bold,
                             ),
                           ),
