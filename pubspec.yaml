@@ -13,8 +13,8 @@ dependencies:
   cloud_firestore:
   firebase_auth:
   intl:
-  cupertino_icons: # これは既にあるかもしれません
-  flutter_rating_bar: # ★これを追加してください★
+  cupertino_icons:
+  flutter_rating_bar:
   provider:
   http:
   icalendar_parser:

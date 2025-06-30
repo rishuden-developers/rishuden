@@ -14,7 +14,8 @@ import 'item_page.dart';
 import 'providers/current_page_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'credit_explore_page.dart';
-import 'setting_page.dart';
+import 'setting_page/setting_page.dart';
+import 'data_upload_page.dart';
 
 class MainPage extends ConsumerStatefulWidget {
   final bool showLoginBonus;

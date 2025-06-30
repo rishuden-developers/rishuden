@@ -10,6 +10,7 @@ import 'character_data.dart' show characterFullDataGlobal;
 import 'level_gauge.dart';
 import 'quest_create.dart'; // QuestCreationWidgetのインポート
 import 'dart:ui';
+import 'setting_page/setting_page.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'providers/timetable_provider.dart';
 
