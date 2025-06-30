@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'park_page.dart';
 import 'character_data.dart'; // グローバルキャラクターデータをインポート
 import 'main_page.dart'; // ★ MainPageをインポート
 // import 'dart:math'; // 診断ロジックがないので不要

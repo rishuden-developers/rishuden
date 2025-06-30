@@ -1,6 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 
 // グローバルな授業名・教室・曜日・時限 → courseId のマッピングを管理するProvider
 class GlobalCourseMappingNotifier extends StateNotifier<Map<String, String>> {

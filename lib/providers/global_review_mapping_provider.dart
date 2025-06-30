@@ -1,6 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 
 // グローバルな教員名+授業名 → reviewId のマッピングを管理するProvider
 class GlobalReviewMappingNotifier extends StateNotifier<Map<String, String>> {

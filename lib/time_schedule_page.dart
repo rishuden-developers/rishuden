@@ -4,31 +4,17 @@ import 'dart:math';
 import 'dart:ui';
 import 'package:flutter/cupertino.dart';
 import 'package:intl/intl.dart';
-import 'package:provider/provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter/services.dart';
 import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 // 共通フッターと遷移先ページのインポート
-import 'common_bottom_navigation.dart';
-import 'park_page.dart';
-import 'credit_review_page.dart';
-import 'ranking_page.dart';
-import 'item_page.dart';
 import 'timetable_entry.dart';
 import 'timetable.dart';
-import 'utils/course_pattern_detector.dart';
-import 'utils/course_color_generator.dart';
-import 'course_pattern.dart';
 import 'providers/timetable_provider.dart';
-import 'providers/current_page_provider.dart';
 import 'providers/global_course_mapping_provider.dart';
-import 'providers/global_review_mapping_provider.dart';
-import 'level_gauge.dart';
-import 'task_progress_gauge.dart';
 
 enum AttendanceStatus { present, absent, late, none }
 

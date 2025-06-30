@@ -1,6 +1,3 @@
-// lib/character_data.dart
-import 'package:flutter/material.dart'; // Colorなどを使う場合、または将来的に使う可能性がある場合
-
 // ★★★ キャラクターの全データをここに定義 ★★★
 final Map<String, dynamic> characterFullDataGlobal = const {
   "剣士": {

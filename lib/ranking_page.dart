@@ -3,12 +3,6 @@ import 'ranking_trending_page.dart'; // 急上昇ランキングページ
 import 'ranking_explore_page.dart'; // 検索ランキングページ
 import 'ranking_vote_page.dart'; // 投票ランキングページ
 import 'dart:ui'; // すりガラス効果(ImageFilter)のために必要
-
-// ★★★ 共通フッターと遷移先ページをインポート ★★★
-import 'park_page.dart';
-import 'time_schedule_page.dart';
-import 'credit_review_page.dart';
-import 'item_page.dart';
 import 'mail_page.dart'; // MailPageをインポート
 
 class RankingPage extends StatelessWidget {
