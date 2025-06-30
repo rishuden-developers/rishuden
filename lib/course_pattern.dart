@@ -1,5 +1,3 @@
-import 'package:flutter/material.dart';
-
 /// 科目パターンを表すクラス
 ///
 /// 科目名、教室、通常の曜日・時限から科目を一意に識別します。

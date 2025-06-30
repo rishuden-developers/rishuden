@@ -3,7 +3,6 @@ import 'dart:math'; // For max/min
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'character_decide_page.dart';
-import 'park_page.dart';
 import 'character_data.dart' show characterFullDataGlobal;
 
 // characterFullDataGlobal を使用するため

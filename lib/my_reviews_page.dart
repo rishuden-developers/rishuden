@@ -1,13 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:async'; // StreamSubscriptionのためにインポート
-
-import 'providers/timetable_provider.dart';
-import 'providers/global_course_mapping_provider.dart';
-import 'providers/global_review_mapping_provider.dart';
 import 'credit_input_page.dart'; // ★ 遷移先として追加
 import 'common_bottom_navigation.dart'; // ボトムナビゲーション用
 import 'main_page.dart';

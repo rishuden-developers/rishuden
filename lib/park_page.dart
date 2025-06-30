@@ -2,25 +2,14 @@ import 'package:flutter/material.dart';
 import 'dart:async'; // Timer.periodic のために必要
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'dart:math';
-import 'package:animated_text_kit/animated_text_kit.dart';
 import 'task_progress_gauge.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'user_page.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'character_data.dart' show characterFullDataGlobal;
-import 'common_bottom_navigation.dart';
-import 'credit_review_page.dart';
-import 'item_page.dart';
-import 'ranking_page.dart';
-import 'time_schedule_page.dart';
-import 'news_page.dart';
-import 'mail_page.dart';
 import 'level_gauge.dart';
 import 'quest_create.dart'; // QuestCreationWidgetのインポート
 import 'dart:ui';
-import 'setting_page.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'providers/timetable_provider.dart';
 

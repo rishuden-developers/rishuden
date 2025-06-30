@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'credit_review_page.dart';
-import 'components/course_card.dart';
 import 'providers/timetable_provider.dart';
 import 'common_bottom_navigation.dart'; // ボトムナビゲーション用
 import 'main_page.dart';

@@ -1,11 +1,8 @@
 import "package:flutter/material.dart";
-import 'dart:math';
-
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'login_page.dart';
 import 'mail_page.dart';
-import 'news_page.dart';
 import 'park_page.dart';
 import 'character_question_page.dart';
 import 'user_profile_page.dart';
@@ -14,12 +11,10 @@ import 'common_bottom_navigation.dart';
 import 'time_schedule_page.dart';
 import 'ranking_page.dart';
 import 'item_page.dart';
-import 'credit_review_page.dart';
 import 'providers/current_page_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'credit_explore_page.dart';
 import 'setting_page.dart';
-import 'data_upload_page.dart';
 
 class MainPage extends ConsumerStatefulWidget {
   final bool showLoginBonus;
