@@ -83,7 +83,28 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('ログイン'), backgroundColor: Colors.brown),
+      appBar: AppBar(
+        title: const Text('ログイン'),
+        backgroundColor: Colors.brown,
+        actions: [
+          TextButton.icon(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => RegisterPage()),
+              );
+            },
+            icon: const Icon(Icons.person_add_alt_1, color: Colors.white),
+            label: const Text(
+              '新規登録→',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Column(
@@ -92,7 +113,7 @@ class _LoginPageState extends State<LoginPage> {
             TextField(
               controller: _emailController,
               decoration: const InputDecoration(
-                labelText: '大学のメールアドレス',
+                labelText: 'メールアドレス',
                 border: OutlineInputBorder(),
               ),
             ),
@@ -100,7 +121,7 @@ class _LoginPageState extends State<LoginPage> {
             TextField(
               controller: _passwordController,
               decoration: const InputDecoration(
-                labelText: 'パスワードを作成',
+                labelText: 'パスワード',
                 border: OutlineInputBorder(),
               ),
               obscureText: true,
@@ -120,16 +141,6 @@ class _LoginPageState extends State<LoginPage> {
                 ),
               ),
               child: const Text('ログイン', style: TextStyle(color: Colors.white)),
-            ),
-            const SizedBox(height: 16),
-            TextButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => RegisterPage()),
-                );
-              },
-              child: const Text('新規登録はこちら'),
             ),
           ],
         ),
