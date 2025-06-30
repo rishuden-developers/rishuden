@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'main_page.dart';
+import 'welcome_page.dart';
 import 'firebase_options.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -36,7 +36,7 @@ class MyApp extends StatelessWidget {
       title: 'Rishuden',
       theme: ThemeData(primarySwatch: Colors.blue),
       debugShowCheckedModeBanner: false,
-      home: MainPage(), // ← ホーム画面をMainPageに戻す
+      home: WelcomePage(),
     );
   }
 }
