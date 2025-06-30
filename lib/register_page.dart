@@ -88,31 +88,8 @@ class _RegisterPageState extends State<RegisterPage> {
     const String koanUrl =
         'https://koan.osaka-u.ac.jp/campusweb/campusportal.do?page=main';
 
-    try {
-      final Uri url = Uri.parse(koanUrl);
-      if (await canLaunchUrl(url)) {
-        await launchUrl(url, mode: LaunchMode.externalApplication);
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('KOANを開けませんでした'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      print('Error opening KOAN URL: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('KOANを開けませんでした'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
+    final Uri url = Uri.parse(koanUrl);
+    await launchUrl(url, mode: LaunchMode.externalApplication);
   }
 
   @override
@@ -121,74 +98,76 @@ class _RegisterPageState extends State<RegisterPage> {
       appBar: AppBar(title: Text('アカウント作成')),
       body: Padding(
         padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            TextField(
-              controller: _emailController,
-              decoration: InputDecoration(labelText: '大学のメールアドレス'),
-            ),
-            TextField(
-              controller: _passwordController,
-              decoration: InputDecoration(labelText: 'パスワード'),
-              obscureText: true,
-            ),
-            const SizedBox(height: 24),
-            Image.asset(
-              'assets/calender.png',
-              width: 220,
-              height: 120,
-              fit: BoxFit.contain,
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              'KOANの休講・スケジュールを選び、カレンダー連携を選択し、URLを作成を押した後、コピーして、下の入力欄に貼り付けてください。\n例: https://koan.osaka-u.ac.jp/...\n\n※ 新規発行のカレンダーURLは反映まで最大1日程度かかる場合があります。',
-              style: TextStyle(fontSize: 13, color: Colors.black87),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _calendarUrlController,
-              decoration: InputDecoration(labelText: 'カレンダーURL (.ics形式)'),
-              keyboardType: TextInputType.url,
-            ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.blue[50],
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.blue[200]!),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              TextField(
+                controller: _emailController,
+                decoration: InputDecoration(labelText: '大学のメールアドレス'),
               ),
-              child: Center(
-                child: ElevatedButton.icon(
-                  onPressed: _openKoan,
-                  icon: const Icon(Icons.open_in_new, size: 18),
-                  label: const Text('KOANを開く'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green[600],
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 12,
-                      horizontal: 24,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
+              TextField(
+                controller: _passwordController,
+                decoration: InputDecoration(labelText: 'パスワード'),
+                obscureText: true,
+              ),
+              const SizedBox(height: 24),
+              Image.asset(
+                'assets/calender.png',
+                width: 220,
+                height: 120,
+                fit: BoxFit.contain,
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'KOANの休講・スケジュールを選び、カレンダー連携を選択し、URLを作成を押した後、コピーして、下の入力欄に貼り付けてください。\n例: https://koan.osaka-u.ac.jp/...\n\n※ 新規発行のカレンダーURLは反映まで最大1日程度かかる場合があります。',
+                style: TextStyle(fontSize: 13, color: Colors.black87),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _calendarUrlController,
+                decoration: InputDecoration(labelText: 'カレンダーURL (.ics形式)'),
+                keyboardType: TextInputType.url,
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.blue[50],
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.blue[200]!),
+                ),
+                child: Center(
+                  child: ElevatedButton.icon(
+                    onPressed: _openKoan,
+                    icon: const Icon(Icons.open_in_new, size: 18),
+                    label: const Text('KOANを開く'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green[600],
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 12,
+                        horizontal: 24,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
-            if (_error != null) ...[
-              SizedBox(height: 12),
-              Text(_error!, style: TextStyle(color: Colors.red)),
+              if (_error != null) ...[
+                SizedBox(height: 12),
+                Text(_error!, style: TextStyle(color: Colors.red)),
+              ],
+              SizedBox(height: 24),
+              ElevatedButton(
+                child: Text('同意して仮登録（メールに2段階認証完了通知が送られます）'),
+                onPressed: _register,
+              ),
             ],
-            SizedBox(height: 24),
-            ElevatedButton(
-              child: Text('同意して仮登録（メールに2段階認証完了通知が送られます）'),
-              onPressed: _register,
-            ),
-          ],
+          ),
         ),
       ),
     );
