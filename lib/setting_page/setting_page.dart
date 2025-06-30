@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'calendar_setting_card.dart';
 import 'delete_account_card.dart';
+import 'logout_card.dart';
 
 class SettingPage extends StatefulWidget {
   const SettingPage({super.key});
@@ -85,6 +86,8 @@ class _SettingPageState extends State<SettingPage> {
                 ),
                 const SizedBox(height: 24),
                 DeleteAccountCard(),
+                const SizedBox(height: 24),
+                LogoutCard(),
               ],
             ),
           ),
