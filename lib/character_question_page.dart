@@ -185,6 +185,7 @@ class _CharacterQuestionPageState extends State<CharacterQuestionPage> {
         'name': _nameController.text,
         'grade': _selectedGrade,
         'department': _selectedDepartment,
+        'profileCompleted': true,
       }, SetOptions(merge: true));
 
       print('--- Firestoreへの保存が完了しました ---');

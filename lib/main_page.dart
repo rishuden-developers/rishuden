@@ -2,6 +2,7 @@ import "package:flutter/material.dart";
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'login_page.dart';
+import 'welcome_page.dart';
 import 'mail_page.dart';
 import 'park_page.dart';
 import 'character_question_page.dart';
@@ -232,11 +233,13 @@ class AuthWrapper extends StatelessWidget {
       stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
         }
 
         if (!snapshot.hasData) {
-          return const LoginPage();
+          return const WelcomePage();
         }
 
         return FutureBuilder<DocumentSnapshot>(
@@ -247,26 +250,57 @@ class AuthWrapper extends StatelessWidget {
                   .get(),
           builder: (context, userSnapshot) {
             if (userSnapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
+              return const Scaffold(
+                body: Center(child: CircularProgressIndicator()),
+              );
             }
 
             if (!userSnapshot.hasData) {
-              return const LoginPage();
+              return const WelcomePage();
             }
 
             final userData = userSnapshot.data!.data() as Map<String, dynamic>?;
 
-            // キャラクターが選択されていない場合
-            if (userData == null || !userData.containsKey('character')) {
+            // デバッグ用ログ
+            print('=== AuthWrapper Debug ===');
+            print('User ID: ${snapshot.data!.uid}');
+            print('User data exists: ${userData != null}');
+            if (userData != null) {
+              print('User data keys: ${userData.keys.toList()}');
+              print('Character: ${userData['character']}');
+              print('Name: ${userData['name']}');
+              print('Profile completed: ${userData['profileCompleted']}');
+            }
+
+            // ユーザーデータが存在し、キャラクターが設定されている場合は直接メインページへ
+            if (userData != null &&
+                userData.containsKey('character') &&
+                userData['character'] != null &&
+                userData.containsKey('name') &&
+                userData['name'] != null) {
+              print(
+                'Redirecting to MainPage - user data exists and character is set',
+              );
+              return MainPage();
+            }
+
+            // キャラクターが選択されていない場合のみ診断画面へ
+            if (userData == null ||
+                !userData.containsKey('character') ||
+                userData['character'] == null) {
+              print(
+                'Redirecting to CharacterQuestionPage - character not found or null',
+              );
               return CharacterQuestionPage();
             }
 
-            // プロフィールが未完了の場合
-            if (!userData.containsKey('profileCompleted') ||
-                userData['profileCompleted'] != true) {
+            // プロフィールが未完了の場合（名前が未設定など）
+            if (!userData.containsKey('name') || userData['name'] == null) {
+              print('Redirecting to UserProfilePage - name not set');
               return const UserProfilePage();
             }
 
+            print('Redirecting to MainPage - all conditions met');
             return MainPage();
           },
         );

@@ -95,6 +95,7 @@ class _CharacterDecidePageState extends State<CharacterDecidePage> {
           'name': _nameController.text,
           'grade': _selectedGrade,
           'department': _selectedDepartment,
+          'profileCompleted': true,
         }, SetOptions(merge: true));
         print('Data saved successfully');
 

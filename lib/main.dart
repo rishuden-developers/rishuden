@@ -6,6 +6,7 @@ import 'firebase_options.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/services.dart';
+import 'main_page.dart';
 // import 'json_paste_upload_page.dart'; // ← もう不要なら削除してOK
 
 void main() async {
@@ -36,7 +37,7 @@ class MyApp extends StatelessWidget {
       title: 'Rishuden',
       theme: ThemeData(primarySwatch: Colors.blue),
       debugShowCheckedModeBanner: false,
-      home: WelcomePage(),
+      home: AuthWrapper(),
     );
   }
 }
