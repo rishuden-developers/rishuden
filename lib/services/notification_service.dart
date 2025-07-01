@@ -1,0 +1,302 @@
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:timezone/timezone.dart' as tz;
+
+class NotificationService {
+  static final NotificationService _instance = NotificationService._internal();
+  factory NotificationService() => _instance;
+  NotificationService._internal();
+
+  final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
+  final FlutterLocalNotificationsPlugin _localNotifications =
+      FlutterLocalNotificationsPlugin();
+
+  // 通知チャンネルの設定
+  static const AndroidNotificationChannel _channel = AndroidNotificationChannel(
+    'high_importance_channel',
+    '高優先度通知',
+    description: 'クエストやたこ焼きの通知に使用されます',
+    importance: Importance.high,
+  );
+
+  // 初期化
+  Future<void> initialize() async {
+    try {
+      // 通知権限を要求
+      await _requestPermission();
+
+      // ローカル通知の初期化
+      await _initializeLocalNotifications();
+
+      // FCMトークンの取得と保存
+      await _getAndSaveFCMToken();
+
+      // 通知ハンドラーの設定
+      _setupNotificationHandlers();
+
+      print('NotificationService initialized successfully');
+    } catch (e) {
+      print('Error initializing NotificationService: $e');
+    }
+  }
+
+  // 通知権限を要求
+  Future<void> _requestPermission() async {
+    NotificationSettings settings = await _firebaseMessaging.requestPermission(
+      alert: true,
+      announcement: false,
+      badge: true,
+      carPlay: false,
+      criticalAlert: false,
+      provisional: false,
+      sound: true,
+    );
+
+    print('User granted permission: ${settings.authorizationStatus}');
+  }
+
+  // ローカル通知の初期化
+  Future<void> _initializeLocalNotifications() async {
+    const AndroidInitializationSettings initializationSettingsAndroid =
+        AndroidInitializationSettings('@mipmap/ic_launcher');
+
+    const DarwinInitializationSettings initializationSettingsIOS =
+        DarwinInitializationSettings(
+          requestAlertPermission: true,
+          requestBadgePermission: true,
+          requestSoundPermission: true,
+        );
+
+    const InitializationSettings initializationSettings =
+        InitializationSettings(
+          android: initializationSettingsAndroid,
+          iOS: initializationSettingsIOS,
+        );
+
+    await _localNotifications.initialize(
+      initializationSettings,
+      onDidReceiveNotificationResponse: _onNotificationTapped,
+    );
+
+    // Androidチャンネルの作成
+    await _localNotifications
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >()
+        ?.createNotificationChannel(_channel);
+  }
+
+  // FCMトークンの取得と保存
+  Future<void> _getAndSaveFCMToken() async {
+    try {
+      print('Getting FCM token...');
+      String? token = await _firebaseMessaging.getToken();
+      if (token != null) {
+        print('FCM Token: $token');
+        await _saveFCMTokenToFirestore(token);
+      } else {
+        print('FCM token is null');
+      }
+    } catch (e) {
+      print('Error getting FCM token: $e');
+    }
+  }
+
+  // FCMトークンをFirestoreに保存
+  Future<void> _saveFCMTokenToFirestore(String token) async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        print('Saving FCM token for user: ${user.uid}');
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .update({
+              'fcmToken': token,
+              'lastTokenUpdate': FieldValue.serverTimestamp(),
+            });
+        print('FCM token saved to Firestore successfully');
+      } else {
+        print('No current user found');
+      }
+    } catch (e) {
+      print('Error saving FCM token to Firestore: $e');
+    }
+  }
+
+  // 通知ハンドラーの設定
+  void _setupNotificationHandlers() {
+    // フォアグラウンド通知の処理
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      print('Got a message whilst in the foreground!');
+      print('Message data: ${message.data}');
+
+      if (message.notification != null) {
+        print('Message also contained a notification: ${message.notification}');
+        _showLocalNotification(message);
+      }
+    });
+
+    // バックグラウンド通知の処理
+    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+      print('A new onMessageOpenedApp event was published!');
+      _handleNotificationTap(message);
+    });
+
+    // アプリが終了状態から起動された場合の処理
+    FirebaseMessaging.instance.getInitialMessage().then((
+      RemoteMessage? message,
+    ) {
+      if (message != null) {
+        print('App opened from terminated state');
+        _handleNotificationTap(message);
+      }
+    });
+  }
+
+  // ローカル通知を表示
+  Future<void> _showLocalNotification(RemoteMessage message) async {
+    const AndroidNotificationDetails androidPlatformChannelSpecifics =
+        AndroidNotificationDetails(
+          'high_importance_channel',
+          '高優先度通知',
+          channelDescription: 'クエストやたこ焼きの通知に使用されます',
+          importance: Importance.max,
+          priority: Priority.high,
+          showWhen: true,
+        );
+
+    const NotificationDetails platformChannelSpecifics = NotificationDetails(
+      android: androidPlatformChannelSpecifics,
+    );
+
+    await _localNotifications.show(
+      message.hashCode,
+      message.notification?.title ?? '新しい通知',
+      message.notification?.body ?? '',
+      platformChannelSpecifics,
+      payload: message.data.toString(),
+    );
+  }
+
+  // 通知タップ時の処理
+  void _onNotificationTapped(NotificationResponse response) {
+    print('Notification tapped: ${response.payload}');
+    // 必要に応じて特定の画面に遷移する処理を追加
+  }
+
+  // 通知タップ時の処理（FCM）
+  void _handleNotificationTap(RemoteMessage message) {
+    print('Notification tapped: ${message.data}');
+    // 必要に応じて特定の画面に遷移する処理を追加
+  }
+
+  // 手動でローカル通知を表示
+  Future<void> showLocalNotification({
+    required String title,
+    required String body,
+    String? payload,
+  }) async {
+    const AndroidNotificationDetails androidPlatformChannelSpecifics =
+        AndroidNotificationDetails(
+          'high_importance_channel',
+          '高優先度通知',
+          channelDescription: 'クエストやたこ焼きの通知に使用されます',
+          importance: Importance.max,
+          priority: Priority.high,
+          showWhen: true,
+        );
+
+    const NotificationDetails platformChannelSpecifics = NotificationDetails(
+      android: androidPlatformChannelSpecifics,
+    );
+
+    await _localNotifications.show(
+      DateTime.now().millisecondsSinceEpoch ~/ 1000,
+      title,
+      body,
+      platformChannelSpecifics,
+      payload: payload,
+    );
+  }
+
+  // 同じ授業を取っている人がクエストを作成した時の通知
+  Future<void> showNewQuestNotification({
+    required String creatorName,
+    required String questName,
+    required String courseName,
+  }) async {
+    await showLocalNotification(
+      title: '新しいクエストが作成されました！',
+      body: '$creatorName が $courseName で「$questName」クエストを作成しました',
+      payload: 'new_quest_created',
+    );
+  }
+
+  // レビューやクエストでのたこ焼き受信通知
+  Future<void> showTakoyakiReceivedNotification({
+    required String senderName,
+    required String reason,
+  }) async {
+    await showLocalNotification(
+      title: 'たこ焼きを貰いました！',
+      body: '$senderName から $reason でたこ焼きを送ってもらいました！',
+      payload: 'takoyaki_received',
+    );
+  }
+
+  // クエスト締め切り1時間前通知
+  Future<void> showQuestDeadlineNotification({
+    required String questName,
+    required String deadline,
+  }) async {
+    await showLocalNotification(
+      title: 'クエスト締め切り間近！',
+      body: '「$questName」の締め切りが $deadline です。残り1時間です！',
+      payload: 'quest_deadline',
+    );
+  }
+
+  // 手動でFCMトークンを再取得
+  Future<void> refreshFCMToken() async {
+    print('Manually refreshing FCM token...');
+    await _getAndSaveFCMToken();
+  }
+
+  // クエスト締切1時間前のローカル通知をスケジューリング
+  /*
+  Future<void> scheduleQuestDeadlineNotification({
+    required String questId,
+    required String questName,
+    required DateTime deadline,
+  }) async {
+    final now = DateTime.now();
+    final notificationTime = deadline.subtract(const Duration(hours: 1));
+    if (notificationTime.isBefore(now)) return; // 既に過ぎていたらスキップ
+
+    await _localNotifications.zonedSchedule(
+      questId.hashCode, // 通知ID
+      'クエスト締め切り間近！',
+      '「$questName」の締め切りが1時間後です',
+      tz.TZDateTime.from(notificationTime, tz.local),
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          'quest_deadline_channel',
+          'クエスト締切通知',
+          channelDescription: 'クエスト締切1時間前の通知',
+          importance: Importance.max,
+          priority: Priority.high,
+        ),
+        iOS: DarwinNotificationDetails(),
+      ),
+      // androidAllowWhileIdle: true,
+      // uiLocalNotificationDateInterpretation:
+      //     UILocalNotificationDateInterpretation.absoluteTime,
+      // matchDateTimeComponents: DateTimeComponents.dateAndTime,
+      payload: 'quest_deadline',
+    );
+  }
+  */
+}

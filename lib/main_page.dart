@@ -17,6 +17,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'credit_explore_page.dart';
 import 'setting_page/setting_page.dart';
 import 'data_upload_page.dart';
+import 'services/notification_service.dart';
 
 class MainPage extends ConsumerStatefulWidget {
   final bool showLoginBonus;
@@ -30,6 +31,15 @@ class MainPage extends ConsumerStatefulWidget {
 class _MainPageState extends ConsumerState<MainPage> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   bool _hasShownLoginBonus = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // FCMトークンを再取得
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      NotificationService().refreshFCMToken();
+    });
+  }
 
   // park_page.dart から Drawer内のタイルを作成するメソッドを移植
   Widget _buildDrawerTile(IconData icon, String title, VoidCallback onTap) {

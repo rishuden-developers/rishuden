@@ -13,6 +13,7 @@ import 'dart:ui';
 import 'setting_page/setting_page.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'providers/timetable_provider.dart';
+import 'services/notification_service.dart';
 
 class ParkPage extends ConsumerStatefulWidget {
   final String diagnosedCharacterName;
@@ -198,6 +199,9 @@ class _ParkPageState extends ConsumerState<ParkPage> {
           print('DEBUG: User ${userDoc.id} has no timetable data');
         }
       }
+
+      // 同じ授業を取っている人に通知を送信
+      await _sendNewQuestNotifications(enrolledUserIds, selectedClass);
       print(
         'DEBUG: Found ${enrolledUserIds.length} enrolled users: $enrolledUserIds',
       );
@@ -1639,6 +1643,21 @@ class _ParkPageState extends ConsumerState<ParkPage> {
             duration: const Duration(seconds: 3),
           ),
         );
+
+        // 作成者にたこ焼き受信通知を送信（Cloud Functions経由のプッシュ通知）
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(creatorId)
+            .collection('notifications')
+            .add({
+              'type': 'takoyaki_received',
+              'senderId': FirebaseAuth.instance.currentUser?.uid,
+              'reason': 'クエスト作成のお礼',
+              'questId': questId,
+              'questName': taskData['name'] ?? 'クエスト',
+              'createdAt': FieldValue.serverTimestamp(),
+              'isRead': false,
+            });
       } else {
         // 作成者の情報を取得
         final creatorDoc =
@@ -2179,6 +2198,31 @@ class _ParkPageState extends ConsumerState<ParkPage> {
         );
       },
     );
+  }
+
+  // 同じ授業を取っている人に新しいクエスト通知を送信
+  Future<void> _sendNewQuestNotifications(
+    List<String> enrolledUserIds,
+    dynamic selectedClass,
+  ) async {
+    try {
+      final courseName = selectedClass['subjectName'] ?? '授業名不明';
+      final questName = selectedClass['subjectName'] ?? 'クエスト';
+      final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+
+      for (String userId in enrolledUserIds) {
+        // 自分以外のユーザーに通知を送信
+        if (userId != null && userId != currentUserId) {
+          await NotificationService().showNewQuestNotification(
+            creatorName: _userName,
+            questName: questName,
+            courseName: courseName,
+          );
+        }
+      }
+    } catch (e) {
+      print('Error sending new quest notifications: $e');
+    }
   }
 }
 

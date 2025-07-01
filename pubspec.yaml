@@ -12,6 +12,8 @@ dependencies:
   firebase_core:
   cloud_firestore:
   firebase_auth:
+  firebase_messaging:
+  flutter_local_notifications:
   intl:
   cupertino_icons:
   flutter_rating_bar:
