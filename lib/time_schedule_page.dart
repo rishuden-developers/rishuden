@@ -137,12 +137,12 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
       ref.watch(timetableProvider)['teacherNames'] ?? {};
 
   // 時間割データを読み込み
-  void _loadTimetableData() {
+  Future<void> _loadTimetableData() async {
     print('Loading timetable data from Firebase...');
-    ref.read(timetableProvider.notifier).loadFromFirestore();
+    await ref.read(timetableProvider.notifier).loadFromFirestore();
 
     // ★★★ 保存されたcourseIdを読み込んで復元 ★★★
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    if (mounted) {
       final savedCourseIds = courseIds;
       if (savedCourseIds.isNotEmpty) {
         // _globalSubjectToCourseIdに復元
@@ -170,14 +170,14 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
 
         print('DEBUG: 保存されたcourseIdを復元しました: $_globalSubjectToCourseId');
       }
-    });
+    }
   }
 
   @override
   void initState() {
     super.initState();
     _pageController = PageController(initialPage: _initialPage);
-    _loadTimetableData();
+    _loadTimetableData(); // 非同期だが、initStateではawaitできない
     _updateHighlight();
     _highlightTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
       if (mounted) {
@@ -195,8 +195,10 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
       _isInitialWeekLoaded = true;
     }
     _fetchCharacterInfoFromFirebase();
-    // ホットリロード時にもデータを再読み込み
-    _loadTimetableData();
+    // ホットリロード時にもデータを再読み込み（ただし初回のみ）
+    if (!_isInitialWeekLoaded) {
+      _loadTimetableData(); // 非同期だが、didChangeDependenciesではawaitできない
+    }
   }
 
   Future<void> _fetchCharacterInfoFromFirebase() async {

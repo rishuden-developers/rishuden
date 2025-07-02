@@ -26,7 +26,9 @@ class TimetableNotifier extends StateNotifier<Map<String, dynamic>> {
   // ★★★ 初期化時にFirebaseからデータを読み込む ★★★
   Future<void> _initializeFromFirebase() async {
     try {
+      print('TimetableProvider - Initializing from Firebase...');
       await loadFromFirestore();
+      print('TimetableProvider - Initialization completed');
     } catch (e) {
       print('Error initializing from Firebase: $e');
     }
@@ -234,6 +236,7 @@ class TimetableNotifier extends StateNotifier<Map<String, dynamic>> {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
+        print('TimetableProvider - Saving data to Firestore...');
         await FirebaseFirestore.instance
             .collection('users')
             .doc(user.uid)
@@ -254,6 +257,9 @@ class TimetableNotifier extends StateNotifier<Map<String, dynamic>> {
               'questDescription': state['questDescription'],
               'lastUpdated': FieldValue.serverTimestamp(),
             }, SetOptions(merge: true));
+        print('TimetableProvider - Data saved successfully');
+      } else {
+        print('TimetableProvider - No user found, skipping save');
       }
     } catch (e) {
       print('Error saving timetable data: $e');
