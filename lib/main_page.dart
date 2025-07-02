@@ -282,29 +282,20 @@ class AuthWrapper extends StatelessWidget {
               print('Profile completed: ${userData['profileCompleted']}');
             }
 
-            // ユーザーデータが存在し、キャラクターが設定されている場合は直接メインページへ
-            if (userData != null &&
-                userData.containsKey('character') &&
-                userData['character'] != null &&
-                userData.containsKey('name') &&
-                userData['name'] != null) {
-              print(
-                'Redirecting to MainPage - user data exists and character is set',
-              );
-              return MainPage();
-            }
-
-            // キャラクターが選択されていない場合のみ診断画面へ
-            if (userData == null ||
-                !userData.containsKey('character') ||
-                userData['character'] == null) {
-              print(
-                'Redirecting to CharacterQuestionPage - character not found or null',
-              );
+            // ユーザーデータが存在しない場合は診断画面へ
+            if (userData == null) {
+              print('Redirecting to CharacterQuestionPage - no user data');
               return CharacterQuestionPage();
             }
 
-            // プロフィールが未完了の場合（名前が未設定など）
+            // キャラクターが設定されていない場合は診断画面へ
+            if (!userData.containsKey('character') ||
+                userData['character'] == null) {
+              print('Redirecting to CharacterQuestionPage - character not set');
+              return CharacterQuestionPage();
+            }
+
+            // 名前が設定されていない場合はプロフィール設定画面へ
             if (!userData.containsKey('name') || userData['name'] == null) {
               print('Redirecting to UserProfilePage - name not set');
               return const UserProfilePage();

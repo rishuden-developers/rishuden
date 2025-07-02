@@ -157,6 +157,172 @@ class _CharacterQuestionPageState extends State<CharacterQuestionPage> {
       return null;
     });
     _updateAnsweredCount();
+
+    // 新規ユーザーの場合、カレンダー情報の反映時間についての注意事項を表示
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _showCalendarNotice();
+    });
+  }
+
+  void _showCalendarNotice() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: Colors.blue[50],
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: Row(
+            children: [
+              Icon(Icons.schedule, color: Colors.blue[700], size: 28),
+              SizedBox(width: 8),
+              Text(
+                'カレンダー情報について',
+                style: TextStyle(
+                  color: Colors.blue[700],
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                ),
+              ),
+            ],
+          ),
+          content: Container(
+            width: double.maxFinite,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.info_outline, color: Colors.orange[600], size: 48),
+                SizedBox(height: 16),
+                Text(
+                  'カレンダー情報の反映には\n最大で24時間かかることがあります',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.orange[700],
+                  ),
+                ),
+                SizedBox(height: 12),
+                Text(
+                  '登録したカレンダーURLの情報が\nアプリに反映されるまでお待ちください',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            Container(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  _showStartDiagnosisButton();
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue[600],
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  padding: EdgeInsets.symmetric(vertical: 12),
+                ),
+                child: Text(
+                  '了解しました',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    // 5秒後に自動で閉じる
+    Future.delayed(Duration(seconds: 5), () {
+      if (mounted && Navigator.canPop(context)) {
+        Navigator.of(context).pop();
+        _showStartDiagnosisButton();
+      }
+    });
+  }
+
+  void _showStartDiagnosisButton() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: Colors.green[50],
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: Row(
+            children: [
+              Icon(Icons.psychology, color: Colors.green[700], size: 28),
+              SizedBox(width: 8),
+              Text(
+                '履修診断を開始',
+                style: TextStyle(
+                  color: Colors.green[700],
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                ),
+              ),
+            ],
+          ),
+          content: Container(
+            width: double.maxFinite,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.emoji_events, color: Colors.amber[600], size: 48),
+                SizedBox(height: 16),
+                Text(
+                  'あなたのキャラクターを\n診断してみましょう！',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.green[700],
+                  ),
+                ),
+                SizedBox(height: 12),
+                Text(
+                  '20個の質問に答えることで\nあなたに最適なキャラクターが決まります',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            Container(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green[600],
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  padding: EdgeInsets.symmetric(vertical: 16),
+                ),
+                child: Text(
+                  '履修診断を開始する',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   void _updateAnsweredCount() {
@@ -185,7 +351,7 @@ class _CharacterQuestionPageState extends State<CharacterQuestionPage> {
         'name': _nameController.text,
         'grade': _selectedGrade,
         'department': _selectedDepartment,
-        'profileCompleted': true,
+        'profileCompleted': true, // 診断完了時にtrueに設定
       }, SetOptions(merge: true));
 
       print('--- Firestoreへの保存が完了しました ---');
@@ -983,7 +1149,7 @@ class _CharacterQuestionPageState extends State<CharacterQuestionPage> {
         'name': _nameController.text.trim(),
         'grade': _selectedGrade,
         'department': _selectedDepartment,
-        'profileCompleted': true,
+        'profileCompleted': true, // キャラクター選択完了時にtrueに設定
       }, SetOptions(merge: true));
 
       if (mounted) {

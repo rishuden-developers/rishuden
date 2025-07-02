@@ -32,6 +32,7 @@ class _RegisterPageState extends State<RegisterPage> {
             .doc(userCredential.user!.uid)
             .set({
               'calendarUrl': _calendarUrlController.text.trim(),
+              'profileCompleted': false, // 新規登録時はfalseに設定
             }, SetOptions(merge: true));
       }
 

@@ -11,6 +11,8 @@ class DeleteAccountCard extends StatefulWidget {
 }
 
 class _DeleteAccountCardState extends State<DeleteAccountCard> {
+  bool _isDeleting = false;
+
   void _showDeleteAccountDialog() {
     // Show confirmation dialog
     showDialog(
@@ -83,6 +85,10 @@ class _DeleteAccountCardState extends State<DeleteAccountCard> {
       return;
     }
 
+    setState(() {
+      _isDeleting = true;
+    });
+
     try {
       // Re-authenticate
       final cred = EmailAuthProvider.credential(
@@ -92,17 +98,85 @@ class _DeleteAccountCardState extends State<DeleteAccountCard> {
       await user.reauthenticateWithCredential(cred);
 
       // If re-authentication is successful, delete user data and account
-      // 1. Delete Firestore document
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .delete();
 
-      // 2. Delete the user account
-      await user.delete();
+      try {
+        // 1. ユーザーが作成したクエストを削除
+        final questsSnapshot =
+            await FirebaseFirestore.instance
+                .collection('quests')
+                .where('createdBy', isEqualTo: user.uid)
+                .get();
+
+        for (var doc in questsSnapshot.docs) {
+          await doc.reference.delete();
+        }
+
+        // 2. ユーザーの通知データを削除
+        final notificationsSnapshot =
+            await FirebaseFirestore.instance
+                .collection('users')
+                .doc(user.uid)
+                .collection('notifications')
+                .get();
+
+        for (var doc in notificationsSnapshot.docs) {
+          await doc.reference.delete();
+        }
+
+        // 3. ユーザーの時間割データを削除
+        final timetableSnapshot =
+            await FirebaseFirestore.instance
+                .collection('users')
+                .doc(user.uid)
+                .collection('timetable')
+                .get();
+
+        for (var doc in timetableSnapshot.docs) {
+          await doc.reference.delete();
+        }
+
+        // 4. ユーザーが参加したクエストからcompletedUserIdsとsupporterIdsを削除
+        final allQuestsSnapshot =
+            await FirebaseFirestore.instance.collection('quests').get();
+
+        for (var doc in allQuestsSnapshot.docs) {
+          final questData = doc.data();
+          final completedUserIds = List<String>.from(
+            questData['completedUserIds'] ?? [],
+          );
+          final supporterIds = List<String>.from(
+            questData['supporterIds'] ?? [],
+          );
+
+          if (completedUserIds.contains(user.uid) ||
+              supporterIds.contains(user.uid)) {
+            await doc.reference.update({
+              'completedUserIds': FieldValue.arrayRemove([user.uid]),
+              'supporterIds': FieldValue.arrayRemove([user.uid]),
+            });
+          }
+        }
+
+        // 5. ユーザーのメインドキュメントを削除（レビューデータは残す）
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .delete();
+
+        // 6. Firebase Authのアカウントを削除
+        await user.delete();
+      } catch (e) {
+        print('Error during account deletion: $e');
+        // データ削除中にエラーが発生した場合でも、アカウント削除は試行
+        await user.delete();
+      }
 
       // Navigate to login page
       if (mounted) {
+        setState(() {
+          _isDeleting = false;
+        });
+
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (context) => const LoginPage()),
           (Route<dynamic> route) => false,
@@ -125,9 +199,14 @@ class _DeleteAccountCardState extends State<DeleteAccountCard> {
         context,
       ).showSnackBar(SnackBar(content: Text(message)));
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('予期せぬエラーが発生しました。')));
+      if (mounted) {
+        setState(() {
+          _isDeleting = false;
+        });
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('予期せぬエラーが発生しました。')));
+      }
     }
   }
 
@@ -164,12 +243,31 @@ class _DeleteAccountCardState extends State<DeleteAccountCard> {
             ),
             const SizedBox(height: 16),
             ElevatedButton(
-              onPressed: _showDeleteAccountDialog,
+              onPressed: _isDeleting ? null : _showDeleteAccountDialog,
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red[700],
                 foregroundColor: Colors.white,
               ),
-              child: const Text('アカウントを削除する'),
+              child:
+                  _isDeleting
+                      ? Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.white,
+                              ),
+                            ),
+                          ),
+                          SizedBox(width: 8),
+                          Text('削除中...'),
+                        ],
+                      )
+                      : const Text('アカウントを削除する'),
             ),
           ],
         ),
