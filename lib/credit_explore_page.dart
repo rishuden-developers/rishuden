@@ -22,13 +22,17 @@ class _CreditExplorePageState extends State<CreditExplorePage> {
   String? _selectedTag; // タグ検索用
 
   final List<String> _faculties = [
-    '情報科学部',
-    '経済学部',
-    '理学部',
-    '文学部',
     '工学部',
-    '総合科学部',
+    '理学部',
+    '医学部',
+    '歯学部',
+    '薬学部',
+    '文学部',
     '法学部',
+    '経済学部',
+    '人間科学部',
+    '外国語学部',
+    '基礎工学部',
   ];
   final List<String> _categories = ['必修', '選択', 'その他'];
   final List<String> _daysOfWeek = ['月', '火', '水', '木', '金', '土', '日'];

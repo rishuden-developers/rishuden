@@ -35,7 +35,8 @@ class _CharacterDecidePageState extends State<CharacterDecidePage> {
     '文学部',
     '法学部',
     '経済学部',
-    '商学部',
+    '人間科学部',
+    '外国語学部',
     '基礎工学部',
   ];
 
