@@ -613,55 +613,54 @@ class _CharacterQuestionPageState extends State<CharacterQuestionPage> {
     if (currentAnswersNonNull[19] == 2)
       merchantScore += norm[19] * 1.6; // Q20自由時間(C:ビジネス)
 
-    double gorillaScore = 0; // 目標18% (大幅アップ狙い)
+    double gorillaScore = 0; // 目標18% (バランス調整)
     if (currentAnswersNonNull[14] == 0)
-      gorillaScore += norm[14] * 1.8; // Q15活動(A:早朝) (大幅アップ)
-    gorillaScore += norm[1] * 1.2; // Q2 1限 (大幅アップ)
-    gorillaScore += norm[7] * 1.6; // Q8ストレス (大幅アップ)
-    gorillaScore += norm[8] * 1.5; // Q9モチベ (大幅アップ)
-    gorillaScore += norm[4] * 1.6; // Q5サークル (大幅アップ)
+      gorillaScore += norm[14] * 1.4; // Q15活動(A:早朝) (調整)
+    gorillaScore += norm[1] * 1.0; // Q2 1限 (調整)
+    gorillaScore += norm[7] * 1.3; // Q8ストレス (調整)
+    gorillaScore += norm[8] * 1.2; // Q9モチベ (調整)
+    gorillaScore += norm[4] * 1.3; // Q5サークル (調整)
     if (currentAnswersNonNull[13] == 0)
-      gorillaScore += norm[13] * 2.8; // Q14困難(A:根性) (最重要、大幅アップ)
-    gorillaScore += nonAttendanceScore * 1.0; // 少しアップ
+      gorillaScore += norm[13] * 2.0; // Q14困難(A:根性) (調整)
+    gorillaScore += nonAttendanceScore * 0.8; // 調整
     if (currentAnswersNonNull[15] == 0)
-      gorillaScore += norm[15] * 0.8; // 聞くも評価
+      gorillaScore += norm[15] * 0.6; // 聞くも評価 (調整)
     else if (currentAnswersNonNull[15] == 3)
-      gorillaScore += norm[15] * 0.3; // 寝るは少しだけマイナスを緩和
+      gorillaScore += norm[15] * 0.2; // 寝るは少しだけマイナスを緩和 (調整)
     if (currentAnswersNonNull[16] == 4)
-      gorillaScore += norm[16] * 2.2; // Q17価値観(E:困難克服) (超重要)
+      gorillaScore += norm[16] * 1.6; // Q17価値観(E:困難克服) (調整)
     if (currentAnswersNonNull[18] == 1 || currentAnswersNonNull[18] == 2)
-      gorillaScore += norm[18] * 1.0; // Q19エネルギー(仲間/寝る)
+      gorillaScore += norm[18] * 0.8; // Q19エネルギー(仲間/寝る) (調整)
     if (currentAnswersNonNull[19] == 3)
-      gorillaScore += norm[19] * 2.2; // Q20自由時間(D:体動かす) (超重要)
+      gorillaScore += norm[19] * 1.6; // Q20自由時間(D:体動かす) (調整)
 
-    double adventurerScore = 0; // 目標18% (大幅抑制狙い)
+    double adventurerScore = 0; // 目標18% (バランス調整)
     if (currentAnswersNonNull[10] == 2)
-      adventurerScore += norm[10] * 1.0; // Q11未知(C) (大幅ダウン)
+      adventurerScore += norm[10] * 1.4; // Q11未知(C) (調整)
     else if (currentAnswersNonNull[10] == 1)
-      adventurerScore += norm[10] * 0.6; // (大幅ダウン)
+      adventurerScore += norm[10] * 1.0; // (調整)
     if (currentAnswersNonNull[11] == 2)
-      adventurerScore += norm[11] * 1.0; // Q12計画(C) (大幅ダウン)
+      adventurerScore += norm[11] * 1.3; // Q12計画(C) (調整)
     else if (currentAnswersNonNull[11] == 1)
-      adventurerScore += norm[11] * 0.5; // (大幅ダウン)
+      adventurerScore += norm[11] * 0.8; // (調整)
     if (currentAnswersNonNull[12] == 1)
-      adventurerScore += norm[12] * 0.9; // Q13興味(B) (大幅ダウン)
+      adventurerScore += norm[12] * 1.2; // Q13興味(B) (調整)
     adventurerScore +=
-        _normalizeInverse(5, currentAnswersNonNull[5]) *
-        1.0; // Q6空きコマ多い (大幅ダウン)
-    if (currentAnswersNonNull[11] == 0) adventurerScore -= 2.0; // 完璧計画ペナルティ維持
+        _normalizeInverse(5, currentAnswersNonNull[5]) * 1.2; // Q6空きコマ多い (調整)
+    if (currentAnswersNonNull[11] == 0) adventurerScore -= 1.0; // 完璧計画ペナルティ軽減
     if (currentAnswersNonNull[14] == 4)
-      adventurerScore += norm[14] * 1.0; // Q15活動(E) (大幅ダウン)
+      adventurerScore += norm[14] * 1.3; // Q15活動(E) (調整)
     if (currentAnswersNonNull[15] == 1)
-      adventurerScore += norm[15] * 0.8; // Q16ゆる授業(B)
+      adventurerScore += norm[15] * 1.1; // Q16ゆる授業(B) (調整)
     if (currentAnswersNonNull[16] == 3)
-      adventurerScore += norm[16] * 1.2; // Q17価値観(D) (大幅ダウン)
+      adventurerScore += norm[16] * 1.5; // Q17価値観(D) (調整)
     if (currentAnswersNonNull[17] == 0)
-      adventurerScore += norm[17] * 1.0; // Q18リスク(A) (大幅ダウン)
+      adventurerScore += norm[17] * 1.3; // Q18リスク(A) (調整)
     if (currentAnswersNonNull[18] == 3)
-      adventurerScore += norm[18] * 1.0; // Q19エネルギー(D) (大幅ダウン)
+      adventurerScore += norm[18] * 1.2; // Q19エネルギー(D) (調整)
     if (currentAnswersNonNull[19] == 0 || currentAnswersNonNull[19] == 5)
-      adventurerScore += norm[19] * 0.7;
-    if (nonAttendanceScore <= 2.0) adventurerScore -= 1.5; // サボりすぎペナルティ少し強化
+      adventurerScore += norm[19] * 1.0; // (調整)
+    if (nonAttendanceScore <= 2.0) adventurerScore -= 0.8; // サボりすぎペナルティ軽減
 
     // --- レアキャラ判定 ---
     double godScoreSum = 0;
