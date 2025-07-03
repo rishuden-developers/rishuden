@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'credit_review_page.dart'; // レビュー詳細ページへの遷移用
+import 'autumn_winter_course_review_page.dart'; // 秋冬学期用レビュー一覧画面
 import 'common_bottom_navigation.dart'; // 共通フッターウィジェット
 import 'park_page.dart';
 import 'time_schedule_page.dart';
@@ -105,7 +106,7 @@ class _CreditResultPageState extends ConsumerState<CreditResultPage> {
     _loadAllCourses();
   }
 
-  // 全授業データを読み込む
+  // 全授業データを読み込む（前期と後期の両方）
   Future<void> _loadAllCourses() async {
     setState(() {
       _isLoadingCourses = true;
@@ -114,6 +115,46 @@ class _CreditResultPageState extends ConsumerState<CreditResultPage> {
     try {
       final List<Map<String, dynamic>> allCourses = [];
 
+      // 1. 前期（春夏学期）の授業データを取得
+      final springSummerCourses = await _loadSpringSummerCourses();
+      allCourses.addAll(springSummerCourses);
+
+      // 2. 後期（秋冬学期）の授業データを取得
+      final autumnWinterCourses = await _loadAutumnWinterCourses();
+      allCourses.addAll(autumnWinterCourses);
+
+      // カテゴリ一覧を抽出
+      final categories = ['未分類', '前期', '後期'];
+
+      // 既存のallCoursesリストをList<CourseCardModel>に変換してsetState
+      final courseCardModels =
+          allCourses.map((course) {
+            return CourseCardModel.fromMap(course);
+          }).toList();
+
+      setState(() {
+        _allCourses = allCourses;
+        _categories = categories;
+        _isLoadingCourses = false;
+        _courseCardModels = courseCardModels;
+      });
+
+      print(
+        'Loaded ${allCourses.length} total courses (${springSummerCourses.length} spring/summer + ${autumnWinterCourses.length} autumn/winter)',
+      );
+    } catch (e) {
+      print('Error loading courses: $e');
+      setState(() {
+        _isLoadingCourses = false;
+      });
+    }
+  }
+
+  // 前期（春夏学期）の授業データを読み込む
+  Future<List<Map<String, dynamic>>> _loadSpringSummerCourses() async {
+    final List<Map<String, dynamic>> courses = [];
+
+    try {
       // global/course_mappingドキュメントからmappingフィールドを取得
       final doc =
           await FirebaseFirestore.instance
@@ -145,13 +186,13 @@ class _CreditResultPageState extends ConsumerState<CreditResultPage> {
             lectureName = courseId;
           }
 
-          allCourses.add({
+          courses.add({
             'courseId': courseId,
             'lectureName': lectureName,
             'classroom': classroom,
             'teacherName': '', // 教員名は別途取得が必要な場合があります
             'category': '', // カテゴリは別途設定が必要
-            'semester': '前期', // デフォルトで前期として設定
+            'semester': '前期', // 前期として設定
             'avgSatisfaction': 0.0,
             'avgEasiness': 0.0,
             'reviewCount': 0,
@@ -159,30 +200,63 @@ class _CreditResultPageState extends ConsumerState<CreditResultPage> {
           });
         }
       }
-
-      // カテゴリ一覧を抽出（現在は空のカテゴリのみ）
-      final categories = ['未分類'];
-
-      // 既存のallCoursesリストをList<CourseCardModel>に変換してsetState
-      final courseCardModels =
-          allCourses.map((course) {
-            return CourseCardModel.fromMap(course);
-          }).toList();
-
-      setState(() {
-        _allCourses = allCourses;
-        _categories = categories;
-        _isLoadingCourses = false;
-        _courseCardModels = courseCardModels;
-      });
-
-      print('Loaded ${allCourses.length} courses from course_mapping');
     } catch (e) {
-      print('Error loading courses: $e');
-      setState(() {
-        _isLoadingCourses = false;
-      });
+      print('Error loading spring/summer courses: $e');
     }
+
+    return courses;
+  }
+
+  // 後期（秋冬学期）の授業データを読み込む
+  Future<List<Map<String, dynamic>>> _loadAutumnWinterCourses() async {
+    final List<Map<String, dynamic>> courses = [];
+
+    try {
+      // course_dataコレクションから秋冬学期の授業を取得
+      final snapshot =
+          await FirebaseFirestore.instance.collection('course_data').get();
+
+      for (final doc in snapshot.docs) {
+        final data = doc.data();
+        if (data.containsKey('data') &&
+            data['data'] is Map &&
+            data['data']['courses'] is List) {
+          final List<dynamic> courseList = (data['data'] as Map)['courses'];
+          for (final course in courseList) {
+            if (course is Map<String, dynamic>) {
+              final lectureName = course['lectureName'] ?? course['name'] ?? '';
+              final teacherName =
+                  course['teacherName'] ??
+                  course['instructor'] ??
+                  course['teacher'] ??
+                  '';
+              final classroom = course['classroom'] ?? course['room'] ?? '';
+              final category = course['category'] ?? '';
+              final semester = course['semester'] ?? '';
+
+              if (lectureName.isNotEmpty) {
+                courses.add({
+                  'courseId': '', // 秋冬学期はcourseIdを使用しない
+                  'lectureName': lectureName,
+                  'teacherName': teacherName,
+                  'classroom': classroom,
+                  'category': category,
+                  'semester': '後期', // 後期として設定
+                  'avgSatisfaction': 0.0,
+                  'avgEasiness': 0.0,
+                  'reviewCount': 0,
+                  'hasMyReview': false,
+                });
+              }
+            }
+          }
+        }
+      }
+    } catch (e) {
+      print('Error loading autumn/winter courses: $e');
+    }
+
+    return courses;
   }
 
   // フィルタリングされた授業を取得
@@ -429,17 +503,34 @@ class _CreditResultPageState extends ConsumerState<CreditResultPage> {
       child: InkWell(
         borderRadius: BorderRadius.circular(15),
         onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder:
-                  (context) => CreditReviewPage(
-                    lectureName: lectureName,
-                    teacherName: teacherName,
-                    courseId: courseId,
-                  ),
-            ),
-          );
+          // 前期と後期で遷移先を分ける
+          final semester = course['semester'] ?? '';
+          if (semester == '後期') {
+            // 後期の場合は秋冬学期用のレビュー一覧画面に遷移
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder:
+                    (context) => AutumnWinterCourseReviewPage(
+                      lectureName: lectureName,
+                      teacherName: teacherName,
+                    ),
+              ),
+            );
+          } else {
+            // 前期の場合は従来のレビュー一覧画面に遷移
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder:
+                    (context) => CreditReviewPage(
+                      lectureName: lectureName,
+                      teacherName: teacherName,
+                      courseId: courseId,
+                    ),
+              ),
+            );
+          }
         },
         child: Padding(
           padding: const EdgeInsets.all(16.0),
@@ -545,7 +636,7 @@ class _CreditResultPageState extends ConsumerState<CreditResultPage> {
 
               // レビュー情報（非同期で取得）
               FutureBuilder<Map<String, dynamic>>(
-                future: _getReviewStats(courseId),
+                future: _getReviewStats(course),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const SizedBox(
@@ -620,38 +711,87 @@ class _CreditResultPageState extends ConsumerState<CreditResultPage> {
     );
   }
 
-  // レビュー統計を取得
-  Future<Map<String, dynamic>> _getReviewStats(String courseId) async {
+  // レビュー統計を取得（前期と後期で異なるロジック）
+  Future<Map<String, dynamic>> _getReviewStats(
+    Map<String, dynamic> course,
+  ) async {
     try {
-      if (courseId.isEmpty)
-        return {'reviewCount': 0, 'avgSatisfaction': 0.0, 'avgEasiness': 0.0};
+      final semester = course['semester'] ?? '';
+      final courseId = course['courseId'] ?? '';
+      final lectureName = course['lectureName'] ?? '';
+      final teacherName = course['teacherName'] ?? '';
 
-      final query =
-          await FirebaseFirestore.instance
-              .collection('reviews')
-              .where('courseId', isEqualTo: courseId)
-              .get();
+      if (semester == '後期') {
+        // 後期（秋冬学期）: lectureNameとteacherNameで検索
+        if (lectureName.isEmpty) {
+          return {'reviewCount': 0, 'avgSatisfaction': 0.0, 'avgEasiness': 0.0};
+        }
 
-      final docs = query.docs;
-      if (docs.isEmpty) {
-        return {'reviewCount': 0, 'avgSatisfaction': 0.0, 'avgEasiness': 0.0};
+        Query query = FirebaseFirestore.instance
+            .collection('reviews')
+            .where('lectureName', isEqualTo: lectureName);
+
+        if (teacherName.isNotEmpty) {
+          query = query.where('teacherName', isEqualTo: teacherName);
+        }
+
+        final querySnapshot = await query.get();
+        final docs = querySnapshot.docs;
+
+        if (docs.isEmpty) {
+          return {'reviewCount': 0, 'avgSatisfaction': 0.0, 'avgEasiness': 0.0};
+        }
+
+        double sumSatisfaction = 0.0;
+        double sumEasiness = 0.0;
+
+        for (final doc in docs) {
+          final data = doc.data() as Map<String, dynamic>? ?? {};
+          sumSatisfaction +=
+              (data['overallSatisfaction'] ?? data['satisfaction'] ?? 0.0) *
+              1.0;
+          sumEasiness += (data['easiness'] ?? data['ease'] ?? 0.0) * 1.0;
+        }
+
+        return {
+          'reviewCount': docs.length,
+          'avgSatisfaction': sumSatisfaction / docs.length,
+          'avgEasiness': sumEasiness / docs.length,
+        };
+      } else {
+        // 前期（春夏学期）: courseIdで検索
+        if (courseId.isEmpty) {
+          return {'reviewCount': 0, 'avgSatisfaction': 0.0, 'avgEasiness': 0.0};
+        }
+
+        final query =
+            await FirebaseFirestore.instance
+                .collection('reviews')
+                .where('courseId', isEqualTo: courseId)
+                .get();
+
+        final docs = query.docs;
+        if (docs.isEmpty) {
+          return {'reviewCount': 0, 'avgSatisfaction': 0.0, 'avgEasiness': 0.0};
+        }
+
+        double sumSatisfaction = 0.0;
+        double sumEasiness = 0.0;
+
+        for (final doc in docs) {
+          final data = doc.data() as Map<String, dynamic>? ?? {};
+          sumSatisfaction +=
+              (data['overallSatisfaction'] ?? data['satisfaction'] ?? 0.0) *
+              1.0;
+          sumEasiness += (data['easiness'] ?? data['ease'] ?? 0.0) * 1.0;
+        }
+
+        return {
+          'reviewCount': docs.length,
+          'avgSatisfaction': sumSatisfaction / docs.length,
+          'avgEasiness': sumEasiness / docs.length,
+        };
       }
-
-      double sumSatisfaction = 0.0;
-      double sumEasiness = 0.0;
-
-      for (final doc in docs) {
-        final data = doc.data();
-        sumSatisfaction +=
-            (data['overallSatisfaction'] ?? data['satisfaction'] ?? 0.0) * 1.0;
-        sumEasiness += (data['easiness'] ?? data['ease'] ?? 0.0) * 1.0;
-      }
-
-      return {
-        'reviewCount': docs.length,
-        'avgSatisfaction': sumSatisfaction / docs.length,
-        'avgEasiness': sumEasiness / docs.length,
-      };
     } catch (e) {
       print('Error getting review stats: $e');
       return {'reviewCount': 0, 'avgSatisfaction': 0.0, 'avgEasiness': 0.0};

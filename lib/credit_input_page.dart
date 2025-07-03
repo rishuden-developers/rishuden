@@ -21,6 +21,24 @@ import 'main_page.dart';
 import 'credit_review_page.dart'
     show LectureFormat, AttendanceStrictness, ExamType;
 
+const List<String> tagOptions = [
+  '楽単',
+  '神講義',
+  '鬼講義',
+  '単位取りやすい',
+  '単位取りにくい',
+  '面白い',
+  'つまらない',
+  '実用的',
+  '理論的',
+  '実習あり',
+  'グループワーク',
+  'プレゼンあり',
+  '小テストあり',
+  'レポートあり',
+  '出席あり',
+];
+
 class CreditInputPage extends ConsumerStatefulWidget {
   final String lectureName;
   final String teacherName;
@@ -64,23 +82,6 @@ class _CreditInputPageState extends ConsumerState<CreditInputPage> {
     '神',
     '鬼',
     '楽単',
-  ];
-  final List<String> _tagOptions = [
-    '楽単',
-    '神講義',
-    '鬼講義',
-    '単位取りやすい',
-    '単位取りにくい',
-    '面白い',
-    'つまらない',
-    '実用的',
-    '理論的',
-    '実習あり',
-    'グループワーク',
-    'プレゼンあり',
-    '小テストあり',
-    'レポートあり',
-    '出席あり',
   ];
   final List<String> _classFormats = ['対面', 'オンデマンド', 'Zoom', 'その他'];
 
@@ -685,7 +686,7 @@ class _CreditInputPageState extends ConsumerState<CreditInputPage> {
           spacing: 8.0,
           runSpacing: 4.0,
           children:
-              _tagOptions.map((tag) {
+              _selectedTags.map((tag) {
                 final isSelected = _selectedTags.contains(tag);
                 return FilterChip(
                   label: Text(tag),
