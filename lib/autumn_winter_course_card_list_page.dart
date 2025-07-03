@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'credit_review_page.dart';
+import 'autumn_winter_review_input_page.dart';
+import 'autumn_winter_course_review_page.dart';
 import 'providers/timetable_provider.dart';
 import 'common_bottom_navigation.dart'; // ボトムナビゲーション用
 import 'main_page.dart';
@@ -84,6 +87,10 @@ class _AutumnWinterCourseCardListPageState
           }
         }
       }
+
+      // 秋冬学期用: 授業名・教員名でレビュー情報を取得
+      await _loadReviewStatsForAutumnWinter(allCourses);
+
       setState(() {
         _allCourses = allCourses;
         _currentPage = 1;
@@ -93,6 +100,60 @@ class _AutumnWinterCourseCardListPageState
     } catch (e) {
       print('Error loading autumn/winter courses: $e');
       setState(() => _isLoading = false);
+    }
+  }
+
+  // 秋冬学期用: 授業名・教員名でレビュー統計を取得
+  Future<void> _loadReviewStatsForAutumnWinter(
+    List<Map<String, dynamic>> courses,
+  ) async {
+    for (int i = 0; i < courses.length; i++) {
+      final lectureName = courses[i]['lectureName'];
+      final teacherName = courses[i]['teacherName'];
+
+      if (lectureName.isNotEmpty && teacherName.isNotEmpty) {
+        try {
+          // 授業名と教員名でレビューを検索
+          final reviewsSnapshot =
+              await FirebaseFirestore.instance
+                  .collection('reviews')
+                  .where('lectureName', isEqualTo: lectureName)
+                  .where('teacherName', isEqualTo: teacherName)
+                  .get();
+
+          final reviews = reviewsSnapshot.docs;
+          if (reviews.isNotEmpty) {
+            double totalSatisfaction = 0.0;
+            double totalEasiness = 0.0;
+            bool hasMyReview = false;
+            final user = FirebaseAuth.instance.currentUser;
+
+            for (final doc in reviews) {
+              final data = doc.data();
+              final satisfaction = (data['overallSatisfaction'] ?? 0.0) * 1.0;
+              final easiness = (data['easiness'] ?? 0.0) * 1.0;
+
+              totalSatisfaction += satisfaction;
+              totalEasiness += easiness;
+
+              // 自分のレビューがあるかチェック
+              if (user != null && data['userId'] == user.uid) {
+                hasMyReview = true;
+              }
+            }
+
+            courses[i] = {
+              ...courses[i],
+              'avgSatisfaction': totalSatisfaction / reviews.length,
+              'avgEasiness': totalEasiness / reviews.length,
+              'reviewCount': reviews.length,
+              'hasMyReview': hasMyReview,
+            };
+          }
+        } catch (e) {
+          print('Error fetching reviews for $lectureName - $teacherName: $e');
+        }
+      }
     }
   }
 
@@ -285,12 +346,11 @@ class _AutumnWinterCourseCardListPageState
                                                     builder:
                                                         (
                                                           context,
-                                                        ) => CreditReviewPage(
+                                                        ) => AutumnWinterCourseReviewPage(
                                                           lectureName:
                                                               paged[index]['lectureName'],
                                                           teacherName:
                                                               paged[index]['teacherName'],
-                                                          courseId: null,
                                                         ),
                                                   ),
                                                 );
