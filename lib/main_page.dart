@@ -1,12 +1,11 @@
 import "package:flutter/material.dart";
 import 'package:firebase_auth/firebase_auth.dart';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'login_page.dart';
 import 'welcome_page.dart';
 import 'mail_page.dart';
 import 'park_page.dart';
-import 'character_question_page.dart';
-import 'user_profile_page.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'common_bottom_navigation.dart';
 import 'time_schedule_page.dart';
@@ -16,12 +15,17 @@ import 'providers/current_page_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'credit_explore_page.dart';
 import 'setting_page/setting_page.dart';
+import 'character_question_page.dart';
+import 'user_profile_page.dart';
+
 import 'data_upload_page.dart';
 import 'services/notification_service.dart';
 import 'providers/background_image_provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
+
+import 'menu_page.dart';
 
 class MainPage extends ConsumerStatefulWidget {
   final bool showLoginBonus;
@@ -164,6 +168,7 @@ class _MainPageState extends ConsumerState<MainPage> {
         ],
       ),
       bottomNavigationBar: const CommonBottomNavigation(),
+
       // park_page.dart から Drawer のコードを移植
       endDrawer: Drawer(
         child: Container(
@@ -294,8 +299,10 @@ class _MainPageState extends ConsumerState<MainPage> {
           ),
         ),
       ),
+
     );
   }
+
 }
 
 class AuthWrapper extends StatelessWidget {
@@ -373,3 +380,5 @@ class AuthWrapper extends StatelessWidget {
     );
   }
 }
+
+
