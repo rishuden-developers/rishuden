@@ -131,7 +131,16 @@ class _MainPageState extends ConsumerState<MainPage> {
       extendBodyBehindAppBar: true,
       body: Stack(
         children: [
+          // 背景画像を最下層に追加
+          Positioned.fill(
+            child: Image.asset(
+              ref.watch(backgroundImagePathProvider),
+              fit: BoxFit.cover,
+            ),
+          ),
+          // ページ本体
           IndexedStack(index: currentPage.index, children: pages),
+          // parkページ用のアイコンボタン
           if (currentPage == AppPage.park)
             Positioned(
               top: MediaQuery.of(context).padding.top,
