@@ -102,12 +102,26 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
   Map<String, int> get lateCount =>
       ref.watch(timetableProvider)['lateCount'] ?? {};
 
+  // ★★★ ローディング状態を取得 ★★★
+  bool get isLoading => ref.watch(timetableProvider)['isLoading'] ?? false;
+
+  // ★★★ 保存エラーを取得 ★★★
+  String? get saveError => ref.watch(timetableProvider)['saveError'];
+
   // データの更新メソッド（UIは変更しない）
   void _updateCellNotes(Map<String, String> notes) {
+    print(
+      'TimeSchedulePage - _updateCellNotes called with ${notes.length} items',
+    );
+    print('TimeSchedulePage - Cell notes content: $notes');
     ref.read(timetableProvider.notifier).updateCellNotes(notes);
   }
 
   void _updateWeeklyNotes(Map<String, String> notes) {
+    print(
+      'TimeSchedulePage - _updateWeeklyNotes called with ${notes.length} items',
+    );
+    print('TimeSchedulePage - Weekly notes content: $notes');
     ref.read(timetableProvider.notifier).updateWeeklyNotes(notes);
   }
 
@@ -138,37 +152,51 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
 
   // 時間割データを読み込み
   Future<void> _loadTimetableData() async {
-    print('Loading timetable data from Firebase...');
-    await ref.read(timetableProvider.notifier).loadFromFirestore();
+    print('TimeSchedulePage - Loading timetable data from Firebase...');
+    try {
+      await ref.read(timetableProvider.notifier).loadFromFirestore();
+      print('TimeSchedulePage - Timetable data loaded successfully');
 
-    // ★★★ 保存されたcourseIdを読み込んで復元 ★★★
-    if (mounted) {
-      final savedCourseIds = courseIds;
-      if (savedCourseIds.isNotEmpty) {
-        // _globalSubjectToCourseIdに復元
-        _globalSubjectToCourseId.clear();
-        _globalSubjectToCourseId.addAll(savedCourseIds);
+      // ★★★ 保存されたcourseIdを読み込んで復元 ★★★
+      if (mounted) {
+        final savedCourseIds = courseIds;
+        if (savedCourseIds.isNotEmpty) {
+          // _globalSubjectToCourseIdに復元
+          _globalSubjectToCourseId.clear();
+          _globalSubjectToCourseId.addAll(savedCourseIds);
 
-        // globalCourseMappingProviderにも復元（正規化された授業名で）
-        final globalMappingNotifier = ref.read(
-          globalCourseMappingProvider.notifier,
-        );
-        for (var entry in savedCourseIds.entries) {
-          // 古い形式のデータの場合は、後方互換性のために古いAPIを使用
-          final normalizedName = globalMappingNotifier.normalizeSubjectName(
-            entry.key,
+          // globalCourseMappingProviderにも復元（正規化された授業名で）
+          final globalMappingNotifier = ref.read(
+            globalCourseMappingProvider.notifier,
           );
-          // 古い形式のaddCourseMappingを使用（後方互換性のため）
-          // 新しい形式では、授業名・教室・曜日・時限が必要だが、
-          // 保存されたデータには教室・曜日・時限の情報がないため、
-          // 古いAPIを使用して復元する
-          globalMappingNotifier.addCourseMappingBySubjectName(
-            normalizedName,
-            entry.value,
-          );
+          for (var entry in savedCourseIds.entries) {
+            // 古い形式のデータの場合は、後方互換性のために古いAPIを使用
+            final normalizedName = globalMappingNotifier.normalizeSubjectName(
+              entry.key,
+            );
+            // 古い形式のaddCourseMappingを使用（後方互換性のため）
+            // 新しい形式では、授業名・教室・曜日・時限が必要だが、
+            // 保存されたデータには教室・曜日・時限の情報がないため、
+            // 古いAPIを使用して復元する
+            globalMappingNotifier.addCourseMappingBySubjectName(
+              normalizedName,
+              entry.value,
+            );
+          }
+
+          print('DEBUG: 保存されたcourseIdを復元しました: $_globalSubjectToCourseId');
         }
-
-        print('DEBUG: 保存されたcourseIdを復元しました: $_globalSubjectToCourseId');
+      }
+    } catch (e) {
+      print('TimeSchedulePage - Error loading timetable data: $e');
+      // ★★★ エラー時はUIに通知 ★★★
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('時間割データの読み込みに失敗しました: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     }
   }
@@ -176,8 +204,13 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
   @override
   void initState() {
     super.initState();
+    final today = DateTime.now();
+    _displayedMonday = today.subtract(Duration(days: today.weekday - 1));
     _pageController = PageController(initialPage: _initialPage);
-    _loadTimetableData(); // 非同期だが、initStateではawaitできない
+    // ★★★ 初期化時はローディング状態を待つ ★★★
+    _loadTimetableData();
+    // ★★★ 予定のFirestoreロードを追加 ★★★
+    _loadEventsFromFirestore();
     _updateHighlight();
     _highlightTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
       if (mounted) {
@@ -190,15 +223,12 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (!_isInitialWeekLoaded) {
+    // ★★★ ローディング完了後に初期週を読み込む ★★★
+    if (!_isInitialWeekLoaded && !isLoading) {
       _changeWeek(_initialPage);
       _isInitialWeekLoaded = true;
     }
     _fetchCharacterInfoFromFirebase();
-    // ホットリロード時にもデータを再読み込み（ただし初回のみ）
-    if (!_isInitialWeekLoaded) {
-      _loadTimetableData(); // 非同期だが、didChangeDependenciesではawaitできない
-    }
   }
 
   Future<void> _fetchCharacterInfoFromFirebase() async {
@@ -509,16 +539,36 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
           weeklyNoteKey = "W_C_${dayIndex}_$periodIndex";
         }
 
+        // ★★★ デバッグログを追加 ★★★
+        print('TimeSchedulePage - _getNoteForCell:');
+        print('  - dayIndex: $dayIndex, periodIndex: $periodIndex');
+        print('  - subject: ${entry.subjectName}, courseId: ${entry.courseId}');
+        print('  - oneTimeNoteKey: $oneTimeNoteKey');
+        print('  - weeklyNoteKey: $weeklyNoteKey');
+        print('  - cellNotes count: ${cellNotes.length}');
+        print('  - weeklyNotes count: ${weeklyNotes.length}');
+        print(
+          '  - cellNotes contains oneTimeNoteKey: ${cellNotes.containsKey(oneTimeNoteKey)}',
+        );
+        print(
+          '  - weeklyNotes contains weeklyNoteKey: ${weeklyNotes.containsKey(weeklyNoteKey)}',
+        );
+
         // ★★★ 修正：その日の特定のメモが存在する場合はそれを優先表示 ★★★
         if (cellNotes.containsKey(oneTimeNoteKey)) {
-          return cellNotes[oneTimeNoteKey] ?? '';
+          final note = cellNotes[oneTimeNoteKey] ?? '';
+          print('  - Found one-time note: "$note"');
+          return note;
         }
 
         // ★★★ その日の特定のメモが存在しない場合のみ、週次メモを表示 ★★★
         if (weeklyNotes.containsKey(weeklyNoteKey)) {
-          return weeklyNotes[weeklyNoteKey] ?? '';
+          final note = weeklyNotes[weeklyNoteKey] ?? '';
+          print('  - Found weekly note: "$note"');
+          return note;
         }
 
+        print('  - No note found');
         return '';
       }
     }
@@ -1214,6 +1264,8 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                           _weekdayEvents[dayIndex]?.removeAt(eventIndex);
                         }
                       });
+                      // ★★★ 予定のFirestore保存を追加 ★★★
+                      _saveEventsToFirestore();
                       Navigator.of(context).pop();
                     },
                     child: const Text(
@@ -1267,6 +1319,8 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                         );
                       }
                     });
+                    // ★★★ 予定のFirestore保存を追加 ★★★
+                    _saveEventsToFirestore();
                     Navigator.of(context).pop();
                   },
                   child: const Text(
@@ -1628,6 +1682,8 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
           ),
         );
       });
+      // ★★★ 予定のFirestore保存を追加 ★★★
+      _saveEventsToFirestore();
     }
   }
 
@@ -2054,6 +2110,16 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                         newWeeklyNotes.remove(weeklyNoteKey);
                       }
                     }
+
+                    // ★★★ 保存前のログを追加 ★★★
+                    print('TimeSchedulePage - Saving notes:');
+                    print('  - oneTimeNoteKey: $oneTimeNoteKey');
+                    print('  - weeklyNoteKey: $weeklyNoteKey');
+                    print('  - newText: "$newText"');
+                    print('  - isWeekly: $isWeekly');
+                    print('  - newCellNotes count: ${newCellNotes.length}');
+                    print('  - newWeeklyNotes count: ${newWeeklyNotes.length}');
+
                     _updateCellNotes(newCellNotes);
                     _updateWeeklyNotes(newWeeklyNotes);
                     _updateAttendancePolicies({
@@ -2110,9 +2176,13 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
         Duration(days: _getDayIndexFromUniqueKey(uniqueKey)),
       ),
     );
-    final currentStatusString = ref
-        .read(timetableProvider.notifier)
-        .getAttendanceStatus(entry.courseId ?? '', date);
+    // ★★★ getAttendanceStatusメソッドを削除したため、直接stateから取得 ★★★
+    final attendanceStatus =
+        ref.read(timetableProvider)['attendanceStatus']
+            as Map<String, Map<String, String>>? ??
+        {};
+    final courseStatus = attendanceStatus[entry.courseId ?? ''] ?? {};
+    final currentStatusString = courseStatus[date];
     final currentStatus =
         currentStatusString != null
             ? AttendanceStatus.values.firstWhere(
@@ -2556,6 +2626,50 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
 
   @override
   Widget build(BuildContext context) {
+    // ★★★ ローディング中はローディング表示 ★★★
+    if (isLoading) {
+      return Scaffold(
+        backgroundColor: const Color(0xFF1a1a1a),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.amberAccent),
+              ),
+              SizedBox(height: 16),
+              Text(
+                '時間割データを読み込み中...',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontFamily: 'misaki',
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // ★★★ 保存エラーがある場合はエラー表示 ★★★
+    if (saveError != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('データの保存に失敗しました: $saveError'),
+            backgroundColor: Colors.red,
+            action: SnackBarAction(
+              label: '再試行',
+              onPressed: () {
+                ref.read(timetableProvider.notifier).clearSaveError();
+              },
+            ),
+          ),
+        );
+      });
+    }
+
     const double bottomPaddingForNavBar = 100.0;
     return Container(
       width: double.infinity,
@@ -2851,6 +2965,148 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
       return picked;
     } else {
       return await showTimePicker(context: context, initialTime: initialTime);
+    }
+  }
+
+  // ★★★ 予定のFirestore保存処理を追加 ★★★
+  Future<void> _saveEventsToFirestore() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        print('DEBUG: 予定をFirestoreに保存中...');
+        print('DEBUG: _weekdayEvents count: ${_weekdayEvents.length}');
+        print('DEBUG: _sundayEvents count: ${_sundayEvents.length}');
+
+        // TimeOfDayを文字列に変換して保存
+        final weekdayEventsForSave = <String, List<Map<String, dynamic>>>{};
+        _weekdayEvents.forEach((dayIndex, events) {
+          weekdayEventsForSave[dayIndex.toString()] =
+              events
+                  .map(
+                    (event) => {
+                      'title': event['title'],
+                      'start':
+                          '${event['start'].hour}:${event['start'].minute}',
+                      'end': '${event['end'].hour}:${event['end'].minute}',
+                      'isWeekly': event['isWeekly'],
+                      'date': event['date'].toIso8601String(),
+                    },
+                  )
+                  .toList();
+        });
+
+        final sundayEventsForSave =
+            _sundayEvents
+                .map(
+                  (event) => {
+                    'title': event['title'],
+                    'start': '${event['start'].hour}:${event['start'].minute}',
+                    'end': '${event['end'].hour}:${event['end'].minute}',
+                    'isWeekly': event['isWeekly'],
+                    'date': event['date'].toIso8601String(),
+                  },
+                )
+                .toList();
+
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .collection('timetable')
+            .doc('events')
+            .set({
+              'weekdayEvents': weekdayEventsForSave,
+              'sundayEvents': sundayEventsForSave,
+              'lastUpdated': FieldValue.serverTimestamp(),
+            }, SetOptions(merge: true));
+
+        print('DEBUG: 予定のFirestore保存完了');
+      }
+    } catch (e) {
+      print('ERROR: 予定のFirestore保存に失敗: $e');
+    }
+  }
+
+  // ★★★ 予定のFirestoreロード処理を追加 ★★★
+  Future<void> _loadEventsFromFirestore() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        print('DEBUG: Firestoreから予定を読み込み中...');
+
+        final doc =
+            await FirebaseFirestore.instance
+                .collection('users')
+                .doc(user.uid)
+                .collection('timetable')
+                .doc('events')
+                .get();
+
+        if (doc.exists) {
+          final data = doc.data()!;
+          print('DEBUG: Firestoreから予定データを取得: ${data.keys}');
+
+          // 平日の予定を復元
+          final weekdayEventsRaw =
+              data['weekdayEvents'] as Map<String, dynamic>? ?? {};
+          _weekdayEvents.clear();
+          weekdayEventsRaw.forEach((dayIndexStr, eventsRaw) {
+            final dayIndex = int.parse(dayIndexStr);
+            final events =
+                (eventsRaw as List<dynamic>).map((eventRaw) {
+                  final event = eventRaw as Map<String, dynamic>;
+                  final startParts = (event['start'] as String).split(':');
+                  final endParts = (event['end'] as String).split(':');
+
+                  return {
+                    'title': event['title'],
+                    'start': TimeOfDay(
+                      hour: int.parse(startParts[0]),
+                      minute: int.parse(startParts[1]),
+                    ),
+                    'end': TimeOfDay(
+                      hour: int.parse(endParts[0]),
+                      minute: int.parse(endParts[1]),
+                    ),
+                    'isWeekly': event['isWeekly'] ?? false,
+                    'date': DateTime.parse(event['date']),
+                  };
+                }).toList();
+            _weekdayEvents[dayIndex] = events;
+          });
+
+          // 日曜の予定を復元
+          final sundayEventsRaw = data['sundayEvents'] as List<dynamic>? ?? [];
+          _sundayEvents.clear();
+          for (final eventRaw in sundayEventsRaw) {
+            final event = eventRaw as Map<String, dynamic>;
+            final startParts = (event['start'] as String).split(':');
+            final endParts = (event['end'] as String).split(':');
+
+            _sundayEvents.add({
+              'title': event['title'],
+              'start': TimeOfDay(
+                hour: int.parse(startParts[0]),
+                minute: int.parse(startParts[1]),
+              ),
+              'end': TimeOfDay(
+                hour: int.parse(endParts[0]),
+                minute: int.parse(endParts[1]),
+              ),
+              'isWeekly': event['isWeekly'] ?? false,
+              'date': DateTime.parse(event['date']),
+            });
+          }
+
+          print(
+            'DEBUG: 予定の復元完了 - 平日: ${_weekdayEvents.length}日, 日曜: ${_sundayEvents.length}件',
+          );
+          setState(() {}); // UIを更新
+        } else {
+          print('DEBUG: Firestoreに予定データが存在しません');
+        }
+      }
+    } catch (e) {
+      print('ERROR: Firestoreからの予定読み込みに失敗: $e');
     }
   }
 }
