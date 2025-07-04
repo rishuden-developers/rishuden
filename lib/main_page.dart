@@ -15,6 +15,8 @@ import 'providers/current_page_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'credit_explore_page.dart';
 import 'setting_page/setting_page.dart';
+import 'character_question_page.dart';
+import 'user_profile_page.dart';
 
 import 'data_upload_page.dart';
 import 'services/notification_service.dart';
