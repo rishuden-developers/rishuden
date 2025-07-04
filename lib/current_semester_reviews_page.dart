@@ -234,7 +234,7 @@ class _CurrentSemesterReviewsPageState
                     final courses = snapshot.data!;
                     return ListView.builder(
                       physics: ClampingScrollPhysics(),
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 80),
                       itemCount: courses.length,
                       itemBuilder: (context, index) {
                         return CourseCard(
