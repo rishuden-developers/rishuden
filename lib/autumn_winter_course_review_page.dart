@@ -12,6 +12,7 @@ import 'package:intl/intl.dart';
 import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'providers/timetable_provider.dart';
+import 'providers/background_image_provider.dart';
 
 class AutumnWinterCourseReviewPage extends ConsumerStatefulWidget {
   final String lectureName;
@@ -175,7 +176,10 @@ class _AutumnWinterCourseReviewPageState
     return Stack(
       children: [
         Positioned.fill(
-          child: Image.asset('assets/night_view.png', fit: BoxFit.cover),
+          child: Image.asset(
+            ref.watch(backgroundImagePathProvider),
+            fit: BoxFit.cover,
+          ),
         ),
         Positioned.fill(child: Container(color: Colors.black.withOpacity(0.5))),
         Material(

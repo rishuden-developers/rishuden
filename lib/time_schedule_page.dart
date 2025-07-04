@@ -18,6 +18,7 @@ import 'timetable_entry.dart';
 import 'timetable.dart';
 import 'providers/timetable_provider.dart';
 import 'providers/global_course_mapping_provider.dart';
+import 'providers/background_image_provider.dart';
 
 enum AttendanceStatus { present, absent, late, none }
 
@@ -2690,7 +2691,10 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
       child: Stack(
         children: [
           Positioned.fill(
-            child: Image.asset("assets/night_view.png", fit: BoxFit.cover),
+            child: Image.asset(
+              ref.watch(backgroundImagePathProvider),
+              fit: BoxFit.cover,
+            ),
           ),
           Positioned.fill(
             child: Container(color: Colors.black.withOpacity(0.4)),

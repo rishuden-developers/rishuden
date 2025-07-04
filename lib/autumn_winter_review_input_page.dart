@@ -6,6 +6,7 @@ import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'common_bottom_navigation.dart';
 import 'main_page.dart';
 import 'providers/current_page_provider.dart';
+import 'providers/background_image_provider.dart';
 
 class AutumnWinterReviewInputPage extends ConsumerStatefulWidget {
   final String lectureName;
@@ -243,7 +244,10 @@ class _AutumnWinterReviewInputPageState
     return Stack(
       children: [
         Positioned.fill(
-          child: Image.asset('assets/night_view.png', fit: BoxFit.cover),
+          child: Image.asset(
+            ref.watch(backgroundImagePathProvider),
+            fit: BoxFit.cover,
+          ),
         ),
         Positioned.fill(child: Container(color: Colors.black.withOpacity(0.5))),
         Material(

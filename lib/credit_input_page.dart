@@ -16,6 +16,7 @@ import 'providers/timetable_provider.dart';
 import 'providers/global_course_mapping_provider.dart';
 import 'providers/current_page_provider.dart';
 import 'main_page.dart';
+import 'providers/background_image_provider.dart';
 
 // credit_review_page.dartからEnumをインポート（同じ定義を持つか、共通ファイルに移動）
 import 'credit_review_page.dart'
@@ -352,7 +353,10 @@ class _CreditInputPageState extends ConsumerState<CreditInputPage> {
     return Stack(
       children: [
         Positioned.fill(
-          child: Image.asset('assets/night_view.png', fit: BoxFit.cover),
+          child: Image.asset(
+            ref.watch(backgroundImagePathProvider),
+            fit: BoxFit.cover,
+          ),
         ),
         Positioned.fill(child: Container(color: Colors.black.withOpacity(0.5))),
         Material(

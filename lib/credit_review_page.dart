@@ -19,6 +19,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'providers/timetable_provider.dart';
 import 'main_page.dart';
 import 'providers/current_page_provider.dart';
+import 'providers/background_image_provider.dart';
 
 // ★★★★ 補足: flutter_rating_bar パッケージの追加 ★★★★
 // pubspec.yaml ファイルの dependencies: の下に追加してください。
@@ -260,7 +261,10 @@ class _CreditReviewPageState extends ConsumerState<CreditReviewPage> {
     return Stack(
       children: [
         Positioned.fill(
-          child: Image.asset('assets/night_view.png', fit: BoxFit.cover),
+          child: Image.asset(
+            ref.watch(backgroundImagePathProvider),
+            fit: BoxFit.cover,
+          ),
         ),
         Positioned.fill(child: Container(color: Colors.black.withOpacity(0.5))),
         Material(

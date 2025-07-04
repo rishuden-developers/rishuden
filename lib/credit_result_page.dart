@@ -17,6 +17,7 @@ import 'package:rishuden/providers/global_review_mapping_provider.dart';
 import 'current_semester_reviews_page.dart' show _CourseCard;
 import 'components/course_card.dart';
 import 'package:rishuden/providers/timetable_provider.dart';
+import 'package:rishuden/providers/background_image_provider.dart';
 
 // 検索結果の各講義を表すデータモデル
 class LectureSearchResult {
@@ -321,7 +322,10 @@ class _CreditResultPageState extends ConsumerState<CreditResultPage> {
     return Stack(
       children: [
         Positioned.fill(
-          child: Image.asset('assets/night_view.png', fit: BoxFit.cover),
+          child: Image.asset(
+            ref.watch(backgroundImagePathProvider),
+            fit: BoxFit.cover,
+          ),
         ),
         Positioned.fill(child: Container(color: Colors.black.withOpacity(0.5))),
         Material(

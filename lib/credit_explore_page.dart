@@ -6,21 +6,21 @@ import 'my_reviews_page.dart';
 import 'credit_result_page.dart';
 import 'autumn_winter_course_card_list_page.dart';
 import 'spring_summer_course_card_list_page.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'providers/background_image_provider.dart';
 
-class CreditExplorePage extends StatefulWidget {
+class CreditExplorePage extends ConsumerWidget {
   const CreditExplorePage({super.key});
 
   @override
-  State<CreditExplorePage> createState() => _CreditExplorePageState();
-}
-
-class _CreditExplorePageState extends State<CreditExplorePage> {
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Stack(
       children: [
         Positioned.fill(
-          child: Image.asset('assets/night_view.png', fit: BoxFit.cover),
+          child: Image.asset(
+            ref.watch(backgroundImagePathProvider),
+            fit: BoxFit.cover,
+          ),
         ),
         Positioned.fill(child: Container(color: Colors.black.withOpacity(0.5))),
         SafeArea(
@@ -93,7 +93,7 @@ class _CreditExplorePageState extends State<CreditExplorePage> {
                 const SizedBox(height: 20),
 
                 // 自分のレビューを書くボタン（横長）
-                _buildMyReviewButton(),
+                _buildMyReviewButton(context),
 
                 const SizedBox(height: 30),
 
@@ -138,7 +138,7 @@ class _CreditExplorePageState extends State<CreditExplorePage> {
     );
   }
 
-  Widget _buildMyReviewButton() {
+  Widget _buildMyReviewButton(BuildContext context) {
     return Container(
       width: double.infinity,
       height: 60,

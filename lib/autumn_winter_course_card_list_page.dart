@@ -10,6 +10,7 @@ import 'common_bottom_navigation.dart'; // ボトムナビゲーション用
 import 'main_page.dart';
 import 'providers/current_page_provider.dart';
 import 'credit_input_page.dart' show tagOptions;
+import 'providers/background_image_provider.dart';
 
 class AutumnWinterCourseCardListPage extends ConsumerStatefulWidget {
   const AutumnWinterCourseCardListPage({super.key});
@@ -349,7 +350,10 @@ class _AutumnWinterCourseCardListPageState
     return Stack(
       children: [
         Positioned.fill(
-          child: Image.asset('assets/night_view.png', fit: BoxFit.cover),
+          child: Image.asset(
+            ref.watch(backgroundImagePathProvider),
+            fit: BoxFit.cover,
+          ),
         ),
         Positioned.fill(child: Container(color: Colors.black.withOpacity(0.5))),
         Material(

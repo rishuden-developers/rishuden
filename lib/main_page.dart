@@ -18,6 +18,10 @@ import 'credit_explore_page.dart';
 import 'setting_page/setting_page.dart';
 import 'data_upload_page.dart';
 import 'services/notification_service.dart';
+import 'providers/background_image_provider.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
+import 'dart:io';
 
 class MainPage extends ConsumerStatefulWidget {
   final bool showLoginBonus;
@@ -219,13 +223,64 @@ class _MainPageState extends ConsumerState<MainPage> {
                   MaterialPageRoute(builder: (context) => const SettingPage()),
                 );
               }),
-              _buildDrawerTile(Icons.help_outline, 'ヘルプ', () {
-                Navigator.pop(context);
+              _buildDrawerTile(Icons.image, '背景画像を変更', () async {
+                showModalBottomSheet(
+                  context: context,
+                  shape: const RoundedRectangleBorder(
+                    borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(16),
+                    ),
+                  ),
+                  builder: (context) {
+                    return SafeArea(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          ListTile(
+                            leading: const Icon(
+                              Icons.refresh,
+                              color: Colors.amber,
+                            ),
+                            title: const Text('デフォルト背景に戻す'),
+                            onTap: () async {
+                              Navigator.pop(context);
+                              await ref
+                                  .read(backgroundImagePathProvider.notifier)
+                                  .resetBackgroundImage();
+                            },
+                          ),
+                          ListTile(
+                            leading: const Icon(
+                              Icons.photo_album,
+                              color: Colors.amber,
+                            ),
+                            title: const Text('アルバムから選ぶ'),
+                            onTap: () async {
+                              Navigator.pop(context);
+                              final picker = ImagePicker();
+                              final picked = await picker.pickImage(
+                                source: ImageSource.gallery,
+                              );
+                              if (picked != null) {
+                                final appDir =
+                                    await getApplicationDocumentsDirectory();
+                                final fileName =
+                                    'background_${DateTime.now().millisecondsSinceEpoch}${picked.name.substring(picked.name.lastIndexOf('.'))}';
+                                final saved = await File(
+                                  picked.path,
+                                ).copy('${appDir.path}/$fileName');
+                                await ref
+                                    .read(backgroundImagePathProvider.notifier)
+                                    .setBackgroundImagePath(saved.path);
+                              }
+                            },
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                );
               }),
-              _buildDrawerTile(Icons.report_problem_outlined, 'ユーザー通報', () {
-                Navigator.pop(context);
-              }),
-              const SizedBox(height: 20),
             ],
           ),
         ),
