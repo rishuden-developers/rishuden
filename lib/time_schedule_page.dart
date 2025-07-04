@@ -6,6 +6,9 @@ import 'package:flutter/cupertino.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:io';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -209,15 +212,22 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
     _pageController = PageController(initialPage: _initialPage);
     // ★★★ 初期化時はローディング状態を待つ ★★★
     _loadTimetableData();
-    // ★★★ 予定のFirestoreロードを追加 ★★★
-    _loadEventsFromFirestore();
+    // ★★★ キャッシュから即座に予定を読み込み、バックグラウンドでFirestoreから最新データを取得 ★★★
+    _loadEventsFromCache();
+    _loadEventsFromFirestore(); // バックグラウンドで実行
     _updateHighlight();
     _highlightTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
       if (mounted) {
         _updateHighlight();
       }
     });
+    // ★★★ 初期化時に必ず今週の時間割をセット ★★★
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _changeWeek(_initialPage);
+    });
   }
+
+  bool _isEventsLoading = true;
 
   bool _isInitialWeekLoaded = false;
   @override
@@ -1264,8 +1274,9 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                           _weekdayEvents[dayIndex]?.removeAt(eventIndex);
                         }
                       });
-                      // ★★★ 予定のFirestore保存を追加 ★★★
+                      // ★★★ 予定のFirestore保存とキャッシュ保存を追加 ★★★
                       _saveEventsToFirestore();
+                      _saveEventsToCache();
                       Navigator.of(context).pop();
                     },
                     child: const Text(
@@ -1319,8 +1330,9 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                         );
                       }
                     });
-                    // ★★★ 予定のFirestore保存を追加 ★★★
+                    // ★★★ 予定のFirestore保存とキャッシュ保存を追加 ★★★
                     _saveEventsToFirestore();
+                    _saveEventsToCache();
                     Navigator.of(context).pop();
                   },
                   child: const Text(
@@ -1682,8 +1694,9 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
           ),
         );
       });
-      // ★★★ 予定のFirestore保存を追加 ★★★
+      // ★★★ 予定のFirestore保存とキャッシュ保存を追加 ★★★
       _saveEventsToFirestore();
+      _saveEventsToCache();
     }
   }
 
@@ -2626,8 +2639,8 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
 
   @override
   Widget build(BuildContext context) {
-    // ★★★ ローディング中はローディング表示 ★★★
-    if (isLoading) {
+    // ★★★ 予定データのローディング中はローディング表示 ★★★
+    if (_isEventsLoading) {
       return Scaffold(
         backgroundColor: const Color(0xFF1a1a1a),
         body: Center(
@@ -2639,7 +2652,7 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
               ),
               SizedBox(height: 16),
               Text(
-                '時間割データを読み込み中...',
+                '予定データを読み込み中...',
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 16,
@@ -3033,6 +3046,9 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
       if (user != null) {
         print('DEBUG: Firestoreから予定を読み込み中...');
 
+        // ★★★ キャッシュを先に表示し、バックグラウンドで最新データを取得 ★★★
+        _loadEventsFromCache();
+
         final doc =
             await FirebaseFirestore.instance
                 .collection('users')
@@ -3100,13 +3116,153 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
           print(
             'DEBUG: 予定の復元完了 - 平日: ${_weekdayEvents.length}日, 日曜: ${_sundayEvents.length}件',
           );
-          setState(() {}); // UIを更新
+
+          // ★★★ キャッシュに保存 ★★★
+          _saveEventsToCache();
+
+          setState(() {
+            _isEventsLoading = false;
+          });
         } else {
           print('DEBUG: Firestoreに予定データが存在しません');
         }
       }
     } catch (e) {
       print('ERROR: Firestoreからの予定読み込みに失敗: $e');
+      // ★★★ エラー時はキャッシュから復元を試行 ★★★
+      _loadEventsFromCache();
+      setState(() {
+        _isEventsLoading = false;
+      });
+    }
+  }
+
+  // ★★★ 予定データのキャッシュ保存 ★★★
+  void _saveEventsToCache() {
+    try {
+      final prefs = SharedPreferences.getInstance();
+      prefs.then((prefs) {
+        // 平日の予定をキャッシュ
+        final weekdayEventsForCache = <String, List<Map<String, dynamic>>>{};
+        _weekdayEvents.forEach((dayIndex, events) {
+          weekdayEventsForCache[dayIndex.toString()] =
+              events
+                  .map(
+                    (event) => {
+                      'title': event['title'],
+                      'start':
+                          '${event['start'].hour}:${event['start'].minute}',
+                      'end': '${event['end'].hour}:${event['end'].minute}',
+                      'isWeekly': event['isWeekly'],
+                      'date': event['date'].toIso8601String(),
+                    },
+                  )
+                  .toList();
+        });
+
+        // 日曜の予定をキャッシュ
+        final sundayEventsForCache =
+            _sundayEvents
+                .map(
+                  (event) => {
+                    'title': event['title'],
+                    'start': '${event['start'].hour}:${event['start'].minute}',
+                    'end': '${event['end'].hour}:${event['end'].minute}',
+                    'isWeekly': event['isWeekly'],
+                    'date': event['date'].toIso8601String(),
+                  },
+                )
+                .toList();
+
+        prefs.setString(
+          'cached_weekday_events',
+          jsonEncode(weekdayEventsForCache),
+        );
+        prefs.setString(
+          'cached_sunday_events',
+          jsonEncode(sundayEventsForCache),
+        );
+        print('DEBUG: 予定データをキャッシュに保存しました');
+      });
+    } catch (e) {
+      print('ERROR: キャッシュ保存に失敗: $e');
+    }
+  }
+
+  // ★★★ 予定データのキャッシュ読み込み ★★★
+  void _loadEventsFromCache() {
+    try {
+      final prefs = SharedPreferences.getInstance();
+      prefs.then((prefs) {
+        final weekdayEventsJson = prefs.getString('cached_weekday_events');
+        final sundayEventsJson = prefs.getString('cached_sunday_events');
+
+        if (weekdayEventsJson != null) {
+          final weekdayEventsRaw =
+              jsonDecode(weekdayEventsJson) as Map<String, dynamic>;
+          _weekdayEvents.clear();
+          weekdayEventsRaw.forEach((dayIndexStr, eventsRaw) {
+            final dayIndex = int.parse(dayIndexStr);
+            final events =
+                (eventsRaw as List<dynamic>).map((eventRaw) {
+                  final event = eventRaw as Map<String, dynamic>;
+                  final startParts = (event['start'] as String).split(':');
+                  final endParts = (event['end'] as String).split(':');
+
+                  return {
+                    'title': event['title'],
+                    'start': TimeOfDay(
+                      hour: int.parse(startParts[0]),
+                      minute: int.parse(startParts[1]),
+                    ),
+                    'end': TimeOfDay(
+                      hour: int.parse(endParts[0]),
+                      minute: int.parse(endParts[1]),
+                    ),
+                    'isWeekly': event['isWeekly'] ?? false,
+                    'date': DateTime.parse(event['date']),
+                  };
+                }).toList();
+            _weekdayEvents[dayIndex] = events;
+          });
+        }
+
+        if (sundayEventsJson != null) {
+          final sundayEventsRaw = jsonDecode(sundayEventsJson) as List<dynamic>;
+          _sundayEvents.clear();
+          for (final eventRaw in sundayEventsRaw) {
+            final event = eventRaw as Map<String, dynamic>;
+            final startParts = (event['start'] as String).split(':');
+            final endParts = (event['end'] as String).split(':');
+
+            _sundayEvents.add({
+              'title': event['title'],
+              'start': TimeOfDay(
+                hour: int.parse(startParts[0]),
+                minute: int.parse(startParts[1]),
+              ),
+              'end': TimeOfDay(
+                hour: int.parse(endParts[0]),
+                minute: int.parse(endParts[1]),
+              ),
+              'isWeekly': event['isWeekly'] ?? false,
+              'date': DateTime.parse(event['date']),
+            });
+          }
+        }
+
+        print(
+          'DEBUG: キャッシュから予定を復元 - 平日: ${_weekdayEvents.length}日, 日曜: ${_sundayEvents.length}件',
+        );
+        setState(() {
+          // キャッシュが空でなければローディング終了
+          if (_weekdayEvents.isNotEmpty || _sundayEvents.isNotEmpty) {
+            _isEventsLoading = false;
+          }
+        });
+      });
+    } catch (e) {
+      print('ERROR: キャッシュ読み込みに失敗: $e');
     }
   }
 }
