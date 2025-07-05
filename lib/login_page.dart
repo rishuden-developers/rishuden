@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'character_question_page.dart';
 import 'register_page.dart';
+import 'welcome_page.dart';
+import 'main.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -58,11 +60,12 @@ class _LoginPageState extends State<LoginPage> {
         return;
       }
 
-      // キャラクター診断ページへ遷移
+      // ログイン成功後はAuthWrapperに任せる（自動的に適切な画面に遷移）
       if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => CharacterQuestionPage()),
+        // アプリのルートに戻る（AuthWrapperが動作する）
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => const MyApp()),
+          (route) => false,
         );
       }
     } catch (e) {

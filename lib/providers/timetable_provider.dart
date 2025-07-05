@@ -9,7 +9,7 @@ class TimetableNotifier extends StateNotifier<Map<String, dynamic>> {
         'cellNotes': <String, String>{},
         'weeklyNotes': <String, String>{},
         'attendancePolicies': <String, String>{},
-        'attendanceStatus': <String, String>{},
+        'attendanceStatus': <String, Map<String, String>>{},
         'absenceCount': <String, int>{},
         'lateCount': <String, int>{},
         'teacherNames': <String, String>{},
@@ -18,6 +18,7 @@ class TimetableNotifier extends StateNotifier<Map<String, dynamic>> {
         'questTaskType': null,
         'questDeadline': null,
         'questDescription': '',
+        'isLoading': true, // ★★★ ローディング状態を追加 ★★★
       }) {
     // 初期化時にFirebaseからデータを読み込み
     _initializeFromFirebase();
@@ -26,20 +27,32 @@ class TimetableNotifier extends StateNotifier<Map<String, dynamic>> {
   // ★★★ 初期化時にFirebaseからデータを読み込む ★★★
   Future<void> _initializeFromFirebase() async {
     try {
+      print('TimetableProvider - Initializing from Firebase...');
       await loadFromFirestore();
+      print('TimetableProvider - Initialization completed');
     } catch (e) {
       print('Error initializing from Firebase: $e');
+      // ★★★ エラー時もローディング状態を解除 ★★★
+      state = {...state, 'isLoading': false};
     }
   }
 
   // セルメモを更新
   void updateCellNotes(Map<String, String> cellNotes) {
+    print(
+      'TimetableProvider - updateCellNotes called. Count: ${cellNotes.length}',
+    );
+    print('TimetableProvider - Cell notes content: $cellNotes');
     state = {...state, 'cellNotes': cellNotes};
     _saveToFirestore();
   }
 
   // 週次メモを更新
   void updateWeeklyNotes(Map<String, String> weeklyNotes) {
+    print(
+      'TimetableProvider - updateWeeklyNotes called. Count: ${weeklyNotes.length}',
+    );
+    print('TimetableProvider - Weekly notes content: $weeklyNotes');
     state = {...state, 'weeklyNotes': weeklyNotes};
     _saveToFirestore();
   }
@@ -50,60 +63,69 @@ class TimetableNotifier extends StateNotifier<Map<String, dynamic>> {
     _saveToFirestore();
   }
 
-  // 出席状況を更新
+  // 出席状態を更新
   void updateAttendanceStatus(Map<String, Map<String, String>> status) {
     state = {...state, 'attendanceStatus': status};
     _saveToFirestore();
   }
 
   // 欠席回数を更新
-  void updateAbsenceCount(Map<String, int> absenceCount) {
-    state = {...state, 'absenceCount': absenceCount};
+  void updateAbsenceCount(Map<String, int> count) {
+    state = {...state, 'absenceCount': count};
     _saveToFirestore();
   }
 
   // 遅刻回数を更新
   void updateLateCount(Map<String, int> count) {
-    final currentData = Map<String, dynamic>.from(state);
-    currentData['lateCount'] = count;
-    state = currentData;
+    state = {...state, 'lateCount': count};
     _saveToFirestore();
   }
 
   // 教員名を更新
   void updateTeacherNames(Map<String, String> teacherNames) {
-    final currentData = Map<String, dynamic>.from(state);
-    currentData['teacherNames'] = teacherNames;
-    state = currentData;
+    state = {...state, 'teacherNames': teacherNames};
     _saveToFirestore();
   }
 
-  // クエスト作成の状態を更新
-  void updateQuestSelectedClass(Map<String, dynamic>? selectedClass) {
-    print('TimetableProvider - Updating questSelectedClass: $selectedClass');
-    state = {...state, 'questSelectedClass': selectedClass};
-    _saveToFirestore();
+  // 出席状態を設定
+  void setAttendanceStatus(String courseId, String date, String status) {
+    final attendanceStatus = Map<String, Map<String, String>>.from(
+      state['attendanceStatus'] ?? {},
+    );
+    if (!attendanceStatus.containsKey(courseId)) {
+      attendanceStatus[courseId] = {};
+    }
+    if (status.isEmpty) {
+      attendanceStatus[courseId]!.remove(date);
+    } else {
+      attendanceStatus[courseId]![date] = status;
+    }
+    updateAttendanceStatus(attendanceStatus);
   }
 
-  void updateQuestTaskType(String? taskType) {
-    print('TimetableProvider - Updating questTaskType: $taskType');
-    state = {...state, 'questTaskType': taskType};
-    _saveToFirestore();
+  // 欠席回数を設定
+  void setAbsenceCount(String courseId, int count) {
+    final absenceCount = Map<String, int>.from(state['absenceCount'] ?? {});
+    if (count <= 0) {
+      absenceCount.remove(courseId);
+    } else {
+      absenceCount[courseId] = count;
+    }
+    updateAbsenceCount(absenceCount);
   }
 
-  void updateQuestDeadline(DateTime? deadline) {
-    print('TimetableProvider - Updating questDeadline: $deadline');
-    state = {...state, 'questDeadline': deadline?.toIso8601String()};
-    _saveToFirestore();
+  // 遅刻回数を設定
+  void setLateCount(String courseId, int count) {
+    final lateCount = Map<String, int>.from(state['lateCount'] ?? {});
+    if (count <= 0) {
+      lateCount.remove(courseId);
+    } else {
+      lateCount[courseId] = count;
+    }
+    updateLateCount(lateCount);
   }
 
-  void updateQuestDescription(String description) {
-    print('TimetableProvider - Updating questDescription: $description');
-    state = {...state, 'questDescription': description};
-    _saveToFirestore();
-  }
-
-  // クエスト作成の状態をリセット
+  // クエストデータをリセット
   void resetQuestData() {
     print('TimetableProvider - Resetting quest data');
     state = {
@@ -162,50 +184,61 @@ class TimetableNotifier extends StateNotifier<Map<String, dynamic>> {
           print(
             'TimetableProvider - Weekly notes count: ${(data['weeklyNotes'] as Map<String, dynamic>?)?.length ?? 0}',
           );
+          print('TimetableProvider - Loaded cellNotes: ${data['cellNotes']}');
+          print(
+            'TimetableProvider - Loaded weeklyNotes: ${data['weeklyNotes']}',
+          );
 
-          // ★★★ 出席状態のデータ構造を変換 ★★★
-          Map<String, Map<String, String>> attendanceStatus = {};
-          final oldAttendanceStatus = data['attendanceStatus'];
-          if (oldAttendanceStatus != null) {
-            if (oldAttendanceStatus is Map<String, dynamic>) {
-              // 新しい形式の場合
-              for (var entry in oldAttendanceStatus.entries) {
-                if (entry.value is Map<String, dynamic>) {
-                  attendanceStatus[entry.key] = Map<String, String>.from(
-                    entry.value,
-                  );
-                }
-              }
-            } else {
-              // 古い形式の場合：後方互換性のための変換
+          // ★★★ 型チェックを強化 ★★★
+          final cellNotesRaw = data['cellNotes'];
+          final weeklyNotesRaw = data['weeklyNotes'];
+
+          Map<String, String> cellNotes;
+          Map<String, String> weeklyNotes;
+
+          if (cellNotesRaw is Map) {
+            try {
+              cellNotes = Map<String, String>.from(cellNotesRaw);
               print(
-                'TimetableProvider - Converting old attendance status format',
+                'TimetableProvider - Cell notes converted successfully: ${cellNotes.length} items',
               );
-              final oldStatus = Map<String, String>.from(oldAttendanceStatus);
-              for (var entry in oldStatus.entries) {
-                // 古い形式: "courseId_20241201" -> "absent"
-                // 新しい形式: "courseId" -> {"20241201": "absent"}
-                final parts = entry.key.split('_');
-                if (parts.length >= 2) {
-                  final date = parts.last;
-                  final courseId = parts.sublist(0, parts.length - 1).join('_');
-
-                  if (!attendanceStatus.containsKey(courseId)) {
-                    attendanceStatus[courseId] = {};
-                  }
-                  attendanceStatus[courseId]![date] = entry.value;
-                }
-              }
+            } catch (e) {
+              print('TimetableProvider - Error converting cellNotes: $e');
+              cellNotes = <String, String>{};
             }
+          } else {
+            print(
+              'TimetableProvider - cellNotes is not a Map, type: ${cellNotesRaw.runtimeType}',
+            );
+            cellNotes = <String, String>{};
+          }
+
+          if (weeklyNotesRaw is Map) {
+            try {
+              weeklyNotes = Map<String, String>.from(weeklyNotesRaw);
+              print(
+                'TimetableProvider - Weekly notes converted successfully: ${weeklyNotes.length} items',
+              );
+            } catch (e) {
+              print('TimetableProvider - Error converting weeklyNotes: $e');
+              weeklyNotes = <String, String>{};
+            }
+          } else {
+            print(
+              'TimetableProvider - weeklyNotes is not a Map, type: ${weeklyNotesRaw.runtimeType}',
+            );
+            weeklyNotes = <String, String>{};
           }
 
           state = {
-            'cellNotes': Map<String, String>.from(data['cellNotes'] ?? {}),
-            'weeklyNotes': Map<String, String>.from(data['weeklyNotes'] ?? {}),
+            'cellNotes': cellNotes,
+            'weeklyNotes': weeklyNotes,
             'attendancePolicies': Map<String, String>.from(
               data['attendancePolicies'] ?? {},
             ),
-            'attendanceStatus': attendanceStatus, // ★★★ 新しい構造を使用 ★★★
+            'attendanceStatus': _convertAttendanceStatus(
+              data['attendanceStatus'],
+            ),
             'absenceCount': Map<String, int>.from(data['absenceCount'] ?? {}),
             'lateCount': Map<String, int>.from(data['lateCount'] ?? {}),
             'teacherNames': Map<String, String>.from(
@@ -216,17 +249,43 @@ class TimetableNotifier extends StateNotifier<Map<String, dynamic>> {
             'questTaskType': data['questTaskType'],
             'questDeadline': data['questDeadline'],
             'questDescription': data['questDescription'] ?? '',
+            'isLoading': false, // ★★★ ローディング完了 ★★★
           };
           print('TimetableProvider - State updated successfully');
+          print(
+            'TimetableProvider - Final cellNotes count: ${cellNotes.length}',
+          );
+          print(
+            'TimetableProvider - Final weeklyNotes count: ${weeklyNotes.length}',
+          );
         } else {
           print('TimetableProvider - No document found, using default state');
+          state = {...state, 'isLoading': false};
         }
       } else {
         print('TimetableProvider - No user found');
+        state = {...state, 'isLoading': false};
       }
     } catch (e) {
       print('Error loading timetable data: $e');
+      state = {...state, 'isLoading': false};
     }
+  }
+
+  // 出席状態のデータ構造を変換
+  Map<String, Map<String, String>> _convertAttendanceStatus(
+    dynamic oldAttendanceStatus,
+  ) {
+    if (oldAttendanceStatus is Map) {
+      final converted = <String, Map<String, String>>{};
+      oldAttendanceStatus.forEach((key, value) {
+        if (value is Map) {
+          converted[key.toString()] = Map<String, String>.from(value);
+        }
+      });
+      return converted;
+    }
+    return <String, Map<String, String>>{};
   }
 
   // Firestoreにデータを保存
@@ -234,14 +293,28 @@ class TimetableNotifier extends StateNotifier<Map<String, dynamic>> {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
+        print('TimetableProvider - Saving data to Firestore...');
+        final cellNotes =
+            state['cellNotes'] is Map<String, String>
+                ? state['cellNotes'] as Map<String, String>
+                : <String, String>{};
+        final weeklyNotes =
+            state['weeklyNotes'] is Map<String, String>
+                ? state['weeklyNotes'] as Map<String, String>
+                : <String, String>{};
+        print('TimetableProvider - Cell notes count: ${cellNotes.length}');
+        print('TimetableProvider - Weekly notes count: ${weeklyNotes.length}');
+        print('TimetableProvider - Cell notes to save: $cellNotes');
+        print('TimetableProvider - Weekly notes to save: $weeklyNotes');
+
         await FirebaseFirestore.instance
             .collection('users')
             .doc(user.uid)
             .collection('timetable')
             .doc('notes')
             .set({
-              'cellNotes': state['cellNotes'],
-              'weeklyNotes': state['weeklyNotes'],
+              'cellNotes': cellNotes,
+              'weeklyNotes': weeklyNotes,
               'attendancePolicies': state['attendancePolicies'],
               'attendanceStatus': state['attendanceStatus'],
               'absenceCount': state['absenceCount'],
@@ -254,60 +327,35 @@ class TimetableNotifier extends StateNotifier<Map<String, dynamic>> {
               'questDescription': state['questDescription'],
               'lastUpdated': FieldValue.serverTimestamp(),
             }, SetOptions(merge: true));
+        print('TimetableProvider - Data saved successfully');
+      } else {
+        print('TimetableProvider - No user found, skipping save');
       }
     } catch (e) {
       print('Error saving timetable data: $e');
+      // ★★★ 保存エラー時はUIに通知する仕組みを追加 ★★★
+      state = {...state, 'saveError': e.toString()};
     }
   }
 
-  // ★★★ 新しいメソッド：特定の授業の特定の日付の出席状態を設定 ★★★
-  void setAttendanceStatus(String courseId, String date, String status) {
-    final attendanceStatus = Map<String, Map<String, String>>.from(
-      state['attendanceStatus'],
-    );
-
-    if (!attendanceStatus.containsKey(courseId)) {
-      attendanceStatus[courseId] = {};
-    }
-
-    if (status.isEmpty) {
-      attendanceStatus[courseId]!.remove(date);
-      if (attendanceStatus[courseId]!.isEmpty) {
-        attendanceStatus.remove(courseId);
-      }
-    } else {
-      attendanceStatus[courseId]![date] = status;
-    }
-
-    updateAttendanceStatus(attendanceStatus);
-  }
-
-  // ★★★ 新しいメソッド：特定の授業の特定の日付の出席状態を取得 ★★★
-  String? getAttendanceStatus(String courseId, String date) {
-    final attendanceStatus =
-        state['attendanceStatus'] as Map<String, Map<String, String>>;
-    return attendanceStatus[courseId]?[date];
-  }
-
-  // 特定のcourseIdの教員名を取得
-  String? getTeacherName(String courseId) {
-    final teacherNames = state['teacherNames'] as Map<String, String>?;
-    return teacherNames?[courseId];
-  }
-
-  // 特定のcourseIdの教員名を設定
+  // 教員名を設定
   void setTeacherName(String courseId, String teacherName) {
-    final currentData = Map<String, dynamic>.from(state);
-    final teacherNames = Map<String, String>.from(
-      currentData['teacherNames'] ?? {},
-    );
-    teacherNames[courseId] = teacherName;
-    currentData['teacherNames'] = teacherNames;
-    state = currentData;
-    _saveToFirestore();
+    final teacherNames = Map<String, String>.from(state['teacherNames']);
+    if (teacherName.isEmpty) {
+      teacherNames.remove(courseId);
+    } else {
+      teacherNames[courseId] = teacherName;
+    }
+    updateTeacherNames(teacherNames);
   }
 
-  // 教員名が設定されている講義の一覧を取得
+  // 教員名を取得
+  String getTeacherName(String courseId) {
+    final teacherNames = state['teacherNames'] as Map<String, String>? ?? {};
+    return teacherNames[courseId] ?? '';
+  }
+
+  // 教員名のリストを取得
   List<Map<String, String>> getLecturesWithTeachers() {
     final teacherNames = state['teacherNames'] as Map<String, String>? ?? {};
 
@@ -342,6 +390,17 @@ class TimetableNotifier extends StateNotifier<Map<String, dynamic>> {
   String? getCourseId(String cellKey) {
     final courseIds = state['courseIds'] as Map<String, String>?;
     return courseIds?[cellKey];
+  }
+
+  // ★★★ ローディング状態を取得 ★★★
+  bool get isLoading => state['isLoading'] ?? false;
+
+  // ★★★ 保存エラーを取得 ★★★
+  String? get saveError => state['saveError'];
+
+  // ★★★ 保存エラーをクリア ★★★
+  void clearSaveError() {
+    state = {...state, 'saveError': null};
   }
 }
 

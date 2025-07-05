@@ -16,10 +16,29 @@ import 'providers/timetable_provider.dart';
 import 'providers/global_course_mapping_provider.dart';
 import 'providers/current_page_provider.dart';
 import 'main_page.dart';
+import 'providers/background_image_provider.dart';
 
 // credit_review_page.dartからEnumをインポート（同じ定義を持つか、共通ファイルに移動）
 import 'credit_review_page.dart'
     show LectureFormat, AttendanceStrictness, ExamType;
+
+const List<String> tagOptions = [
+  '楽単',
+  '神講義',
+  '鬼講義',
+  '単位取りやすい',
+  '単位取りにくい',
+  '面白い',
+  'つまらない',
+  '実用的',
+  '理論的',
+  '実習あり',
+  'グループワーク',
+  'プレゼンあり',
+  '小テストあり',
+  'レポートあり',
+  '出席あり',
+];
 
 class CreditInputPage extends ConsumerStatefulWidget {
   final String lectureName;
@@ -64,23 +83,6 @@ class _CreditInputPageState extends ConsumerState<CreditInputPage> {
     '神',
     '鬼',
     '楽単',
-  ];
-  final List<String> _tagOptions = [
-    '楽単',
-    '神講義',
-    '鬼講義',
-    '単位取りやすい',
-    '単位取りにくい',
-    '面白い',
-    'つまらない',
-    '実用的',
-    '理論的',
-    '実習あり',
-    'グループワーク',
-    'プレゼンあり',
-    '小テストあり',
-    'レポートあり',
-    '出席あり',
   ];
   final List<String> _classFormats = ['対面', 'オンデマンド', 'Zoom', 'その他'];
 
@@ -351,7 +353,10 @@ class _CreditInputPageState extends ConsumerState<CreditInputPage> {
     return Stack(
       children: [
         Positioned.fill(
-          child: Image.asset('assets/night_view.png', fit: BoxFit.cover),
+          child: Image.asset(
+            ref.watch(backgroundImagePathProvider),
+            fit: BoxFit.cover,
+          ),
         ),
         Positioned.fill(child: Container(color: Colors.black.withOpacity(0.5))),
         Material(
@@ -693,7 +698,7 @@ class _CreditInputPageState extends ConsumerState<CreditInputPage> {
           spacing: 8.0,
           runSpacing: 4.0,
           children:
-              _tagOptions.map((tag) {
+              _selectedTags.map((tag) {
                 final isSelected = _selectedTags.contains(tag);
                 return FilterChip(
                   label: Text(tag),

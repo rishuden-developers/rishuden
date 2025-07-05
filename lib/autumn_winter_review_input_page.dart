@@ -6,6 +6,7 @@ import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'common_bottom_navigation.dart';
 import 'main_page.dart';
 import 'providers/current_page_provider.dart';
+import 'providers/background_image_provider.dart';
 
 class AutumnWinterReviewInputPage extends ConsumerStatefulWidget {
   final String lectureName;
@@ -110,8 +111,15 @@ class _AutumnWinterReviewInputPageState
 
   // レビュー保存
   Future<void> _saveReview() async {
-    if (!mounted) return;
-    if (_isLoading) return;
+    print('秋冬学期レビュー投稿開始');
+    if (!mounted) {
+      print('コンポーネントがマウントされていません');
+      return;
+    }
+    if (_isLoading) {
+      print('既にローディング中です');
+      return;
+    }
 
     setState(() => _isLoading = true);
 
@@ -134,6 +142,7 @@ class _AutumnWinterReviewInputPageState
     }
 
     try {
+      print('レビューデータ作成開始');
       // レビューデータを作成
       final reviewData = {
         'lectureName': lectureName,
@@ -157,16 +166,22 @@ class _AutumnWinterReviewInputPageState
       print('秋冬学期レビュー投稿: $reviewData');
 
       // reviewsコレクションに保存
+      print('Firestoreへの保存開始');
       await FirebaseFirestore.instance.collection('reviews').add(reviewData);
+      print('Firestoreへの保存完了');
 
       // 報酬の計算と付与
+      print('報酬計算開始');
       int reward = 5;
       if (_commentController.text.trim().isNotEmpty) {
         reward += 5;
       }
+      print('報酬: $reward個');
       await _giveTakoyakiReward(reward);
+      print('報酬付与完了');
 
       if (mounted) {
+        print('レビュー投稿成功 - 画面更新');
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('レビューを保存しました！たこ焼き$reward個GET！')));
@@ -175,8 +190,9 @@ class _AutumnWinterReviewInputPageState
       }
     } catch (e, st) {
       print('秋冬学期レビュー投稿エラー: $e');
-      print(st);
+      print('スタックトレース: $st');
       if (mounted) {
+        print('エラー時の画面更新');
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('レビュー投稿に失敗: $e')));
@@ -187,19 +203,28 @@ class _AutumnWinterReviewInputPageState
 
   // たこ焼き報酬付与
   Future<void> _giveTakoyakiReward(int amount) async {
+    print('たこ焼き報酬付与開始: $amount個');
     final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
+    if (user == null) {
+      print('ユーザーがログインしていません');
+      return;
+    }
 
     try {
+      print('ユーザードキュメント更新開始');
       final userRef = FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid);
       await userRef.update({'takoyakiCount': FieldValue.increment(amount)});
+      print('たこ焼き報酬付与成功');
     } catch (e) {
+      print('たこ焼き報酬付与エラー: $e');
       if (e is FirebaseException && e.code == 'not-found') {
+        print('ユーザードキュメントが存在しないため、新規作成');
         await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
           'takoyakiCount': amount,
         }, SetOptions(merge: true));
+        print('ユーザードキュメント新規作成完了');
       } else {
         print('たこ焼き報酬の付与に失敗: $e');
       }
@@ -219,7 +244,10 @@ class _AutumnWinterReviewInputPageState
     return Stack(
       children: [
         Positioned.fill(
-          child: Image.asset('assets/night_view.png', fit: BoxFit.cover),
+          child: Image.asset(
+            ref.watch(backgroundImagePathProvider),
+            fit: BoxFit.cover,
+          ),
         ),
         Positioned.fill(child: Container(color: Colors.black.withOpacity(0.5))),
         Material(

@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'welcome_page.dart';
 import 'firebase_options.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/services.dart';
+import 'main_page.dart';
+import 'services/notification_service.dart';
+import 'services/background_message_handler.dart';
 // import 'json_paste_upload_page.dart'; // ← もう不要なら削除してOK
 
 void main() async {
@@ -15,6 +19,13 @@ void main() async {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
+
+    // バックグラウンド通知ハンドラーを設定
+    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+
+    // 通知サービスを初期化
+    await NotificationService().initialize();
+
     await initializeDateFormatting('ja_JP', null);
     runApp(ProviderScope(child: const MyApp()));
   } catch (e) {
@@ -36,7 +47,7 @@ class MyApp extends StatelessWidget {
       title: 'Rishuden',
       theme: ThemeData(primarySwatch: Colors.blue),
       debugShowCheckedModeBanner: false,
-      home: WelcomePage(),
+      home: AuthWrapper(),
     );
   }
 }

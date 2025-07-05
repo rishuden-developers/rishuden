@@ -1,101 +1,36 @@
-// credit_review_page.dart
 import 'package:flutter/material.dart';
-import 'package:flutter_rating_bar/flutter_rating_bar.dart'; // ★レート表示に利用するパッケージをインポート
+import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'common_bottom_navigation.dart'; // 共通フッターウィジェット
-import 'park_page.dart';
-import 'time_schedule_page.dart';
-import 'ranking_page.dart';
-import 'item_page.dart';
-import 'credit_input_page.dart'; // レビュー投稿画面への遷移用
-import 'credit_explore_page.dart'; // ボトムナビゲーション用
-import 'providers/global_review_mapping_provider.dart';
-import 'character_data.dart'; // キャラクターデータをインポート
+import 'common_bottom_navigation.dart';
+import 'main_page.dart';
+import 'providers/current_page_provider.dart';
+import 'autumn_winter_review_input_page.dart';
+import 'character_data.dart';
 import 'package:intl/intl.dart';
 import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'providers/timetable_provider.dart';
-import 'main_page.dart';
-import 'providers/current_page_provider.dart';
 import 'providers/background_image_provider.dart';
 
-// ★★★★ 補足: flutter_rating_bar パッケージの追加 ★★★★
-// pubspec.yaml ファイルの dependencies: の下に追加してください。
-// dependencies:
-//   flutter:
-//     sdk: flutter
-//   flutter_rating_bar: ^5.1.1 # 最新バージョンを確認してください
-// ----------------------------------------------------
-
-enum LectureFormat { faceToFace, onDemand, zoom, other }
-
-enum AttendanceStrictness {
-  flexible,
-  everyTimeRollCall,
-  attendancePoints,
-  noAttendance,
-}
-
-enum ExamType { report, written, attendanceBased, none, other }
-
-// Dummy Review Data Structure (for demonstration of filtering)
-class LectureReview {
+class AutumnWinterCourseReviewPage extends ConsumerStatefulWidget {
   final String lectureName;
   final String teacherName;
-  final String userId;
-  final double overallSatisfaction;
-  final double easiness;
-  final LectureFormat lectureFormat;
-  final AttendanceStrictness attendanceStrictness;
-  final ExamType examType;
-  final String teacherFeature;
-  final String comment;
-  final List<String> tags;
-  final String reviewId;
-  final String reviewDate;
 
-  LectureReview({
-    required this.lectureName,
-    required this.teacherName,
-    required this.userId,
-    required this.overallSatisfaction,
-    required this.easiness,
-    required this.lectureFormat,
-    required this.attendanceStrictness,
-    required this.examType,
-    required this.teacherFeature,
-    required this.comment,
-    required this.tags,
-    required this.reviewId,
-    required this.reviewDate,
-  });
-}
-
-class CreditReviewPage extends ConsumerStatefulWidget {
-  final String lectureName;
-  final String teacherName;
-  final String? courseId; // ★ courseIdに統一
-  final String? initialDescription; // 講義の概要
-  final double? initialOverallSatisfaction; // 講義全体の平均満足度
-  final double? initialEasiness; // 講義全体の平均楽単度
-
-  const CreditReviewPage({
+  const AutumnWinterCourseReviewPage({
     super.key,
     required this.lectureName,
     required this.teacherName,
-    this.courseId, // ★ courseIdに統一
-    this.initialDescription,
-    this.initialOverallSatisfaction,
-    this.initialEasiness,
   });
 
   @override
-  ConsumerState<CreditReviewPage> createState() => _CreditReviewPageState();
+  ConsumerState<AutumnWinterCourseReviewPage> createState() =>
+      _AutumnWinterCourseReviewPageState();
 }
 
-class _CreditReviewPageState extends ConsumerState<CreditReviewPage> {
+class _AutumnWinterCourseReviewPageState
+    extends ConsumerState<AutumnWinterCourseReviewPage> {
   List<Map<String, dynamic>> _allReviews = [];
   List<Map<String, dynamic>> _filteredReviews = [];
   bool _isLoading = true;
@@ -109,7 +44,6 @@ class _CreditReviewPageState extends ConsumerState<CreditReviewPage> {
   @override
   void initState() {
     super.initState();
-    // initStateではrefが使えないため、WidgetsBinding.instance.addPostFrameCallbackを使用
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _subscribeToReviews();
     });
@@ -117,25 +51,20 @@ class _CreditReviewPageState extends ConsumerState<CreditReviewPage> {
 
   @override
   void dispose() {
-    _reviewsSubscription?.cancel(); // ★ ページが破棄されるときにStreamの監視をキャンセル
+    _reviewsSubscription?.cancel();
     super.dispose();
   }
 
-  // Firebaseのレビュー変更を監視
+  // Firebaseのレビュー変更を監視（秋冬学期用：lectureNameとteacherNameでフィルタリング）
   void _subscribeToReviews() async {
     setState(() => _isLoading = true);
     try {
       Query query = FirebaseFirestore.instance.collection('reviews');
 
-      // courseIdでフィルタリング（その講義のレビューのみを取得）
-      if (widget.courseId != null && widget.courseId!.isNotEmpty) {
-        query = query.where('courseId', isEqualTo: widget.courseId);
-      } else {
-        // courseIdがない場合は、lectureNameとteacherNameでフィルタリング
-        query = query.where('lectureName', isEqualTo: widget.lectureName);
-        if (widget.teacherName.isNotEmpty) {
-          query = query.where('teacherName', isEqualTo: widget.teacherName);
-        }
+      // 秋冬学期用: lectureNameとteacherNameでフィルタリング
+      query = query.where('lectureName', isEqualTo: widget.lectureName);
+      if (widget.teacherName.isNotEmpty) {
+        query = query.where('teacherName', isEqualTo: widget.teacherName);
       }
 
       final querySnapshot = await query.get();
@@ -176,7 +105,7 @@ class _CreditReviewPageState extends ConsumerState<CreditReviewPage> {
       });
       _applyFilters();
     } catch (e) {
-      print('Error loading reviews: $e');
+      print('Error loading autumn/winter reviews: $e');
       if (!mounted) return;
       setState(() {
         _isLoading = false;
@@ -242,20 +171,6 @@ class _CreditReviewPageState extends ConsumerState<CreditReviewPage> {
             ? _allReviews
             : _allReviews.where((r) => r['userId'] != user.uid).toList();
 
-    // courseIdがwidget.courseIdと一致するレビューだけを抽出
-    final filteredReviews =
-        _allReviews
-            .where(
-              (r) =>
-                  (r['courseId'] ?? '').toString().trim() ==
-                  (widget.courseId ?? '').toString().trim(),
-            )
-            .toList();
-
-    // デバッグ用: Firestoreから取得したレビュー件数を出力
-    print('レビュー件数: ${_allReviews.length}');
-    print('CreditReviewPageでのwidget.courseId: \\${widget.courseId}');
-
     final double topOffset =
         kToolbarHeight + MediaQuery.of(context).padding.top;
     return Stack(
@@ -306,7 +221,7 @@ class _CreditReviewPageState extends ConsumerState<CreditReviewPage> {
                     _buildLectureInfoCard(),
                     const SizedBox(height: 20),
                     _buildOverallRatingsCard(),
-                    if (filteredReviews.isEmpty) ...[
+                    if (_allReviews.isEmpty) ...[
                       const SizedBox(height: 32),
                       Center(
                         child: Text(
@@ -320,13 +235,13 @@ class _CreditReviewPageState extends ConsumerState<CreditReviewPage> {
                     ] else ...[
                       const SizedBox(height: 20),
                       // すべてのレビューをカードで表示
-                      ...filteredReviews
+                      ..._allReviews
                           .map<Widget>(_buildOtherReviewCard)
                           .toList(),
                     ],
                     const SizedBox(height: 20),
                     _buildPostReviewButton(context),
-                    const SizedBox(height: 200), // ボトムナビの高さ分の余白を増加
+                    const SizedBox(height: 200), // ボトムナビの高さ分の余白
                   ],
                 ),
               ),
@@ -354,7 +269,7 @@ class _CreditReviewPageState extends ConsumerState<CreditReviewPage> {
 
   Widget _buildLectureInfoCard() {
     return Card(
-      margin: EdgeInsets.zero, // Remove margin to allow for specific padding
+      margin: EdgeInsets.zero,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
       elevation: 5,
       color: Colors.white,
@@ -373,17 +288,21 @@ class _CreditReviewPageState extends ConsumerState<CreditReviewPage> {
               ),
             ),
             const SizedBox(height: 4),
-            _EditableTeacherName(
-              courseId: widget.courseId,
-              initialTeacherName: widget.teacherName,
-            ),
-            if (widget.initialDescription != null) ...[
-              const SizedBox(height: 12),
-              Text(
-                widget.initialDescription!,
-                style: const TextStyle(fontSize: 14, color: Colors.black87),
+            Text(
+              widget.teacherName.isNotEmpty ? widget.teacherName : '未設定',
+              style: TextStyle(
+                fontSize: 18,
+                color:
+                    widget.teacherName.isNotEmpty
+                        ? Colors.grey[700]
+                        : Colors.grey[500],
+                fontStyle:
+                    widget.teacherName.isEmpty
+                        ? FontStyle.italic
+                        : FontStyle.normal,
+                fontFamily: 'NotoSansJP',
               ),
-            ],
+            ),
           ],
         ),
       ),
@@ -466,20 +385,13 @@ class _CreditReviewPageState extends ConsumerState<CreditReviewPage> {
   Widget _buildPostReviewButton(BuildContext context) {
     return ElevatedButton.icon(
       onPressed: () {
-        if (widget.courseId == null || widget.courseId!.isEmpty) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('courseIdが取得できません。授業カードから遷移してください。')),
-          );
-          return;
-        }
         Navigator.push(
           context,
           MaterialPageRoute(
             builder:
-                (context) => CreditInputPage(
+                (context) => AutumnWinterReviewInputPage(
                   lectureName: widget.lectureName,
                   teacherName: widget.teacherName,
-                  courseId: widget.courseId!,
                 ),
           ),
         ).then((result) {
@@ -508,113 +420,6 @@ class _CreditReviewPageState extends ConsumerState<CreditReviewPage> {
           side: BorderSide(color: Colors.teal[100]!, width: 1.5),
         ),
         elevation: 4,
-      ),
-    );
-  }
-
-  Widget _buildMyReviewCard(Map<String, dynamic> review) {
-    return Card(
-      color: Colors.cyan[50],
-      elevation: 6,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // キャラクター画像
-            Container(
-              width: 56,
-              height: 56,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-                color: Colors.grey[200],
-              ),
-              child: _getCharacterImageWidget(review['userId']),
-            ),
-            const SizedBox(width: 16),
-            // レビュー内容
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'あなたのレビュー',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                      color: Colors.cyan,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      RatingBarIndicator(
-                        rating: review['overallSatisfaction'],
-                        itemBuilder:
-                            (context, index) =>
-                                const Icon(Icons.star, color: Colors.amber),
-                        itemCount: 5,
-                        itemSize: 20.0,
-                        direction: Axis.horizontal,
-                      ),
-                      Text(
-                        review['createdAt'] != null
-                            ? DateFormat('yyyy/MM/dd').format(
-                              (review['createdAt'] as Timestamp).toDate(),
-                            )
-                            : '',
-                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '形式: ${_formatEnum(review['lectureFormat'])}',
-                    style: const TextStyle(color: Colors.black87),
-                  ),
-                  Text(
-                    '出席: ${_formatEnum(review['attendanceStrictness'])}',
-                    style: const TextStyle(color: Colors.black87),
-                  ),
-                  Text(
-                    '試験: ${_formatEnum(review['examType'])}',
-                    style: const TextStyle(color: Colors.black87),
-                  ),
-                  Text(
-                    '教員特徴: ${review['teacherFeature']}',
-                    style: const TextStyle(color: Colors.black87),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'コメント: ${review['comment']}',
-                    style: const TextStyle(color: Colors.black87),
-                  ),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 6.0,
-                    children:
-                        review['tags']
-                            .map<Widget>(
-                              (tag) => Chip(
-                                label: Text(
-                                  tag,
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.cyan[100],
-                                  ),
-                                ),
-                                backgroundColor: Colors.cyan[100],
-                              ),
-                            )
-                            .toList(),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -842,94 +647,5 @@ extension FirstWhereOrNullExtension<E> on Iterable<E> {
       if (test(element)) return element;
     }
     return null;
-  }
-}
-
-// 教員名編集用Widget
-class _EditableTeacherName extends StatefulWidget {
-  final String? courseId;
-  final String initialTeacherName;
-  const _EditableTeacherName({this.courseId, required this.initialTeacherName});
-
-  @override
-  State<_EditableTeacherName> createState() => _EditableTeacherNameState();
-}
-
-class _EditableTeacherNameState extends State<_EditableTeacherName> {
-  late TextEditingController _controller;
-  bool _isEditing = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = TextEditingController(text: widget.initialTeacherName);
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final teacherName = _controller.text;
-    return _isEditing
-        ? Row(
-          children: [
-            Expanded(
-              child: TextField(
-                controller: _controller,
-                autofocus: true,
-                style: const TextStyle(fontSize: 18, fontFamily: 'NotoSansJP'),
-                decoration: const InputDecoration(
-                  hintText: '教員名を入力してください',
-                  border: InputBorder.none,
-                  isDense: true,
-                  contentPadding: EdgeInsets.zero,
-                ),
-                onSubmitted: (value) => _save(value),
-                onEditingComplete: () => _save(_controller.text),
-              ),
-            ),
-            IconButton(
-              icon: const Icon(Icons.check, size: 20),
-              onPressed: () => _save(_controller.text),
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(),
-            ),
-          ],
-        )
-        : GestureDetector(
-          onTap: () {
-            setState(() {
-              _isEditing = true;
-            });
-          },
-          child: Text(
-            teacherName.isNotEmpty ? teacherName : '未設定',
-            style: TextStyle(
-              fontSize: 18,
-              color:
-                  teacherName.isNotEmpty ? Colors.grey[700] : Colors.grey[500],
-              fontStyle:
-                  teacherName.isEmpty ? FontStyle.italic : FontStyle.normal,
-              fontFamily: 'NotoSansJP',
-            ),
-          ),
-        );
-  }
-
-  void _save(String value) async {
-    setState(() {
-      _isEditing = false;
-    });
-    if (widget.courseId != null && widget.courseId!.isNotEmpty) {
-      // timetableProviderに保存
-      final container = ProviderScope.containerOf(context, listen: false);
-      container
-          .read(timetableProvider.notifier)
-          .setTeacherName(widget.courseId!, value);
-    }
   }
 }

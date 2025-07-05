@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Rishuden</string>
+	<string>履修伝説 ver1.0</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -47,6 +47,8 @@
 	</array>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>このアプリではプロフィール画像の設定等のために写真ライブラリへのアクセス許可が必要です。</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>背景画像の保存のために写真ライブラリへアクセスします。</string>
 	<key>UIDeviceFamily</key>
 	<array>
 		<integer>1</integer>

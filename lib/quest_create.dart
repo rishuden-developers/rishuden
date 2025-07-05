@@ -376,15 +376,14 @@ class _QuestCreationWidgetState extends ConsumerState<QuestCreationWidget> {
 
                               print('DEBUG: クエスト作成を開始します');
 
-                              ref
-                                  .read(timetableProvider.notifier)
-                                  .updateQuestTaskType(tempTaskType);
-                              ref
-                                  .read(timetableProvider.notifier)
-                                  .updateQuestDeadline(tempDeadline);
-                              ref
-                                  .read(timetableProvider.notifier)
-                                  .updateQuestDescription(tempDescription);
+                              // ★★★ 直接stateを更新するように修正 ★★★
+                              final currentState = ref.read(timetableProvider);
+                              ref.read(timetableProvider.notifier).state = {
+                                ...currentState,
+                                'questTaskType': tempTaskType,
+                                'questDeadline': tempDeadline,
+                                'questDescription': tempDescription,
+                              };
 
                               print('DEBUG: widget.onCreateを呼び出します');
                               widget.onCreate(
@@ -607,28 +606,25 @@ class _QuestCreationWidgetState extends ConsumerState<QuestCreationWidget> {
                               child: InkWell(
                                 onTap: () async {
                                   // 授業情報を更新
-                                  ref
-                                      .read(timetableProvider.notifier)
-                                      .updateQuestSelectedClass({
-                                        'id': entry!.id,
-                                        'subjectName': entry.subjectName,
-                                        'classroom': entry.classroom,
-                                        'dayOfWeek': entry.dayOfWeek,
-                                        'period': entry.period,
-                                        'date': entry.date,
-                                        'courseId': entry.courseId,
-                                      });
+                                  // ★★★ 直接stateを更新するように修正 ★★★
+                                  final currentState = ref.read(
+                                    timetableProvider,
+                                  );
+                                  ref.read(timetableProvider.notifier).state = {
+                                    ...currentState,
+                                    'questSelectedClass': selectedClass,
+                                  };
 
                                   print(
-                                    'DEBUG: 授業タップ - ${entry.subjectName}, courseId: ${entry.courseId}',
+                                    'DEBUG: 授業タップ - ${entry?.subjectName}, courseId: ${entry?.courseId}',
                                   );
 
                                   // 最新クエストを検索（courseIdがnullの場合は従来の手動入力）
-                                  if (entry.courseId != null) {
+                                  if (entry?.courseId != null) {
                                     print('DEBUG: courseIdがあるため、過去のクエストを検索します');
                                     final latestQuests =
                                         await _getLatestQuestsForCourse(
-                                          entry.courseId!,
+                                          entry!.courseId!,
                                         );
 
                                     print(
@@ -656,11 +652,11 @@ class _QuestCreationWidgetState extends ConsumerState<QuestCreationWidget> {
                                       if (selectedTaskType != null &&
                                           selectedDeadline != null) {
                                         print(
-                                          'Quest Create - Showing dialog with existing data for ${entry.subjectName}',
+                                          'Quest Create - Showing dialog with existing data for ${entry?.subjectName}',
                                         );
                                       } else {
                                         print(
-                                          'Quest Create - Showing dialog for new quest for ${entry.subjectName}',
+                                          'Quest Create - Showing dialog for new quest for ${entry?.subjectName}',
                                         );
                                       }
                                       _showTaskDetailsDialog();
@@ -673,11 +669,11 @@ class _QuestCreationWidgetState extends ConsumerState<QuestCreationWidget> {
                                     if (selectedTaskType != null &&
                                         selectedDeadline != null) {
                                       print(
-                                        'Quest Create - Showing dialog with existing data for ${entry.subjectName}',
+                                        'Quest Create - Showing dialog with existing data for ${entry?.subjectName}',
                                       );
                                     } else {
                                       print(
-                                        'Quest Create - Showing dialog for new quest for ${entry.subjectName}',
+                                        'Quest Create - Showing dialog for new quest for ${entry?.subjectName}',
                                       );
                                     }
                                     _showTaskDetailsDialog();

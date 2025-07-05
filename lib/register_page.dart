@@ -33,6 +33,7 @@ class _RegisterPageState extends State<RegisterPage> {
             .doc(userCredential.user!.uid)
             .set({
               'calendarUrl': _calendarUrlController.text.trim(),
+              'profileCompleted': false, // 新規登録時はfalseに設定
             }, SetOptions(merge: true));
       }
 
@@ -104,49 +105,12 @@ class _RegisterPageState extends State<RegisterPage> {
     }
   }
 
-  void _showTermsDialog() {
-    showDialog(
-      context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text(
-              '利用規約',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            content: SingleChildScrollView(
-              child: const Text(
-                '履修伝説（以下「当アプリ」）は、ユーザーのプライバシーを尊重し、個人情報の保護に努めます。\n\n'
-                '**1. 収集する情報**\n'
-                '当アプリでは、以下の情報を収集することがあります。\n'
-                '• メールアドレス（Google認証時）\n'
-                '• ユーザー名・学部名など（任意）\n'
-                '• アプリ内の利用履歴・課題提出状況\n\n'
-                '**2. 利用目的**\n'
-                '収集した情報は以下の目的で使用します。\n'
-                '• ユーザー識別とアカウント管理\n'
-                '• 履修サポート機能の提供\n'
-                '• ユーザー同士のクエスト・投稿機能の提供\n'
-                '• アプリ改善のための分析\n\n'
-                '**3. 情報の共有**\n'
-                '取得した情報は、法令に基づく場合を除き、第三者に提供・共有することはありません。\n\n'
-                '**4. クッキー（Cookies）について**\n'
-                '当アプリでは、利用状況を分析するためにクッキー等を使用する場合があります。\n\n'
-                '**5. プライバシーポリシーの変更**\n'
-                '必要に応じて、本ポリシーの内容を変更することがあります。変更後はNotionページにて随時更新します。\n\n'
-                '**6. お問い合わせ**\n'
-                'ご質問・ご不明点がある場合は以下のフォームよりお問い合わせください：\n'
-                'https://forms.gle/T8zCqjtdwGMA2xGZ7',
-                style: TextStyle(fontSize: 14, height: 1.5),
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('閉じる'),
-              ),
-            ],
-          ),
-    );
+  Future<void> _openKoan() async {
+    const String koanUrl =
+        'https://koan.osaka-u.ac.jp/campusweb/campusportal.do?page=main';
+
+    final Uri url = Uri.parse(koanUrl);
+    await launchUrl(url, mode: LaunchMode.externalApplication);
   }
 
   @override
