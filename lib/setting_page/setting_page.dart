@@ -26,7 +26,7 @@ class _SettingPageState extends State<SettingPage> {
           style: TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
-            fontFamily: 'misaki',
+            fontFamily: 'Noto Sans JP',
           ),
         ),
         backgroundColor: Colors.indigo[800],
