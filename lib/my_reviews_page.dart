@@ -247,18 +247,7 @@ class _MyReviewsPageState extends ConsumerState<MyReviewsPage> {
                 left: 0,
                 right: 0,
                 bottom: 0,
-                child: CommonBottomNavigation(
-                  onNavigate: (page) {
-                    ref.read(currentPageProvider.notifier).state = page;
-                    Navigator.of(
-                      context,
-                      rootNavigator: true,
-                    ).pushAndRemoveUntil(
-                      MaterialPageRoute(builder: (context) => MainPage()),
-                      (route) => false,
-                    );
-                  },
-                ),
+                child: CommonBottomNavigation(),
               ),
             ],
           ),
