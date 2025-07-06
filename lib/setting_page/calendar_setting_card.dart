@@ -52,7 +52,7 @@ class _CalendarSettingCardState extends State<CalendarSettingCard> {
           SnackBar(
             content: const Text(
               'ログインが必要です',
-              style: TextStyle(fontFamily: 'misaki', color: Colors.white),
+              style: TextStyle(fontFamily: 'Noto Sans JP', color: Colors.white),
             ),
             backgroundColor: Colors.black.withOpacity(0.85),
             shape: RoundedRectangleBorder(
@@ -77,7 +77,7 @@ class _CalendarSettingCardState extends State<CalendarSettingCard> {
             SnackBar(
               content: const Text(
                 'カレンダーURLを保存しました！\n新規発行のURLは反映まで最大1日程度かかる場合があります。',
-                style: TextStyle(fontFamily: 'misaki', color: Colors.white),
+                style: TextStyle(fontFamily: 'Noto Sans JP', color: Colors.white),
               ),
               backgroundColor: Colors.black.withOpacity(0.85),
               shape: RoundedRectangleBorder(
@@ -98,7 +98,7 @@ class _CalendarSettingCardState extends State<CalendarSettingCard> {
             SnackBar(
               content: const Text(
                 '保存に失敗しました',
-                style: TextStyle(fontFamily: 'misaki', color: Colors.white),
+                style: TextStyle(fontFamily: 'Noto Sans JP', color: Colors.white),
               ),
               backgroundColor: Colors.black.withOpacity(0.85),
               shape: RoundedRectangleBorder(
@@ -115,7 +115,7 @@ class _CalendarSettingCardState extends State<CalendarSettingCard> {
           SnackBar(
             content: const Text(
               'URLを入力してください',
-              style: TextStyle(fontFamily: 'misaki', color: Colors.white),
+              style: TextStyle(fontFamily: 'Noto Sans JP', color: Colors.white),
             ),
             backgroundColor: Colors.black.withOpacity(0.85),
             shape: RoundedRectangleBorder(

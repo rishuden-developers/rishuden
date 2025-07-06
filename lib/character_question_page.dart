@@ -788,6 +788,7 @@ class _CharacterQuestionPageState extends State<CharacterQuestionPage> {
                           offset: Offset(0, 0),
                         ),
                     ],
+                    fontFamily: 'NotoSansJP',
                   ),
                 ),
                 SizedBox(height: 4),
@@ -857,7 +858,11 @@ class _CharacterQuestionPageState extends State<CharacterQuestionPage> {
         children: [
           Text(
             questions[index],
-            style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+              fontFamily: 'NotoSansJP',
+            ),
           ),
           SizedBox(height: 12),
           // スクロール可能なSingleChildScrollViewでボタンを一列に配置
@@ -879,16 +884,27 @@ class _CharacterQuestionPageState extends State<CharacterQuestionPage> {
         children: [
           Text(
             questions[index],
-            style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+              fontFamily: 'NotoSansJP',
+            ),
           ),
           SizedBox(height: 8),
           DropdownButtonFormField<int?>(
             value: answers[index],
             hint: Text(
               '選択してください',
-              style: TextStyle(color: Colors.white.withOpacity(0.7)),
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.7),
+                fontFamily: 'NotoSansJP',
+              ),
             ),
-            style: TextStyle(color: Colors.white, fontSize: 16),
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              fontFamily: 'NotoSansJP',
+            ),
             decoration: InputDecoration(
               enabledBorder: OutlineInputBorder(
                 borderSide: BorderSide(color: Colors.white.withOpacity(0.7)),
@@ -911,6 +927,7 @@ class _CharacterQuestionPageState extends State<CharacterQuestionPage> {
                     fontSize: 14,
                     color: Colors.white54,
                     fontStyle: FontStyle.italic,
+                    fontFamily: 'NotoSansJP',
                   ),
                 ),
               ),
@@ -919,7 +936,11 @@ class _CharacterQuestionPageState extends State<CharacterQuestionPage> {
                   value: entry.key,
                   child: Text(
                     entry.value,
-                    style: TextStyle(fontSize: 14, color: Colors.white),
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.white,
+                      fontFamily: 'NotoSansJP',
+                    ),
                   ),
                 );
               }).toList(),
@@ -950,10 +971,18 @@ class _CharacterQuestionPageState extends State<CharacterQuestionPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('キャラ診断 ver5.0'),
+        title: Text(
+          'キャラ診断 ver5.0',
+          style: TextStyle(
+            fontFamily: 'NotoSansJP',
+            color: Colors.white,
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         backgroundColor: Colors.brown,
         titleTextStyle: TextStyle(
-          fontFamily: 'misaki',
+          fontFamily: 'NotoSansJP',
           color: Colors.white,
           fontSize: 20,
           fontWeight: FontWeight.bold,
@@ -990,6 +1019,7 @@ class _CharacterQuestionPageState extends State<CharacterQuestionPage> {
                             color: Colors.black.withOpacity(0.7),
                           ),
                         ],
+                        fontFamily: 'NotoSansJP',
                       ),
                     ),
                     SizedBox(height: 8),
@@ -1021,7 +1051,11 @@ class _CharacterQuestionPageState extends State<CharacterQuestionPage> {
                         icon: Icon(Icons.psychology, color: Colors.white),
                         label: Text(
                           '診断結果を見る',
-                          style: TextStyle(fontSize: 16, color: Colors.white),
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.white,
+                            fontFamily: 'NotoSansJP',
+                          ),
                         ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor:
@@ -1032,7 +1066,10 @@ class _CharacterQuestionPageState extends State<CharacterQuestionPage> {
                             horizontal: 32,
                             vertical: 16,
                           ),
-                          textStyle: TextStyle(fontWeight: FontWeight.bold),
+                          textStyle: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'NotoSansJP',
+                          ),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(30.0),
                           ),
@@ -1100,7 +1137,7 @@ class _CharacterQuestionPageState extends State<CharacterQuestionPage> {
         SnackBar(
           content: const Text(
             'キャラクターを選択してください',
-            style: TextStyle(fontFamily: 'misaki', color: Colors.white),
+            style: TextStyle(fontFamily: 'NotoSansJP', color: Colors.white),
           ),
           backgroundColor: Colors.black.withOpacity(0.85),
           shape: RoundedRectangleBorder(
@@ -1119,7 +1156,7 @@ class _CharacterQuestionPageState extends State<CharacterQuestionPage> {
         SnackBar(
           content: const Text(
             'すべての項目を入力してください',
-            style: TextStyle(fontFamily: 'misaki', color: Colors.white),
+            style: TextStyle(fontFamily: 'NotoSansJP', color: Colors.white),
           ),
           backgroundColor: Colors.black.withOpacity(0.85),
           shape: RoundedRectangleBorder(
@@ -1164,7 +1201,10 @@ class _CharacterQuestionPageState extends State<CharacterQuestionPage> {
           SnackBar(
             content: Text(
               'エラーが発生しました: $e',
-              style: const TextStyle(fontFamily: 'misaki', color: Colors.white),
+              style: const TextStyle(
+                fontFamily: 'NotoSansJP',
+                color: Colors.white,
+              ),
             ),
             backgroundColor: Colors.black.withOpacity(0.85),
             shape: RoundedRectangleBorder(

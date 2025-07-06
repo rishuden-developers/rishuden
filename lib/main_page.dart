@@ -56,7 +56,7 @@ class _MainPageState extends ConsumerState<MainPage> {
       title: Text(
         title,
         style: const TextStyle(
-          fontFamily: 'misaki',
+          fontFamily: 'NotoSansJP',
           fontSize: 16,
           color: Colors.white,
         ),
@@ -194,7 +194,7 @@ class _MainPageState extends ConsumerState<MainPage> {
                     Text(
                       '冒険のメニュー',
                       style: TextStyle(
-                        fontFamily: 'misaki',
+                        fontFamily: 'NotoSansJP',
                         color: Colors.white,
                         fontSize: 22,
                         shadows: [Shadow(color: Colors.black, blurRadius: 2)],

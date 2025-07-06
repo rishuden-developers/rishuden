@@ -441,6 +441,10 @@ class _CreditInputPageState extends ConsumerState<CreditInputPage> {
                             border: OutlineInputBorder(),
                           ),
                           maxLines: 5,
+                          textInputAction: TextInputAction.done,
+                          onSubmitted: (_) {
+                            FocusScope.of(context).unfocus();
+                          },
                         ),
                         const SizedBox(height: 20),
                         Container(
@@ -555,6 +559,10 @@ class _CreditInputPageState extends ConsumerState<CreditInputPage> {
                 border: InputBorder.none,
                 icon: Icon(Icons.person),
               ),
+              textInputAction: TextInputAction.done,
+              onFieldSubmitted: (_) {
+                FocusScope.of(context).unfocus();
+              },
             ),
           ],
         ),

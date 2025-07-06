@@ -1189,7 +1189,7 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                 '${_days[dayIndex]}の予定',
                 style: const TextStyle(
                   color: Colors.white,
-                  fontFamily: 'misaki',
+                  fontFamily: 'NotoSansJP',
                 ),
               ),
               content: SingleChildScrollView(
@@ -1566,7 +1566,7 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
               title: Text(
                 '${_days[dayIndex]}曜日の予定を追加',
                 style: const TextStyle(
-                  fontFamily: 'misaki',
+                  fontFamily: 'NotoSansJP',
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
                 ),
@@ -1633,7 +1633,7 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                       title: const Text(
                         "毎週の予定にする",
                         style: TextStyle(
-                          fontFamily: 'misaki',
+                          fontFamily: 'NotoSansJP',
                           fontSize: 13,
                           color: Colors.white,
                         ),
@@ -1655,7 +1655,7 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                   child: Text(
                     'キャンセル',
                     style: TextStyle(
-                      fontFamily: 'misaki',
+                      fontFamily: 'NotoSansJP',
                       color: Colors.brown[600],
                     ),
                   ),
@@ -1667,7 +1667,10 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                   ),
                   child: const Text(
                     '保存',
-                    style: TextStyle(fontFamily: 'misaki', color: Colors.white),
+                    style: TextStyle(
+                      fontFamily: 'NotoSansJP',
+                      color: Colors.white,
+                    ),
                   ),
                   onPressed: () => Navigator.of(context).pop(true),
                 ),
@@ -1815,7 +1818,7 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                   Text(
                     "${_days[dayIndex]}曜 ${academicPeriodIndex! + 1}限",
                     style: const TextStyle(
-                      fontFamily: 'misaki',
+                      fontFamily: 'NotoSansJP',
                       fontSize: 16,
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
@@ -1825,7 +1828,7 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                   Text(
                     "${entry!.subjectName} (${entry.originalLocation})",
                     style: TextStyle(
-                      fontFamily: 'misaki',
+                      fontFamily: 'NotoSansJP',
                       fontSize: 12,
                       color: Colors.grey[400],
                     ),
@@ -1862,7 +1865,7 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                       title: const Text(
                         "毎週のメモにする",
                         style: TextStyle(
-                          fontFamily: 'misaki',
+                          fontFamily: 'NotoSansJP',
                           fontSize: 13,
                           color: Colors.white,
                         ),
@@ -1886,7 +1889,7 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                       child: Text(
                         "教員名:",
                         style: const TextStyle(
-                          fontFamily: 'misaki',
+                          fontFamily: 'NotoSansJP',
                           fontSize: 13,
                           color: Colors.white,
                         ),
@@ -1921,7 +1924,7 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                       child: Text(
                         "出席方針:",
                         style: const TextStyle(
-                          fontFamily: 'misaki',
+                          fontFamily: 'NotoSansJP',
                           fontSize: 13,
                           color: Colors.white,
                         ),
@@ -1967,7 +1970,7 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                         child: Text(
                           "出席記録:",
                           style: const TextStyle(
-                            fontFamily: 'misaki',
+                            fontFamily: 'NotoSansJP',
                             fontSize: 13,
                             color: Colors.white,
                           ),
@@ -2104,7 +2107,10 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                   ),
                   child: const Text(
                     '保存',
-                    style: TextStyle(fontFamily: 'misaki', color: Colors.black),
+                    style: TextStyle(
+                      fontFamily: 'NotoSansJP',
+                      color: Colors.black,
+                    ),
                   ),
                   onPressed: () {
                     final newText = noteController.text.trim();
@@ -2345,7 +2351,7 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
               child: Text(
                 title,
                 style: const TextStyle(
-                  fontFamily: 'misaki',
+                  fontFamily: 'NotoSansJP',
                   fontSize: 10,
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
@@ -2479,7 +2485,7 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                               _periodTimes[timeIndex][0],
                               style: const TextStyle(
                                 fontSize: 10,
-                                fontFamily: 'misaki',
+                                fontFamily: 'NotoSansJP',
                                 color: Colors.white,
                                 shadows: [
                                   Shadow(color: Colors.black54, blurRadius: 2),
@@ -2496,7 +2502,7 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                               _periodTimes[timeIndex][1],
                               style: const TextStyle(
                                 fontSize: 10,
-                                fontFamily: 'misaki',
+                                fontFamily: 'NotoSansJP',
                                 color: Colors.white,
                                 shadows: [
                                   Shadow(color: Colors.black54, blurRadius: 2),
@@ -2511,7 +2517,7 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                             ? periodLabels[index].split('').join('\n')
                             : periodLabels[index],
                         style: TextStyle(
-                          fontFamily: 'misaki',
+                          fontFamily: 'NotoSansJP',
                           fontSize: periodLabels[index].length > 1 ? 12 : 18,
                           fontWeight: FontWeight.bold,
                           color: Colors.white,
@@ -2565,7 +2571,7 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 12,
-                            fontFamily: 'misaki',
+                            fontFamily: 'NotoSansJP',
                             color: isSunday ? Colors.red[300] : Colors.white,
                             shadows: const [
                               Shadow(color: Colors.black45, blurRadius: 2),
@@ -2577,7 +2583,7 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                           _dayDates.isNotEmpty ? _dayDates[dayIndex] : "",
                           style: TextStyle(
                             fontSize: 10,
-                            fontFamily: 'misaki',
+                            fontFamily: 'NotoSansJP',
                             color: isSunday ? Colors.red[200] : Colors.white70,
                           ),
                         ),
