@@ -180,7 +180,6 @@ class _RegisterPageState extends State<RegisterPage> {
             // 利用規約リンク
             Center(
               child: GestureDetector(
-                onTap: _showTermsDialog,
                 child: const Text(
                   '利用規約',
                   style: TextStyle(
@@ -292,13 +291,13 @@ class _RegisterPageState extends State<RegisterPage> {
             // 同意して仮登録ボタン
             ElevatedButton(
               child: const Text(
-                '同意して仮登録（メールに2段階認証完了通知が送られます）',
+                'アカウントを作成する',
                 style: TextStyle(
                   color: Colors.white, // 白いテキスト
-                  fontSize: 16,
+                  fontSize: 18,
                   fontWeight: FontWeight.bold,
                 ),
-                textAlign: TextAlign.center, // テキストが長いので中央寄せ
+                textAlign: TextAlign.center,
               ),
               onPressed: _agreedToTerms ? _register : null,
               style: ElevatedButton.styleFrom(
@@ -306,10 +305,14 @@ class _RegisterPageState extends State<RegisterPage> {
                     _agreedToTerms
                         ? const Color(0xFF3498DB)
                         : Colors.grey, // 青色基調
-                padding: const EdgeInsets.symmetric(vertical: 16),
+                padding: const EdgeInsets.symmetric(
+                  vertical: 16,
+                  horizontal: 24,
+                ),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
                 ),
+                elevation: 2, // ボタンに少し影を追加
               ),
             ),
             const SizedBox(height: 20), // 下部の余白
