@@ -115,7 +115,7 @@ class _CharacterDecidePageState extends State<CharacterDecidePage> {
             SnackBar(
               content: const Text(
                 'ログインが必要です',
-                style: TextStyle(fontFamily: 'misaki', color: Colors.white),
+                style: TextStyle(fontFamily: 'NotoSansJP', color: Colors.white),
               ),
               backgroundColor: Colors.black.withOpacity(0.85),
               shape: RoundedRectangleBorder(
@@ -133,7 +133,10 @@ class _CharacterDecidePageState extends State<CharacterDecidePage> {
           SnackBar(
             content: Text(
               'エラーが発生しました: $e',
-              style: const TextStyle(fontFamily: 'misaki', color: Colors.white),
+              style: const TextStyle(
+                fontFamily: 'NotoSansJP',
+                color: Colors.white,
+              ),
             ),
             backgroundColor: Colors.black.withOpacity(0.85),
             shape: RoundedRectangleBorder(
@@ -167,7 +170,7 @@ class _CharacterDecidePageState extends State<CharacterDecidePage> {
         backgroundColor: Colors.brown,
         automaticallyImplyLeading: false,
         titleTextStyle: const TextStyle(
-          fontFamily: 'SansJP',
+          fontFamily: 'NotoSansJP',
           color: Colors.white,
           fontSize: 20,
           fontWeight: FontWeight.bold,
@@ -342,7 +345,10 @@ class _CharacterDecidePageState extends State<CharacterDecidePage> {
                     icon: const Icon(Icons.check, color: Colors.white),
                     label: const Text(
                       "このキャラクターで決定",
-                      style: TextStyle(color: Colors.white),
+                      style: TextStyle(
+                        fontFamily: 'NotoSansJP',
+                        color: Colors.white,
+                      ),
                     ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.brown,

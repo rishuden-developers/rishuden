@@ -6,325 +6,129 @@ import 'my_reviews_page.dart';
 import 'credit_result_page.dart';
 import 'autumn_winter_course_card_list_page.dart';
 import 'spring_summer_course_card_list_page.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'providers/background_image_provider.dart';
+import 'common_bottom_navigation.dart';
 
-class CreditExplorePage extends StatefulWidget {
+class CreditExplorePage extends ConsumerWidget {
   const CreditExplorePage({super.key});
 
   @override
-  State<CreditExplorePage> createState() => _CreditExplorePageState();
-}
-
-class _CreditExplorePageState extends State<CreditExplorePage> {
-  final TextEditingController _searchController = TextEditingController();
-  String? _selectedFaculty;
-  String? _selectedCategory; // 必修/選択
-  String? _selectedDayOfWeek;
-  String? _selectedTag; // タグ検索用
-
-  final List<String> _faculties = [
-    '工学部',
-    '理学部',
-    '医学部',
-    '歯学部',
-    '薬学部',
-    '文学部',
-    '法学部',
-    '経済学部',
-    '人間科学部',
-    '外国語学部',
-    '基礎工学部',
-  ];
-  final List<String> _categories = ['必修', '選択', 'その他'];
-  final List<String> _daysOfWeek = ['月', '火', '水', '木', '金', '土', '日'];
-  final List<String> _tags = [
-    'レポート多め',
-    'グループワークあり',
-    'テストなし',
-    '出席必須',
-    'オンライン完結',
-    'ディスカッション多め',
-    '課題なし',
-    '板書メイン',
-  ];
-
-  void _performSearch() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder:
-            (context) => CreditResultPage(
-              searchQuery:
-                  _searchController.text.isNotEmpty
-                      ? _searchController.text
-                      : null,
-              filterFaculty: _selectedFaculty,
-              filterTag: _selectedTag,
-              filterCategory: _selectedCategory,
-              filterDayOfWeek: _selectedDayOfWeek,
+  Widget build(BuildContext context, WidgetRef ref) {
+    return SafeArea(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          children: [
+            // タイトル
+            const Text(
+              '単位探索',
+              style: TextStyle(
+                fontSize: 32,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+                fontFamily: 'NotoSansJP',
+              ),
             ),
-      ),
-    );
-  }
+            const SizedBox(height: 30),
 
-  @override
-  Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        Positioned.fill(
-          child: Image.asset('assets/night_view.png', fit: BoxFit.cover),
-        ),
-        Positioned.fill(child: Container(color: Colors.black.withOpacity(0.5))),
-        SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              children: [
-                // タイトル
-                const Text(
-                  '単位探索',
-                  style: TextStyle(
-                    fontSize: 32,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                    fontFamily: 'NotoSansJP',
+            // 横並びの2つのボタン
+            SizedBox(
+              height: 190, // ボタンの高さを明示的に制限
+              child: Row(
+                children: [
+                  // 左ボタン：今学期のレビュー確認
+                  Expanded(
+                    child: _buildMainButton(
+                      title: '今の履修を\n確認！',
+                      subtitle: '春夏学期',
+                      icon: Icons.rate_review,
+                      color: Colors.orange[700]!,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder:
+                                (context) =>
+                                    const SpringSummerCourseCardListPage(),
+                          ),
+                        );
+                      },
+                    ),
                   ),
-                ),
-                const SizedBox(height: 30),
+                  const SizedBox(width: 20),
 
-                // 検索バー
-                _buildSearchBar(),
-                const SizedBox(height: 20),
-
-                // 検索フィルターのドロップダウン
-                _buildFilterDropdown('学部で絞り込む', _selectedFaculty, _faculties, (
-                  String? newValue,
-                ) {
-                  setState(() {
-                    _selectedFaculty = newValue;
-                  });
-                }),
-                const SizedBox(height: 10),
-                _buildFilterDropdown('タグで絞り込む', _selectedTag, _tags, (
-                  String? newValue,
-                ) {
-                  setState(() {
-                    _selectedTag = newValue;
-                  });
-                }),
-                const SizedBox(height: 20),
-
-                // 検索ボタン
-                _buildSearchButton(),
-                const SizedBox(height: 30),
-
-                // 横並びの2つのボタン
-                SizedBox(
-                  height: 190, // ボタンの高さを明示的に制限
-                  child: Row(
-                    children: [
-                      // 左ボタン：今学期のレビュー確認
-                      Expanded(
-                        child: _buildMainButton(
-                          title: '今の履修を\n確認！',
-                          subtitle: '春夏学期',
-                          icon: Icons.rate_review,
-                          color: Colors.orange[700]!,
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder:
-                                    (context) =>
-                                        const SpringSummerCourseCardListPage(),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                      const SizedBox(width: 20),
-
-                      // 右ボタン：後期の履修準備
-                      Expanded(
-                        child: _buildMainButton(
-                          title: '後期の履修の\n準備をする！',
-                          subtitle: '秋冬学期',
-                          icon: Icons.school,
-                          color: Colors.green[700]!,
-                          isDisabled: false,
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder:
-                                    (context) =>
-                                        const AutumnWinterCourseCardListPage(),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                    ],
+                  // 右ボタン：後期の履修準備
+                  Expanded(
+                    child: _buildMainButton(
+                      title: '後期の履修の\n準備をする！',
+                      subtitle: '秋冬学期',
+                      icon: Icons.school,
+                      color: Colors.green[700]!,
+                      isDisabled: false,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder:
+                                (context) =>
+                                    const AutumnWinterCourseCardListPage(),
+                          ),
+                        );
+                      },
+                    ),
                   ),
-                ),
-
-                const SizedBox(height: 20),
-
-                // 自分のレビューを書くボタン（横長）
-                _buildMyReviewButton(),
-
-                const SizedBox(height: 30),
-
-                // 説明文
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.white.withOpacity(0.2)),
-                  ),
-                  child: const Column(
-                    children: [
-                      Text(
-                        '使い方',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                          fontFamily: 'NotoSansJP',
-                        ),
-                      ),
-                      SizedBox(height: 12),
-                      Text(
-                        '上：講義名や教員名で検索できます\n左：今学期の履修授業のレビューを確認・投稿できます\n右：後期の履修準備として秋冬学期の授業を探せます\n下：自分のレビューを管理できます',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.white,
-                          fontFamily: 'NotoSansJP',
-                          height: 1.5,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ),
-      ],
-    );
-  }
 
-  Widget _buildSearchBar() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(30.0),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.2),
-            spreadRadius: 1,
-            blurRadius: 5,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: TextField(
-        controller: _searchController,
-        decoration: InputDecoration(
-          hintText: '講義名や教員名で検索...',
-          hintStyle: TextStyle(color: Colors.grey[600]),
-          prefixIcon: Icon(Icons.search, color: Colors.grey[600]),
-          border: InputBorder.none,
-          suffixIcon:
-              _searchController.text.isNotEmpty
-                  ? IconButton(
-                    icon: Icon(Icons.clear, color: Colors.grey[600]),
-                    onPressed: () {
-                      _searchController.clear();
-                      setState(() {});
-                    },
-                  )
-                  : null,
-        ),
-        onChanged: (text) {
-          setState(() {});
-        },
-        onSubmitted: (text) => _performSearch(),
-      ),
-    );
-  }
+            const SizedBox(height: 20),
 
-  Widget _buildFilterDropdown(
-    String hintText,
-    String? selectedValue,
-    List<String> items,
-    ValueChanged<String?> onChanged,
-  ) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.9),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.blueAccent[100]!, width: 1.5),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 3,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          isExpanded: true,
-          value: selectedValue,
-          hint: Text(hintText, style: TextStyle(color: Colors.grey[700])),
-          icon: const Icon(Icons.arrow_drop_down, color: Colors.indigo),
-          iconSize: 24,
-          elevation: 16,
-          style: const TextStyle(color: Colors.black87, fontSize: 16),
-          onChanged: onChanged,
-          items:
-              items.map<DropdownMenuItem<String>>((String value) {
-                return DropdownMenuItem<String>(
-                  value: value,
-                  child: Text(value),
-                );
-              }).toList(),
+            // 自分のレビューを書くボタン（横長）
+            _buildMyReviewButton(context),
+
+            const SizedBox(height: 30),
+
+            // 説明文
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.white.withOpacity(0.2)),
+              ),
+              child: const Column(
+                children: [
+                  Text(
+                    '使い方',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                      fontFamily: 'NotoSansJP',
+                    ),
+                  ),
+                  SizedBox(height: 12),
+                  Text(
+                    '上：講義名や教員名で検索できます\n左：今学期の履修授業のレビューを確認・投稿できます\n右：後期の履修準備として秋冬学期の授業を探せます\n下：自分のレビューを管理できます',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.white,
+                      fontFamily: 'NotoSansJP',
+                      height: 1.5,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildSearchButton() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-      child: ElevatedButton.icon(
-        icon: const Icon(Icons.search, color: Colors.white),
-        label: const Text(
-          'この条件で検索',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color.fromARGB(255, 21, 204, 255),
-          minimumSize: const Size(double.infinity, 50),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-        ),
-        onPressed: _performSearch,
-      ),
-    );
-  }
-
-  Widget _buildMyReviewButton() {
+  Widget _buildMyReviewButton(BuildContext context) {
     return Container(
       width: double.infinity,
       height: 60,

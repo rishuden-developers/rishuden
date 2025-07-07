@@ -153,7 +153,7 @@ class _TaskProgressPainter extends CustomPainter {
           color: Colors.white,
           fontWeight: FontWeight.bold,
           fontSize: size.height * 0.6,
-          fontFamily: 'misaki',
+          fontFamily: 'NotoSansJP',
           shadows: const [
             Shadow(color: Colors.black, blurRadius: 2, offset: Offset(1, 1)),
           ],

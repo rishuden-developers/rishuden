@@ -7,6 +7,7 @@ import 'credit_input_page.dart'; // ★ 遷移先として追加
 import 'common_bottom_navigation.dart'; // ボトムナビゲーション用
 import 'main_page.dart';
 import 'providers/current_page_provider.dart';
+import 'providers/background_image_provider.dart';
 
 // ページの状態で使用するデータモデル
 class MyCourseReviewModel {
@@ -42,9 +43,7 @@ class _MyReviewsPageState extends ConsumerState<MyReviewsPage> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadAndSubscribeToMyCourses();
-    });
+    _loadAndSubscribeToMyCourses();
   }
 
   @override
@@ -186,76 +185,8 @@ class _MyReviewsPageState extends ConsumerState<MyReviewsPage> {
         });
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final double topOffset =
-        kToolbarHeight + MediaQuery.of(context).padding.top;
-    return Stack(
-      children: [
-        Positioned.fill(
-          child: Image.asset('assets/night_view.png', fit: BoxFit.cover),
-        ),
-        Positioned.fill(child: Container(color: Colors.black.withOpacity(0.5))),
-        Material(
-          type: MaterialType.transparency,
-          child: Stack(
-            children: [
-              // AppBar
-              Positioned(
-                top: 0,
-                left: 0,
-                right: 0,
-                child: AppBar(
-                  title: const Text('自分の授業をレビュー'),
-                  backgroundColor: Colors.transparent,
-                  elevation: 0,
-                ),
-              ),
-              // ListView（AppBarの下から画面の一番下まで）
-              Positioned(
-                top: topOffset,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                child:
-                    _isLoading
-                        ? const Center(
-                          child: CircularProgressIndicator(color: Colors.white),
-                        )
-                        : _myCourses.isEmpty
-                        ? const Center(
-                          child: Text(
-                            '時間割に授業が登録されていません。',
-                            style: TextStyle(
-                              color: Colors.white70,
-                              fontSize: 16,
-                            ),
-                          ),
-                        )
-                        : ListView.builder(
-                          physics: ClampingScrollPhysics(),
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          itemCount: _myCourses.length,
-                          itemBuilder: (context, index) {
-                            final course = _myCourses[index];
-                            return _buildResultCard(course);
-                          },
-                        ),
-              ),
-              // ボトムナビ
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: 0,
-                child: CommonBottomNavigation(),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
+=======
+>>>>>>> main
   Widget _buildResultCard(MyCourseReviewModel result) {
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
@@ -330,6 +261,90 @@ class _MyReviewsPageState extends ConsumerState<MyReviewsPage> {
           ),
         ),
       ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final double topOffset =
+        kToolbarHeight + MediaQuery.of(context).padding.top;
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: Image.asset(
+            ref.watch(backgroundImagePathProvider),
+            fit: BoxFit.cover,
+          ),
+        ),
+        Positioned.fill(child: Container(color: Colors.black.withOpacity(0.5))),
+        Material(
+          type: MaterialType.transparency,
+          child: Stack(
+            children: [
+              // AppBar
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: AppBar(
+                  title: const Text('自分の授業をレビュー'),
+                  backgroundColor: Colors.transparent,
+                  elevation: 0,
+                ),
+              ),
+              // ListView（AppBarの下から画面の一番下まで）
+              Positioned(
+                top: topOffset,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child:
+                    _isLoading
+                        ? const Center(
+                          child: CircularProgressIndicator(color: Colors.white),
+                        )
+                        : _myCourses.isEmpty
+                        ? const Center(
+                          child: Text(
+                            '時間割に授業が登録されていません。',
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 16,
+                            ),
+                          ),
+                        )
+                        : ListView.builder(
+                          physics: ClampingScrollPhysics(),
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          itemCount: _myCourses.length,
+                          itemBuilder: (context, index) {
+                            final course = _myCourses[index];
+                            return _buildResultCard(course);
+                          },
+                        ),
+              ),
+              // ボトムナビ
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: CommonBottomNavigation(
+                  onNavigate: (page) {
+                    ref.read(currentPageProvider.notifier).state = page;
+                    Navigator.of(
+                      context,
+                      rootNavigator: true,
+                    ).pushAndRemoveUntil(
+                      MaterialPageRoute(builder: (context) => MainPage()),
+                      (route) => false,
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

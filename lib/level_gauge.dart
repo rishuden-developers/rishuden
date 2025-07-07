@@ -37,7 +37,7 @@ class LiquidLevelGaugeState extends State<LiquidLevelGauge> {
   final TextStyle levelTextStyle = const TextStyle(
     color: Colors.white,
     fontWeight: FontWeight.bold,
-    fontFamily: 'misaki',
+    fontFamily: 'NotoSansJP',
     shadows: [
       Shadow(color: Colors.black54, blurRadius: 2, offset: Offset(1, 1)),
     ],
@@ -217,7 +217,7 @@ class LiquidLevelGaugeState extends State<LiquidLevelGauge> {
                 child: Text(
                   '+20 EXP',
                   style: TextStyle(
-                    fontFamily: 'misaki',
+                    fontFamily: 'NotoSansJP',
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
                     color: Colors.yellowAccent,

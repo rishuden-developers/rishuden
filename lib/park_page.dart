@@ -14,6 +14,7 @@ import 'setting_page/setting_page.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'providers/timetable_provider.dart';
 import 'services/notification_service.dart';
+import 'providers/background_image_provider.dart';
 
 class ParkPage extends ConsumerStatefulWidget {
   final String diagnosedCharacterName;
@@ -320,7 +321,10 @@ class _ParkPageState extends ConsumerState<ParkPage> {
         SnackBar(
           content: Text(
             '${_userName}は ${creatorCharacter}に クエスト作成の お礼の たこ焼きを 一個 渡した',
-            style: const TextStyle(fontFamily: 'misaki', color: Colors.white),
+            style: const TextStyle(
+              fontFamily: 'NotoSansJP',
+              color: Colors.white,
+            ),
           ),
           backgroundColor: Colors.black.withOpacity(0.85),
           shape: RoundedRectangleBorder(
@@ -534,7 +538,7 @@ class _ParkPageState extends ConsumerState<ParkPage> {
                           const Text(
                             '学生団体 OZTECH', // ★ タイトルを変更
                             style: TextStyle(
-                              fontFamily: 'misaki',
+                              fontFamily: 'NotoSansJP',
                               fontSize: 22,
                               fontWeight: FontWeight.bold,
                               color: Colors.white,
@@ -544,7 +548,7 @@ class _ParkPageState extends ConsumerState<ParkPage> {
                           const Text(
                             '履修伝説を作成した学生団体\n大学入学を機にプログラミングを始めた阪大一回生三人と\nデザイン担当の阪大二回生で構成されているらしい。。\n\n',
                             style: TextStyle(
-                              fontFamily: 'misaki',
+                              fontFamily: 'NotoSansJP',
                               fontSize: 16,
                               color: Colors.white,
                               height: 1.5,
@@ -575,7 +579,7 @@ class _ParkPageState extends ConsumerState<ParkPage> {
                                   child: const Text(
                                     'Instagram',
                                     style: TextStyle(
-                                      fontFamily: 'misaki',
+                                      fontFamily: 'NotoSansJP',
                                       fontSize: 14,
                                       color: Colors.white,
                                       fontWeight: FontWeight.bold,
@@ -601,7 +605,7 @@ class _ParkPageState extends ConsumerState<ParkPage> {
                                   child: const Text(
                                     '公式X',
                                     style: TextStyle(
-                                      fontFamily: 'misaki',
+                                      fontFamily: 'NotoSansJP',
                                       fontSize: 14,
                                       color: Colors.white,
                                       fontWeight: FontWeight.bold,
@@ -629,7 +633,7 @@ class _ParkPageState extends ConsumerState<ParkPage> {
                                   child: const Text(
                                     'YouTube',
                                     style: TextStyle(
-                                      fontFamily: 'misaki',
+                                      fontFamily: 'NotoSansJP',
                                       fontSize: 14,
                                       color: Colors.white,
                                       fontWeight: FontWeight.bold,
@@ -694,7 +698,7 @@ class _ParkPageState extends ConsumerState<ParkPage> {
                           const Text(
                             '開発サークル ぽちぽち', // ★ タイトルを変更
                             style: TextStyle(
-                              fontFamily: 'misaki',
+                              fontFamily: 'NotoSansJP',
                               fontSize: 22,
                               fontWeight: FontWeight.bold,
                               color: Colors.white,
@@ -704,7 +708,7 @@ class _ParkPageState extends ConsumerState<ParkPage> {
                           const Text(
                             'アプリ開発サークル\n"ぽちぽちのつどい"はみんなの生活を豊かにするアプリを日夜開発中！\n\n',
                             style: TextStyle(
-                              fontFamily: 'misaki',
+                              fontFamily: 'NotoSansJP',
                               fontSize: 16,
                               color: Colors.white,
                               height: 1.5,
@@ -722,7 +726,7 @@ class _ParkPageState extends ConsumerState<ParkPage> {
                               '公式Xはこちら',
                               textAlign: TextAlign.center,
                               style: TextStyle(
-                                fontFamily: 'misaki',
+                                fontFamily: 'NotoSansJP',
                                 fontSize: 16,
                                 color: Colors.lightBlueAccent,
                                 decoration: TextDecoration.underline,
@@ -759,7 +763,10 @@ class _ParkPageState extends ConsumerState<ParkPage> {
     return Stack(
       children: [
         Positioned.fill(
-          child: Image.asset('assets/night_view.png', fit: BoxFit.cover),
+          child: Image.asset(
+            ref.watch(backgroundImagePathProvider),
+            fit: BoxFit.cover,
+          ),
         ),
         Positioned.fill(child: Container(color: Colors.black.withOpacity(0.5))),
         SafeArea(
@@ -776,7 +783,7 @@ class _ParkPageState extends ConsumerState<ParkPage> {
                       Text(
                         _userName,
                         style: const TextStyle(
-                          fontFamily: 'misaki',
+                          fontFamily: 'NotoSansJP',
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
                           color: Colors.white,
@@ -817,7 +824,7 @@ class _ParkPageState extends ConsumerState<ParkPage> {
                           color: Colors.black,
                           fontSize: topBarHeight * 0.26,
                           fontWeight: FontWeight.bold,
-                          fontFamily: 'misaki',
+                          fontFamily: 'NotoSansJP',
                         ),
                         overflow: TextOverflow.ellipsis,
                         softWrap: false,
@@ -856,7 +863,7 @@ class _ParkPageState extends ConsumerState<ParkPage> {
                             '現在、討伐対象のクエストはありません。',
                             style: TextStyle(
                               color: Colors.white,
-                              fontFamily: 'misaki',
+                              fontFamily: 'NotoSansJP',
                               fontSize: 16,
                             ),
                           ),
@@ -1120,7 +1127,7 @@ class _ParkPageState extends ConsumerState<ParkPage> {
                       fontSize: screenHeight * 0.025,
                       fontWeight: FontWeight.bold,
                       color: textColor,
-                      fontFamily: 'misaki',
+                      fontFamily: 'NotoSansJP',
                       shadows: [
                         BoxShadow(
                           color: textColor.withOpacity(0.7),
@@ -1365,7 +1372,7 @@ class _ParkPageState extends ConsumerState<ParkPage> {
                   _dialogueMessages[_currentMessageIndex],
                   style: const TextStyle(
                     color: Colors.white,
-                    fontFamily: 'misaki',
+                    fontFamily: 'NotoSansJP',
                     fontSize: 18,
                     height: 1.5,
                     shadows: [
@@ -1633,7 +1640,10 @@ class _ParkPageState extends ConsumerState<ParkPage> {
           SnackBar(
             content: Text(
               '${_userName}は ${creatorCharacter}に クエスト作成の お礼の たこ焼きを 一個 渡した',
-              style: const TextStyle(fontFamily: 'misaki', color: Colors.white),
+              style: const TextStyle(
+                fontFamily: 'NotoSansJP',
+                color: Colors.white,
+              ),
             ),
             backgroundColor: Colors.black.withOpacity(0.85),
             shape: RoundedRectangleBorder(
@@ -1673,7 +1683,10 @@ class _ParkPageState extends ConsumerState<ParkPage> {
           SnackBar(
             content: Text(
               '${_userName}は ${creatorCharacter}から たこ焼きを 一個 取り戻した',
-              style: const TextStyle(fontFamily: 'misaki', color: Colors.white),
+              style: const TextStyle(
+                fontFamily: 'NotoSansJP',
+                color: Colors.white,
+              ),
             ),
             backgroundColor: Colors.black.withOpacity(0.85),
             shape: RoundedRectangleBorder(
@@ -1964,7 +1977,7 @@ class _ParkPageState extends ConsumerState<ParkPage> {
           SnackBar(
             content: Text(
               '「$subjectName」の「$taskType」が半数達成！全員にたこ焼き1個、作成者に2個配布されました！',
-              style: TextStyle(fontFamily: 'misaki', color: Colors.white),
+              style: TextStyle(fontFamily: 'NotoSansJP', color: Colors.white),
             ),
             backgroundColor: Colors.black.withOpacity(0.85),
             shape: RoundedRectangleBorder(
@@ -2040,7 +2053,7 @@ class _ParkPageState extends ConsumerState<ParkPage> {
           SnackBar(
             content: Text(
               '「$subjectName」の「$taskType」が全員達成！全員にたこ焼き5個、作成者に10個配布されました！',
-              style: TextStyle(fontFamily: 'misaki', color: Colors.white),
+              style: TextStyle(fontFamily: 'NotoSansJP', color: Colors.white),
             ),
             backgroundColor: Colors.black.withOpacity(0.85),
             shape: RoundedRectangleBorder(
@@ -2091,7 +2104,7 @@ class _ParkPageState extends ConsumerState<ParkPage> {
                           const Text(
                             'たこ焼きの増やし方・使い方',
                             style: TextStyle(
-                              fontFamily: 'misaki',
+                              fontFamily: 'NotoSansJP',
                               fontSize: 22,
                               fontWeight: FontWeight.bold,
                               color: Colors.white,
@@ -2105,7 +2118,7 @@ class _ParkPageState extends ConsumerState<ParkPage> {
                                 Text(
                                   '【たこ焼きの増やし方】',
                                   style: TextStyle(
-                                    fontFamily: 'misaki',
+                                    fontFamily: 'NotoSansJP',
                                     fontSize: 18,
                                     fontWeight: FontWeight.bold,
                                     color: Colors.white,
@@ -2115,7 +2128,7 @@ class _ParkPageState extends ConsumerState<ParkPage> {
                                 Text(
                                   '・ログインボーナス',
                                   style: TextStyle(
-                                    fontFamily: 'misaki',
+                                    fontFamily: 'NotoSansJP',
                                     fontSize: 16,
                                     color: Colors.white,
                                   ),
@@ -2123,7 +2136,7 @@ class _ParkPageState extends ConsumerState<ParkPage> {
                                 Text(
                                   '・クエスト討伐',
                                   style: TextStyle(
-                                    fontFamily: 'misaki',
+                                    fontFamily: 'NotoSansJP',
                                     fontSize: 16,
                                     color: Colors.white,
                                   ),
@@ -2131,7 +2144,7 @@ class _ParkPageState extends ConsumerState<ParkPage> {
                                 Text(
                                   '・クエスト作成',
                                   style: TextStyle(
-                                    fontFamily: 'misaki',
+                                    fontFamily: 'NotoSansJP',
                                     fontSize: 16,
                                     color: Colors.white,
                                   ),
@@ -2139,7 +2152,7 @@ class _ParkPageState extends ConsumerState<ParkPage> {
                                 Text(
                                   '・クエストへのいいね',
                                   style: TextStyle(
-                                    fontFamily: 'misaki',
+                                    fontFamily: 'NotoSansJP',
                                     fontSize: 16,
                                     color: Colors.white,
                                   ),
@@ -2147,7 +2160,7 @@ class _ParkPageState extends ConsumerState<ParkPage> {
                                 Text(
                                   '・単位レビュー投稿',
                                   style: TextStyle(
-                                    fontFamily: 'misaki',
+                                    fontFamily: 'NotoSansJP',
                                     fontSize: 16,
                                     color: Colors.white,
                                   ),
@@ -2156,7 +2169,7 @@ class _ParkPageState extends ConsumerState<ParkPage> {
                                 Text(
                                   '【たこ焼きの使い方】',
                                   style: TextStyle(
-                                    fontFamily: 'misaki',
+                                    fontFamily: 'NotoSansJP',
                                     fontSize: 18,
                                     fontWeight: FontWeight.bold,
                                     color: Colors.white,
@@ -2166,7 +2179,7 @@ class _ParkPageState extends ConsumerState<ParkPage> {
                                 Text(
                                   '・レビュー閲覧',
                                   style: TextStyle(
-                                    fontFamily: 'misaki',
+                                    fontFamily: 'NotoSansJP',
                                     fontSize: 16,
                                     color: Colors.white,
                                   ),
@@ -2174,7 +2187,7 @@ class _ParkPageState extends ConsumerState<ParkPage> {
                                 Text(
                                   '・アイテム購入（ver2.0で実装！）',
                                   style: TextStyle(
-                                    fontFamily: 'misaki',
+                                    fontFamily: 'NotoSansJP',
                                     fontSize: 16,
                                     color: Colors.white,
                                   ),
@@ -2357,7 +2370,7 @@ class _CountdownWidgetState extends State<_CountdownWidget>
           TextSpan(
             text: 'd',
             style: TextStyle(
-              fontFamily: 'misaki',
+              fontFamily: 'NotoSansJP',
               fontSize: screenHeight * 0.02,
               color: labelColor,
             ),
@@ -2377,7 +2390,7 @@ class _CountdownWidgetState extends State<_CountdownWidget>
           TextSpan(
             text: 'h',
             style: TextStyle(
-              fontFamily: 'misaki',
+              fontFamily: 'NotoSansJP',
               fontSize: screenHeight * 0.02,
               color: labelColor,
             ),
@@ -2397,7 +2410,7 @@ class _CountdownWidgetState extends State<_CountdownWidget>
           TextSpan(
             text: 'm',
             style: TextStyle(
-              fontFamily: 'misaki',
+              fontFamily: 'NotoSansJP',
               fontSize: screenHeight * 0.02,
               color: labelColor,
             ),
@@ -2417,7 +2430,7 @@ class _CountdownWidgetState extends State<_CountdownWidget>
           TextSpan(
             text: 's',
             style: TextStyle(
-              fontFamily: 'misaki',
+              fontFamily: 'NotoSansJP',
               fontSize: screenHeight * 0.02,
               color: labelColor,
             ),

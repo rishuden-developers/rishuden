@@ -20,6 +20,10 @@ import 'user_profile_page.dart';
 
 import 'data_upload_page.dart';
 import 'services/notification_service.dart';
+import 'providers/background_image_provider.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
+import 'dart:io';
 
 import 'menu_page.dart';
 
@@ -52,7 +56,7 @@ class _MainPageState extends ConsumerState<MainPage> {
       title: Text(
         title,
         style: const TextStyle(
-          fontFamily: 'misaki',
+          fontFamily: 'NotoSansJP',
           fontSize: 16,
           color: Colors.white,
         ),
@@ -131,7 +135,16 @@ class _MainPageState extends ConsumerState<MainPage> {
       extendBodyBehindAppBar: true,
       body: Stack(
         children: [
+          // 背景画像を最下層に追加
+          Positioned.fill(
+            child: Image.asset(
+              ref.watch(backgroundImagePathProvider),
+              fit: BoxFit.cover,
+            ),
+          ),
+          // ページ本体
           IndexedStack(index: currentPage.index, children: pages),
+          // parkページ用のアイコンボタン
           if (currentPage == AppPage.park)
             Positioned(
               top: MediaQuery.of(context).padding.top,
@@ -155,7 +168,138 @@ class _MainPageState extends ConsumerState<MainPage> {
         ],
       ),
       bottomNavigationBar: const CommonBottomNavigation(),
-      endDrawer: MenuPageDrawer()
+
+      // park_page.dart から Drawer のコードを移植
+      endDrawer: Drawer(
+        child: Container(
+          decoration: const BoxDecoration(
+            image: DecorationImage(
+              image: AssetImage('assets/ranking_guild_background.png'),
+              fit: BoxFit.cover,
+            ),
+          ),
+          child: Column(
+            children: [
+              DrawerHeader(
+                decoration: BoxDecoration(
+                  border: Border(
+                    bottom: BorderSide(color: Colors.amber[300]!, width: 2),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: const [
+                    Icon(Icons.menu_book, color: Colors.white, size: 36),
+                    SizedBox(height: 10),
+                    Text(
+                      '冒険のメニュー',
+                      style: TextStyle(
+                        fontFamily: 'NotoSansJP',
+                        color: Colors.white,
+                        fontSize: 22,
+                        shadows: [Shadow(color: Colors.black, blurRadius: 2)],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              _buildDrawerTile(Icons.school_outlined, 'KOAN', () {
+                _launchURL(
+                  'https://koan.osaka-u.ac.jp/campusweb/campusportal.do?page=main',
+                );
+              }),
+              _buildDrawerTile(Icons.book_outlined, 'CLE', () {
+                _launchURL('https://www.cle.osaka-u.ac.jp/ultra/course');
+              }),
+              _buildDrawerTile(Icons.person_outline, 'マイハンダイ', () {
+                _launchURL('https://my.osaka-u.ac.jp/');
+              }),
+              _buildDrawerTile(Icons.mail_outline, 'OU-Mail', () {
+                _launchURL('https://outlook.office.com/mail/');
+              }),
+              Divider(color: Colors.amber[200]),
+              _buildDrawerTile(Icons.mail, 'お問い合わせ', () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const MailPage()),
+                );
+              }),
+              _buildDrawerTile(Icons.info_outline, 'お知らせを見る', () {
+                Navigator.pop(context);
+                _showNoticeDialog(context);
+              }),
+              Divider(color: Colors.amber[200]),
+              _buildDrawerTile(Icons.settings, '設定', () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const SettingPage()),
+                );
+              }),
+              _buildDrawerTile(Icons.image, '背景画像を変更', () async {
+                showModalBottomSheet(
+                  context: context,
+                  shape: const RoundedRectangleBorder(
+                    borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(16),
+                    ),
+                  ),
+                  builder: (context) {
+                    return SafeArea(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          ListTile(
+                            leading: const Icon(
+                              Icons.refresh,
+                              color: Colors.amber,
+                            ),
+                            title: const Text('デフォルト背景に戻す'),
+                            onTap: () async {
+                              Navigator.pop(context);
+                              await ref
+                                  .read(backgroundImagePathProvider.notifier)
+                                  .resetBackgroundImage();
+                            },
+                          ),
+                          ListTile(
+                            leading: const Icon(
+                              Icons.photo_album,
+                              color: Colors.amber,
+                            ),
+                            title: const Text('アルバムから選ぶ'),
+                            onTap: () async {
+                              Navigator.pop(context);
+                              final picker = ImagePicker();
+                              final picked = await picker.pickImage(
+                                source: ImageSource.gallery,
+                              );
+                              if (picked != null) {
+                                final appDir =
+                                    await getApplicationDocumentsDirectory();
+                                final fileName =
+                                    'background_${DateTime.now().millisecondsSinceEpoch}${picked.name.substring(picked.name.lastIndexOf('.'))}';
+                                final saved = await File(
+                                  picked.path,
+                                ).copy('${appDir.path}/$fileName');
+                                await ref
+                                    .read(backgroundImagePathProvider.notifier)
+                                    .setBackgroundImagePath(saved.path);
+                              }
+                            },
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                );
+              }),
+            ],
+          ),
+        ),
+      ),
+
     );
   }
 

@@ -56,7 +56,7 @@ class _MailPageState extends State<MailPage> {
       SnackBar(
         content: const Text(
           'ご意見ありがとうございます！運営ギルドに伝書を送りました。',
-          style: TextStyle(fontFamily: 'misaki', color: Colors.white),
+          style: TextStyle(fontFamily: 'NotoSansJP', color: Colors.white),
         ),
         backgroundColor: Colors.black.withOpacity(0.85),
         shape: RoundedRectangleBorder(
@@ -156,7 +156,7 @@ class _MailPageState extends State<MailPage> {
                   style: TextStyle(
                     fontSize: 18,
                     color: Colors.white,
-                    fontFamily: 'misaki',
+                    fontFamily: 'NotoSansJP',
                     fontWeight: FontWeight.bold,
                     shadows: [
                       Shadow(color: Colors.black45, offset: Offset(1, 1)),
@@ -211,7 +211,7 @@ class _MailPageState extends State<MailPage> {
                   fontSize: 13,
                   color: Colors.white,
                   height: 1.4,
-                  fontFamily: 'misaki',
+                  fontFamily: 'NotoSansJP',
                 ),
               ),
               const SizedBox(height: 16),
@@ -230,7 +230,7 @@ class _MailPageState extends State<MailPage> {
                   minLines: 4,
                   maxLines: 8,
                   style: const TextStyle(
-                    fontFamily: 'misaki',
+                    fontFamily: 'NotoSansJP',
                     fontSize: 15,
                     color: Colors.white,
                   ),
@@ -238,7 +238,7 @@ class _MailPageState extends State<MailPage> {
                     hintText: '（例）こんな機能が欲しい、このキャラが好き…など',
                     hintStyle: TextStyle(
                       color: Colors.grey[400],
-                      fontFamily: 'misaki',
+                      fontFamily: 'NotoSansJP',
                     ),
                     border: InputBorder.none,
                   ),
@@ -261,7 +261,7 @@ class _MailPageState extends State<MailPage> {
                   textStyle: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
-                    fontFamily: 'misaki',
+                    fontFamily: 'NotoSansJP',
                   ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(24),
@@ -304,7 +304,7 @@ class _MailPageState extends State<MailPage> {
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
-              fontFamily: 'misaki',
+              fontFamily: 'NotoSansJP',
               color: Colors.brown,
             ),
           ),
@@ -314,7 +314,7 @@ class _MailPageState extends State<MailPage> {
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 13,
-              fontFamily: 'misaki',
+              fontFamily: 'NotoSansJP',
               color: Colors.black87,
               height: 1.4,
             ),
@@ -328,7 +328,7 @@ class _MailPageState extends State<MailPage> {
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
               textStyle: const TextStyle(
-                fontFamily: 'misaki',
+                fontFamily: 'NotoSansJP',
                 fontWeight: FontWeight.bold,
               ),
               shape: RoundedRectangleBorder(

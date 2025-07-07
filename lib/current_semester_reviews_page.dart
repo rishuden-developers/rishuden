@@ -9,6 +9,7 @@ import 'common_bottom_navigation.dart'; // ボトムナビゲーション用
 import 'main_page.dart';
 import 'providers/current_page_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'providers/background_image_provider.dart';
 
 class CurrentSemesterReviewsPage extends ConsumerStatefulWidget {
   const CurrentSemesterReviewsPage({super.key});
@@ -186,7 +187,10 @@ class _CurrentSemesterReviewsPageState
     return Stack(
       children: [
         Positioned.fill(
-          child: Image.asset('assets/night_view.png', fit: BoxFit.cover),
+          child: Image.asset(
+            ref.watch(backgroundImagePathProvider),
+            fit: BoxFit.cover,
+          ),
         ),
         Positioned.fill(child: Container(color: Colors.black.withOpacity(0.5))),
         Material(
@@ -230,7 +234,7 @@ class _CurrentSemesterReviewsPageState
                     final courses = snapshot.data!;
                     return ListView.builder(
                       physics: ClampingScrollPhysics(),
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 80),
                       itemCount: courses.length,
                       itemBuilder: (context, index) {
                         return CourseCard(
