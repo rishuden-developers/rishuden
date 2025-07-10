@@ -5,6 +5,10 @@ import 'package:url_launcher/url_launcher.dart';
 import 'character_question_page.dart';
 
 class RegisterPage extends StatefulWidget {
+  final String universityType;
+  const RegisterPage({Key? key, this.universityType = 'main'})
+    : super(key: key);
+
   @override
   State<RegisterPage> createState() => _RegisterPageState();
 }

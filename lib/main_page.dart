@@ -29,8 +29,13 @@ import 'menu_page.dart';
 
 class MainPage extends ConsumerStatefulWidget {
   final bool showLoginBonus;
+  final String universityType;
 
-  const MainPage({super.key, this.showLoginBonus = false});
+  const MainPage({
+    super.key,
+    this.showLoginBonus = false,
+    this.universityType = 'main',
+  });
 
   @override
   ConsumerState<MainPage> createState() => _MainPageState();
@@ -94,6 +99,7 @@ class _MainPageState extends ConsumerState<MainPage> {
 
   @override
   Widget build(BuildContext context) {
+    print('大学タイプ:  [33m [1m' + widget.universityType + '\u001b[0m');
     // ログインボーナス通知を表示（一度だけ）
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (widget.showLoginBonus && !_hasShownLoginBonus) {
@@ -125,7 +131,7 @@ class _MainPageState extends ConsumerState<MainPage> {
         answers: const [],
         userName: userName,
       ),
-      const TimeSchedulePage(),
+      TimeSchedulePage(universityType: widget.universityType),
       const ItemPage(),
     ];
 
@@ -299,10 +305,8 @@ class _MainPageState extends ConsumerState<MainPage> {
           ),
         ),
       ),
-
     );
   }
-
 }
 
 class AuthWrapper extends StatelessWidget {
@@ -380,5 +384,3 @@ class AuthWrapper extends StatelessWidget {
     );
   }
 }
-
-

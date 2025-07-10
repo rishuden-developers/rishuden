@@ -41,7 +41,10 @@ class AuthWrapper extends StatelessWidget {
                 userData['profileCompleted'] != true) {
               return const UserProfilePage();
             }
-            return MainPage();
+            // 大学タイプを取得（main or other）
+            final universityType = userData['universityType'] ?? 'main';
+            // MainPageに渡す（今後Provider化も検討）
+            return MainPage(universityType: universityType);
           },
         );
       },

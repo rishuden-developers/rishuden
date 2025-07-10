@@ -23,7 +23,8 @@ import 'providers/background_image_provider.dart';
 enum AttendanceStatus { present, absent, late, none }
 
 class TimeSchedulePage extends ConsumerStatefulWidget {
-  const TimeSchedulePage({super.key});
+  final String universityType;
+  const TimeSchedulePage({super.key, this.universityType = 'main'});
   @override
   ConsumerState<TimeSchedulePage> createState() => _TimeSchedulePageState();
 }
@@ -157,6 +158,11 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
   // 時間割データを読み込み
   Future<void> _loadTimetableData() async {
     print('TimeSchedulePage - Loading timetable data from Firebase...');
+    if (widget.universityType == 'other') {
+      print('他大学モード: Firestoreのuniversities/other/coursesからデータ取得（今はユーザー入力のみ）');
+      // TODO: 他大学用のデータ取得・保存ロジックをここに実装
+      return;
+    }
     try {
       await ref.read(timetableProvider.notifier).loadFromFirestore();
       print('TimeSchedulePage - Timetable data loaded successfully');
@@ -208,6 +214,7 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
   @override
   void initState() {
     super.initState();
+    print('時間割ページ: 大学タイプ = ' + widget.universityType);
     final today = DateTime.now();
     _displayedMonday = today.subtract(Duration(days: today.weekday - 1));
     _pageController = PageController(initialPage: _initialPage);
@@ -226,6 +233,9 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _changeWeek(_initialPage);
     });
+    if (widget.universityType == 'other') {
+      _loadOtherUnivCourses();
+    }
   }
 
   bool _isEventsLoading = true;
@@ -2646,6 +2656,183 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
 
   @override
   Widget build(BuildContext context) {
+    if (widget.universityType == 'other') {
+      // --- グリッド用データ構造を生成 ---
+      List<List<TimetableEntry?>> grid = List.generate(
+        _days.length,
+        (dayIdx) => List.generate(_academicPeriods, (periodIdx) => null),
+      );
+      for (final entry in _otherUnivCourses) {
+        if (entry.dayOfWeek >= 0 &&
+            entry.dayOfWeek < _days.length &&
+            entry.period > 0 &&
+            entry.period <= _academicPeriods) {
+          grid[entry.dayOfWeek][entry.period - 1] = entry;
+        }
+      }
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('時間割（他大学）'),
+          backgroundColor: Colors.blueGrey,
+        ),
+        backgroundColor: const Color(0xFF1a1a1a),
+        body: Column(
+          children: [
+            // ヘッダー
+            Row(
+              children: [
+                const SizedBox(width: 45),
+                ...List.generate(
+                  _days.length,
+                  (dayIdx) => Expanded(
+                    child: Container(
+                      height: 40,
+                      alignment: Alignment.center,
+                      child: Text(
+                        _days[dayIdx],
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            Expanded(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 時限ラベル
+                  Container(
+                    width: 45,
+                    child: Column(
+                      children: List.generate(
+                        _academicPeriods,
+                        (periodIdx) => Expanded(
+                          child: Center(
+                            child: Text(
+                              '${periodIdx + 1}限',
+                              style: const TextStyle(color: Colors.white),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  // グリッド本体
+                  Expanded(
+                    child: Row(
+                      children: List.generate(
+                        _days.length,
+                        (dayIdx) => Expanded(
+                          child: Column(
+                            children: List.generate(_academicPeriods, (
+                              periodIdx,
+                            ) {
+                              final entry = grid[dayIdx][periodIdx];
+                              return Expanded(
+                                child: GestureDetector(
+                                  onTap: () {
+                                    if (entry == null) {
+                                      _showOtherUnivCourseDialog(
+                                        dayIdx,
+                                        periodIdx + 1,
+                                      );
+                                    } else {
+                                      _showOtherUnivCourseDialog(
+                                        dayIdx,
+                                        periodIdx + 1,
+                                        entry: entry,
+                                      );
+                                    }
+                                  },
+                                  child: Container(
+                                    margin: const EdgeInsets.all(1),
+                                    decoration: BoxDecoration(
+                                      color:
+                                          entry == null
+                                              ? Colors.black26
+                                              : Colors.blueGrey[800],
+                                      border: Border.all(color: Colors.white24),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child:
+                                        entry == null
+                                            ? const Center(
+                                              child: Icon(
+                                                Icons.add,
+                                                color: Colors.white24,
+                                              ),
+                                            )
+                                            : Padding(
+                                              padding: const EdgeInsets.all(
+                                                4.0,
+                                              ),
+                                              child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    entry.subjectName,
+                                                    style: const TextStyle(
+                                                      color: Colors.white,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      fontSize: 11,
+                                                    ),
+                                                    maxLines: 2,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                  ),
+                                                  if (entry
+                                                      .classroom
+                                                      .isNotEmpty)
+                                                    Text(
+                                                      entry.classroom,
+                                                      style: const TextStyle(
+                                                        color: Colors.white70,
+                                                        fontSize: 9,
+                                                      ),
+                                                      maxLines: 1,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
+                                                    ),
+                                                  if (entry.courseId != null &&
+                                                      entry
+                                                          .courseId!
+                                                          .isNotEmpty)
+                                                    Text(
+                                                      entry.courseId!,
+                                                      style: const TextStyle(
+                                                        color: Colors.white38,
+                                                        fontSize: 8,
+                                                      ),
+                                                      maxLines: 1,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
+                                                    ),
+                                                ],
+                                              ),
+                                            ),
+                                  ),
+                                ),
+                              );
+                            }),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     // ★★★ 予定データのローディング中はローディング表示 ★★★
     if (_isEventsLoading) {
       return Scaffold(
@@ -3274,6 +3461,329 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
     } catch (e) {
       print('ERROR: キャッシュ読み込みに失敗: $e');
     }
+  }
+
+  // 他大学用: Firestoreから取得した講義リスト
+  List<TimetableEntry> _otherUnivCourses = [];
+
+  // 他大学用: 講義追加ダイアログ
+  Future<void> _showAddCourseDialog() async {
+    final _subjectController = TextEditingController();
+    final _classroomController = TextEditingController();
+    final _teacherController = TextEditingController();
+    int _selectedDay = 0;
+    int _selectedPeriod = 1;
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('講義を追加'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: _subjectController,
+                  decoration: const InputDecoration(labelText: '授業名'),
+                ),
+                TextField(
+                  controller: _classroomController,
+                  decoration: const InputDecoration(labelText: '教室'),
+                ),
+                TextField(
+                  controller: _teacherController,
+                  decoration: const InputDecoration(labelText: '教員名'),
+                ),
+                DropdownButtonFormField<int>(
+                  value: _selectedDay,
+                  items: List.generate(
+                    _days.length,
+                    (i) => DropdownMenuItem(value: i, child: Text(_days[i])),
+                  ),
+                  onChanged: (v) => _selectedDay = v ?? 0,
+                  decoration: const InputDecoration(labelText: '曜日'),
+                ),
+                DropdownButtonFormField<int>(
+                  value: _selectedPeriod,
+                  items: List.generate(
+                    _academicPeriods,
+                    (i) => DropdownMenuItem(
+                      value: i + 1,
+                      child: Text('${i + 1}限'),
+                    ),
+                  ),
+                  onChanged: (v) => _selectedPeriod = v ?? 1,
+                  decoration: const InputDecoration(labelText: '時限'),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('キャンセル'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                if (_subjectController.text.trim().isEmpty) return;
+                final entry = TimetableEntry(
+                  id: DateTime.now().millisecondsSinceEpoch.toString(),
+                  subjectName: _subjectController.text.trim(),
+                  classroom: _classroomController.text.trim(),
+                  originalLocation: _classroomController.text.trim(),
+                  dayOfWeek: _selectedDay,
+                  period: _selectedPeriod,
+                  date: '',
+                  color: Colors.blue,
+                );
+                await _addOtherUnivCourse(entry);
+                Navigator.of(context).pop();
+              },
+              child: const Text('追加'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // 他大学用: Firestoreに講義を追加
+  Future<void> _addOtherUnivCourse(TimetableEntry entry) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    final docRef = FirebaseFirestore.instance
+        .collection('universities')
+        .doc('other')
+        .collection('courses')
+        .doc(user.uid);
+    final snapshot = await docRef.get();
+    List<dynamic> courses = [];
+    if (snapshot.exists &&
+        snapshot.data() != null &&
+        snapshot.data()!.containsKey('courses')) {
+      courses = List.from(snapshot.data()!['courses']);
+    }
+    courses.add(entry.toMap());
+    await docRef.set({'courses': courses}, SetOptions(merge: true));
+    await _loadOtherUnivCourses();
+  }
+
+  // 他大学用: Firestoreから講義を取得
+  Future<void> _loadOtherUnivCourses() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    final docRef = FirebaseFirestore.instance
+        .collection('universities')
+        .doc('other')
+        .collection('courses')
+        .doc(user.uid);
+    final snapshot = await docRef.get();
+    if (snapshot.exists &&
+        snapshot.data() != null &&
+        snapshot.data()!.containsKey('courses')) {
+      final List<dynamic> data = snapshot.data()!['courses'];
+      setState(() {
+        _otherUnivCourses =
+            data
+                .map(
+                  (e) => TimetableEntry.fromMap(Map<String, dynamic>.from(e)),
+                )
+                .toList();
+      });
+    } else {
+      setState(() {
+        _otherUnivCourses = [];
+      });
+    }
+  }
+
+  // 他大学用: 講義削除
+  Future<void> _deleteOtherUnivCourse(String id) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    final docRef = FirebaseFirestore.instance
+        .collection('universities')
+        .doc('other')
+        .collection('courses')
+        .doc(user.uid);
+    final snapshot = await docRef.get();
+    List<dynamic> courses = [];
+    if (snapshot.exists &&
+        snapshot.data() != null &&
+        snapshot.data()!.containsKey('courses')) {
+      courses = List.from(snapshot.data()!['courses']);
+    }
+    courses.removeWhere((e) => e['id'] == id);
+    await docRef.set({'courses': courses}, SetOptions(merge: true));
+    await _loadOtherUnivCourses();
+  }
+
+  // --- 他大学用: 講義追加・編集ダイアログ ---
+  Future<void> _showOtherUnivCourseDialog(
+    int dayIdx,
+    int period, {
+    TimetableEntry? entry,
+  }) async {
+    final _subjectController = TextEditingController(
+      text: entry?.subjectName ?? '',
+    );
+    final _classroomController = TextEditingController(
+      text: entry?.classroom ?? '',
+    );
+    final _teacherController = TextEditingController(
+      text: entry?.originalLocation ?? '',
+    );
+    // オートコンプリート候補取得
+    final allCourses = await _fetchAllOtherUnivCourses();
+    final subjectCandidates =
+        allCourses.map((e) => e.subjectName).toSet().toList();
+    final teacherCandidates =
+        allCourses.map((e) => e.originalLocation).toSet().toList();
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('${_days[dayIdx]}曜 ${period}限の講義'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Autocomplete<String>(
+                  optionsBuilder:
+                      (text) =>
+                          subjectCandidates
+                              .where((s) => s.contains(text.text))
+                              .toList(),
+                  initialValue: TextEditingValue(text: _subjectController.text),
+                  onSelected: (v) => _subjectController.text = v,
+                  fieldViewBuilder: (
+                    context,
+                    controller,
+                    focus,
+                    onFieldSubmitted,
+                  ) {
+                    controller.text = _subjectController.text;
+                    return TextField(
+                      controller: controller,
+                      focusNode: focus,
+                      decoration: const InputDecoration(labelText: '授業名'),
+                    );
+                  },
+                ),
+                Autocomplete<String>(
+                  optionsBuilder:
+                      (text) =>
+                          teacherCandidates
+                              .where((s) => s.contains(text.text))
+                              .toList(),
+                  initialValue: TextEditingValue(text: _teacherController.text),
+                  onSelected: (v) => _teacherController.text = v,
+                  fieldViewBuilder: (
+                    context,
+                    controller,
+                    focus,
+                    onFieldSubmitted,
+                  ) {
+                    controller.text = _teacherController.text;
+                    return TextField(
+                      controller: controller,
+                      focusNode: focus,
+                      decoration: const InputDecoration(labelText: '教員名'),
+                    );
+                  },
+                ),
+                TextField(
+                  controller: _classroomController,
+                  decoration: const InputDecoration(labelText: '教室'),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            if (entry != null)
+              TextButton(
+                onPressed: () async {
+                  await _deleteOtherUnivCourse(entry.id);
+                  Navigator.of(context).pop();
+                },
+                child: const Text('削除', style: TextStyle(color: Colors.red)),
+              ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('キャンセル'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                if (_subjectController.text.trim().isEmpty) return;
+                final newEntry = TimetableEntry(
+                  id:
+                      entry?.id ??
+                      DateTime.now().millisecondsSinceEpoch.toString(),
+                  subjectName: _subjectController.text.trim(),
+                  classroom: _classroomController.text.trim(),
+                  originalLocation: _teacherController.text.trim(),
+                  dayOfWeek: dayIdx,
+                  period: period,
+                  date: '',
+                  color: Colors.blue,
+                );
+                if (entry == null) {
+                  await _addOtherUnivCourse(newEntry);
+                } else {
+                  await _updateOtherUnivCourse(newEntry);
+                }
+                Navigator.of(context).pop();
+              },
+              child: Text(entry == null ? '追加' : '保存'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // --- 他大学用: Firestore全ユーザーの講義を取得（オートコンプリート候補用） ---
+  Future<List<TimetableEntry>> _fetchAllOtherUnivCourses() async {
+    final snap =
+        await FirebaseFirestore.instance
+            .collection('universities')
+            .doc('other')
+            .collection('courses')
+            .get();
+    List<TimetableEntry> all = [];
+    for (final doc in snap.docs) {
+      if (doc.data().containsKey('courses')) {
+        final List<dynamic> data = doc.data()['courses'];
+        all.addAll(
+          data.map((e) => TimetableEntry.fromMap(Map<String, dynamic>.from(e))),
+        );
+      }
+    }
+    return all;
+  }
+
+  // --- 他大学用: 講義編集 ---
+  Future<void> _updateOtherUnivCourse(TimetableEntry entry) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    final docRef = FirebaseFirestore.instance
+        .collection('universities')
+        .doc('other')
+        .collection('courses')
+        .doc(user.uid);
+    final snapshot = await docRef.get();
+    List<dynamic> courses = [];
+    if (snapshot.exists &&
+        snapshot.data() != null &&
+        snapshot.data()!.containsKey('courses')) {
+      courses = List.from(snapshot.data()!['courses']);
+    }
+    final idx = courses.indexWhere((e) => e['id'] == entry.id);
+    if (idx != -1) {
+      courses[idx] = entry.toMap();
+    }
+    await docRef.set({'courses': courses}, SetOptions(merge: true));
+    await _loadOtherUnivCourses();
   }
 }
 
