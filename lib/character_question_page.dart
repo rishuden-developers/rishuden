@@ -79,8 +79,9 @@ final Map<int, List<String>> questionOptions = {
 };
 
 class CharacterQuestionPage extends StatefulWidget {
-  // ★ const CharacterQuestionPage({super.key}); から const を削除 (StatefulWidgetなので通常不要)
-  CharacterQuestionPage({super.key});
+  final String? universityType;
+
+  CharacterQuestionPage({super.key, this.universityType});
 
   @override
   _CharacterQuestionPageState createState() => _CharacterQuestionPageState();
@@ -1100,19 +1101,8 @@ class _CharacterQuestionPageState extends State<CharacterQuestionPage> {
                                               answers: finalAnswers,
                                               diagnosedCharacterName:
                                                   characterName,
-                                            ),
-                                      ),
-                                    );
-                                  }
-                                  if (mounted) {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder:
-                                            (context) => CharacterDecidePage(
-                                              diagnosedCharacterName:
-                                                  characterName,
-                                              answers: finalAnswers,
+                                              universityType:
+                                                  widget.universityType,
                                             ),
                                       ),
                                     );

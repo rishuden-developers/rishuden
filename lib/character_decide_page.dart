@@ -8,11 +8,13 @@ import 'main_page.dart'; // ★ MainPageをインポート
 class CharacterDecidePage extends StatefulWidget {
   final List<int> answers;
   final String diagnosedCharacterName;
+  final String? universityType;
 
   const CharacterDecidePage({
     super.key,
     required this.answers,
     required this.diagnosedCharacterName,
+    this.universityType,
   });
 
   @override
@@ -104,7 +106,11 @@ class _CharacterDecidePageState extends State<CharacterDecidePage> {
           print('Navigating to MainPage...');
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (context) => MainPage()),
+            MaterialPageRoute(
+              builder:
+                  (context) =>
+                      MainPage(universityType: widget.universityType ?? 'main'),
+            ),
           );
           print('Navigation completed');
         }

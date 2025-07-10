@@ -62,21 +62,16 @@ class _LoginPageState extends State<LoginPage> {
 
       // 大学タイプに応じて遷移先を分岐
       if (mounted) {
-        if (widget.universityType == 'other') {
-          // 他大学の場合は直接メインページへ（キャラクター診断はスキップ）
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) => MainPage(universityType: 'other'),
-            ),
-          );
-        } else {
-          // 大阪大学の場合はキャラクター診断ページへ
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => CharacterQuestionPage()),
-          );
-        }
+        // 他大学・大阪大学共通でキャラクター診断ページへ
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder:
+                (context) => CharacterQuestionPage(
+                  universityType: widget.universityType,
+                ),
+          ),
+        );
       }
     } catch (e) {
       String msg = e.toString();
