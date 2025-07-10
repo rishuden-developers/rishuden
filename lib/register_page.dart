@@ -36,6 +36,8 @@ class _RegisterPageState extends State<RegisterPage> {
             .collection('users')
             .doc(userCredential.user!.uid)
             .set({
+              'universityType': 'main',
+              'universityName': '大阪大学',
               'calendarUrl': _calendarUrlController.text.trim(),
               'profileCompleted': false, // 新規登録時はfalseに設定
             }, SetOptions(merge: true));

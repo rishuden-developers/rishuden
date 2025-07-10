@@ -353,6 +353,7 @@ class _CharacterQuestionPageState extends State<CharacterQuestionPage> {
         'grade': _selectedGrade,
         'department': _selectedDepartment,
         'profileCompleted': true, // 診断完了時にtrueに設定
+        // 大学情報は既に登録時に保存されているため、ここでは更新しない
       }, SetOptions(merge: true));
 
       print('--- Firestoreへの保存が完了しました ---');

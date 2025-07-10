@@ -4,7 +4,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'character_question_page.dart';
 
 class OtherUnivRegisterPage extends StatefulWidget {
-  const OtherUnivRegisterPage({Key? key}) : super(key: key);
+  final String selectedUniversity;
+
+  const OtherUnivRegisterPage({Key? key, required this.selectedUniversity})
+    : super(key: key);
 
   @override
   State<OtherUnivRegisterPage> createState() => _OtherUnivRegisterPageState();
@@ -33,6 +36,7 @@ class _OtherUnivRegisterPageState extends State<OtherUnivRegisterPage> {
             .doc(userCredential.user!.uid)
             .set({
               'universityType': 'other',
+              'universityName': widget.selectedUniversity,
               'profileCompleted': false,
             }, SetOptions(merge: true));
       }
@@ -107,9 +111,9 @@ class _OtherUnivRegisterPageState extends State<OtherUnivRegisterPage> {
     return Scaffold(
       backgroundColor: const Color(0xFF2C3E50),
       appBar: AppBar(
-        title: const Text(
-          'アカウント作成（他大学）',
-          style: TextStyle(color: Colors.white),
+        title: Text(
+          'アカウント作成（${widget.selectedUniversity}）',
+          style: const TextStyle(color: Colors.white),
         ),
         backgroundColor: const Color(0xFF2C3E50),
         iconTheme: const IconThemeData(color: Colors.white),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'welcome_page.dart';
 
 class UserPage extends StatefulWidget {
   const UserPage({super.key});
@@ -56,7 +57,10 @@ class _UserPageState extends State<UserPage> {
     try {
       await FirebaseAuth.instance.signOut();
       if (mounted) {
-        Navigator.pushReplacementNamed(context, '/login');
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const WelcomePage()),
+          (route) => false,
+        );
       }
     } catch (e) {
       print("Error logging out: $e");

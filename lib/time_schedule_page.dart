@@ -234,7 +234,16 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
       _changeWeek(_initialPage);
     });
     if (widget.universityType == 'other') {
-      _loadOtherUnivCourses();
+      _loadOtherUnivCourses().then((_) {
+        // 他大学のコースデータを読み込んだ後に時間割グリッドを初期化
+        _initializeTimetableGrid(_displayedMonday);
+        // 他大学用の場合は予定データの読み込みを完了としてマーク
+        setState(() {
+          _isEventsLoading = false;
+        });
+      });
+      // 分散協力型データベースのデータも読み込み
+      _loadGlobalCourseData();
     }
   }
 
@@ -296,9 +305,16 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
   }
 
   Future<void> _initializeTimetableGrid(DateTime weekStart) async {
-    List<TimetableEntry> timeTableEntries = await getWeeklyTimetableEntries(
-      weekStart,
-    );
+    List<TimetableEntry> timeTableEntries = [];
+
+    if (widget.universityType == 'other') {
+      // 他大学の場合は_otherUnivCoursesを使用
+      timeTableEntries = _otherUnivCourses;
+      print('他大学モード: ${timeTableEntries.length}件のコースデータを使用');
+    } else {
+      // 大阪大学の場合は従来通りFirestoreから取得
+      timeTableEntries = await getWeeklyTimetableEntries(weekStart);
+    }
 
     // ★★★ 保存されたcourseIdを優先的に使用 ★★★
     Map<String, String> courseIdMap = {};
@@ -377,11 +393,20 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
       (dayIndex) => List.generate(_academicPeriods, (periodIndex) => null),
     );
     for (var entry in timeTableEntries) {
-      grid[entry.dayOfWeek][entry.period - 1] = entry;
+      if (entry.dayOfWeek >= 0 &&
+          entry.dayOfWeek < _days.length &&
+          entry.period > 0 &&
+          entry.period <= _academicPeriods) {
+        grid[entry.dayOfWeek][entry.period - 1] = entry;
+        print(
+          '他大学コース配置: ${entry.subjectName} -> ${entry.dayOfWeek}曜${entry.period}限',
+        );
+      }
     }
     setState(() {
       _timetableGrid = grid;
     });
+    print('他大学モード: 時間割グリッドを更新しました (${grid.length}x${grid[0].length})');
   }
 
   // ★★★ Firebaseにレギュラー授業情報を保存 ★★★
@@ -1017,11 +1042,21 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
               print(
                 'DEBUG: Cell tapped - dayIndex: $dayIndex, periodIndex: $periodIndex, subject: ${entry.subjectName}',
               );
-              _showNoteDialog(
-                context,
-                dayIndex,
-                academicPeriodIndex: periodIndex,
-              );
+              if (widget.universityType == 'other') {
+                // 他大学用の場合は専用のダイアログを表示
+                _showOtherUnivCourseDialog(
+                  dayIndex,
+                  periodIndex + 1,
+                  entry: entry,
+                );
+              } else {
+                // 大阪大学用の場合は従来通りメモダイアログを表示
+                _showNoteDialog(
+                  context,
+                  dayIndex,
+                  academicPeriodIndex: periodIndex,
+                );
+              }
             },
             child: classWidget,
           ),
@@ -1476,12 +1511,12 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                 periodIndex = tappedRowIndex - 1; // 3限以降
               }
 
-              // ★★★ 授業コマが存在する場合は、予定追加の処理を完全にスキップ ★★★
+              // ★★★ 授業コマが存在する場合は、何もしない ★★★
               if (periodIndex >= 0 &&
                   periodIndex < _timetableGrid[dayIndex].length &&
                   _timetableGrid[dayIndex][periodIndex] != null) {
                 print(
-                  'DEBUG: Skipping event dialog - class exists at period $periodIndex',
+                  'DEBUG: Class exists at period $periodIndex - no action taken',
                 );
                 return;
               }
@@ -2657,175 +2692,110 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
   @override
   Widget build(BuildContext context) {
     if (widget.universityType == 'other') {
-      // --- グリッド用データ構造を生成 ---
-      List<List<TimetableEntry?>> grid = List.generate(
-        _days.length,
-        (dayIdx) => List.generate(_academicPeriods, (periodIdx) => null),
-      );
-      for (final entry in _otherUnivCourses) {
-        if (entry.dayOfWeek >= 0 &&
-            entry.dayOfWeek < _days.length &&
-            entry.period > 0 &&
-            entry.period <= _academicPeriods) {
-          grid[entry.dayOfWeek][entry.period - 1] = entry;
-        }
-      }
-      return Scaffold(
-        appBar: AppBar(
-          title: const Text('時間割（他大学）'),
-          backgroundColor: Colors.blueGrey,
-        ),
-        backgroundColor: const Color(0xFF1a1a1a),
-        body: Column(
-          children: [
-            // ヘッダー
-            Row(
-              children: [
-                const SizedBox(width: 45),
-                ...List.generate(
-                  _days.length,
-                  (dayIdx) => Expanded(
-                    child: Container(
-                      height: 40,
-                      alignment: Alignment.center,
-                      child: Text(
-                        _days[dayIdx],
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+      // 他大学用の時間割を大阪大学用と同じUIで表示
+      // 他大学用の場合は、他大学のコースデータを直接使用するのでローディング状態を無視
+      // ★★★ 保存エラーがある場合はエラー表示 ★★★
+
+      // ★★★ 保存エラーがある場合はエラー表示 ★★★
+      if (saveError != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('データの保存に失敗しました: $saveError'),
+              backgroundColor: Colors.red,
+              action: SnackBarAction(
+                label: '再試行',
+                onPressed: () {
+                  ref.read(timetableProvider.notifier).clearSaveError();
+                },
+              ),
             ),
-            Expanded(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // 時限ラベル
-                  Container(
-                    width: 45,
-                    child: Column(
-                      children: List.generate(
-                        _academicPeriods,
-                        (periodIdx) => Expanded(
-                          child: Center(
-                            child: Text(
-                              '${periodIdx + 1}限',
-                              style: const TextStyle(color: Colors.white),
+          );
+        });
+      }
+
+      const double bottomPaddingForNavBar = 100.0;
+      return Container(
+        width: double.infinity,
+        height: double.infinity,
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: Image.asset(
+                ref.watch(backgroundImagePathProvider),
+                fit: BoxFit.cover,
+              ),
+            ),
+            Positioned.fill(
+              child: Container(color: Colors.black.withOpacity(0.4)),
+            ),
+            SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                child: Column(
+                  children: [
+                    _buildWeekSelector(),
+                    _buildNewTimetableHeader(),
+                    Expanded(
+                      child: PageView.builder(
+                        controller: _pageController,
+                        onPageChanged: _changeWeek,
+                        itemBuilder: (context, page) {
+                          return Padding(
+                            padding: const EdgeInsets.only(
+                              top: 4.0,
+                              bottom: 8.0,
                             ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  // グリッド本体
-                  Expanded(
-                    child: Row(
-                      children: List.generate(
-                        _days.length,
-                        (dayIdx) => Expanded(
-                          child: Column(
-                            children: List.generate(_academicPeriods, (
-                              periodIdx,
-                            ) {
-                              final entry = grid[dayIdx][periodIdx];
-                              return Expanded(
-                                child: GestureDetector(
-                                  onTap: () {
-                                    if (entry == null) {
-                                      _showOtherUnivCourseDialog(
-                                        dayIdx,
-                                        periodIdx + 1,
-                                      );
-                                    } else {
-                                      _showOtherUnivCourseDialog(
-                                        dayIdx,
-                                        periodIdx + 1,
-                                        entry: entry,
-                                      );
-                                    }
-                                  },
-                                  child: Container(
-                                    margin: const EdgeInsets.all(1),
-                                    decoration: BoxDecoration(
-                                      color:
-                                          entry == null
-                                              ? Colors.black26
-                                              : Colors.blueGrey[800],
-                                      border: Border.all(color: Colors.white24),
-                                      borderRadius: BorderRadius.circular(6),
+                            child: LayoutBuilder(
+                              builder: (context, constraints) {
+                                final availableHeight = constraints.maxHeight;
+                                final dynamicRowHeight = availableHeight / 8.0;
+
+                                return Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    _buildNewContinuousTimeColumn(
+                                      periodRowHeight: dynamicRowHeight,
+                                      lunchRowHeight: dynamicRowHeight,
                                     ),
-                                    child:
-                                        entry == null
-                                            ? const Center(
-                                              child: Icon(
-                                                Icons.add,
-                                                color: Colors.white24,
+                                    Expanded(
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.circular(12),
+                                        child: BackdropFilter(
+                                          filter: ImageFilter.blur(
+                                            sigmaX: 4.0,
+                                            sigmaY: 4.0,
+                                          ),
+                                          child: Container(
+                                            decoration: BoxDecoration(
+                                              color: Colors.black.withOpacity(
+                                                0.3,
                                               ),
-                                            )
-                                            : Padding(
-                                              padding: const EdgeInsets.all(
-                                                4.0,
-                                              ),
-                                              child: Column(
-                                                crossAxisAlignment:
-                                                    CrossAxisAlignment.start,
-                                                children: [
-                                                  Text(
-                                                    entry.subjectName,
-                                                    style: const TextStyle(
-                                                      color: Colors.white,
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                      fontSize: 11,
-                                                    ),
-                                                    maxLines: 2,
-                                                    overflow:
-                                                        TextOverflow.ellipsis,
-                                                  ),
-                                                  if (entry
-                                                      .classroom
-                                                      .isNotEmpty)
-                                                    Text(
-                                                      entry.classroom,
-                                                      style: const TextStyle(
-                                                        color: Colors.white70,
-                                                        fontSize: 9,
-                                                      ),
-                                                      maxLines: 1,
-                                                      overflow:
-                                                          TextOverflow.ellipsis,
-                                                    ),
-                                                  if (entry.courseId != null &&
-                                                      entry
-                                                          .courseId!
-                                                          .isNotEmpty)
-                                                    Text(
-                                                      entry.courseId!,
-                                                      style: const TextStyle(
-                                                        color: Colors.white38,
-                                                        fontSize: 8,
-                                                      ),
-                                                      maxLines: 1,
-                                                      overflow:
-                                                          TextOverflow.ellipsis,
-                                                    ),
-                                                ],
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                              border: Border.all(
+                                                color: Colors.grey[800]!,
+                                                width: 1.0,
                                               ),
                                             ),
-                                  ),
-                                ),
-                              );
-                            }),
-                          ),
-                        ),
+                                            child: _buildNewTimetableGrid(
+                                              periodRowHeight: dynamicRowHeight,
+                                              lunchRowHeight: dynamicRowHeight,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              },
+                            ),
+                          );
+                        },
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ],
@@ -3113,6 +3083,462 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
         .collection('meta')
         .doc('info')
         .set({'teacherName': teacherName}, SetOptions(merge: true));
+  }
+
+  // 講義検索・追加ダイアログを表示
+  Future<void> _showCourseSearchDialog(int dayIndex, int periodIndex) async {
+    final course = _timetableGrid[dayIndex][periodIndex];
+    if (course == null) return;
+
+    // 分散協力型データベースから講義データを読み込み
+    List<Map<String, dynamic>> globalCourseData = [];
+    try {
+      final snap =
+          await FirebaseFirestore.instance.collection('globalCourses').get();
+      globalCourseData = snap.docs.map((doc) => doc.data()).toList();
+    } catch (e) {
+      print('グローバルデータ読み込みエラー: $e');
+    }
+
+    // 講義名の標準化
+    String normalizeSubjectName(String subjectName) {
+      String normalized = subjectName.trim().toLowerCase();
+      normalized = normalized
+          .replaceAll('（', '(')
+          .replaceAll('）', ')')
+          .replaceAll('　', ' ')
+          .replaceAll('  ', ' ');
+      return normalized;
+    }
+
+    // オートコンプリート候補を取得
+    List<String> getAutocompleteSuggestions(String query) {
+      if (query.isEmpty) return [];
+
+      final normalizedQuery = normalizeSubjectName(query);
+      final suggestions = <String>[];
+
+      for (final courseData in globalCourseData) {
+        final subjectName = courseData['subjectName'] ?? '';
+        final normalizedName = courseData['normalizedName'] ?? '';
+
+        if (normalizedName.contains(normalizedQuery) ||
+            subjectName.toLowerCase().contains(normalizedQuery)) {
+          suggestions.add(subjectName);
+        }
+      }
+
+      // 使用回数でソート（人気順）
+      suggestions.sort((a, b) {
+        final aCourse = globalCourseData.firstWhere(
+          (courseData) => courseData['subjectName'] == a,
+          orElse: () => {'usageCount': 0},
+        );
+        final bCourse = globalCourseData.firstWhere(
+          (courseData) => courseData['subjectName'] == b,
+          orElse: () => {'usageCount': 0},
+        );
+        return (bCourse['usageCount'] ?? 0).compareTo(
+          aCourse['usageCount'] ?? 0,
+        );
+      });
+
+      return suggestions.take(10).toList();
+    }
+
+    final subjectController = TextEditingController(text: course.subjectName);
+    final teacherController = TextEditingController(
+      text: course.originalLocation,
+    );
+    final classroomController = TextEditingController(text: course.classroom);
+    final facultyController = TextEditingController(text: course.faculty ?? '');
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return Dialog(
+              backgroundColor: Colors.transparent,
+              child: Container(
+                width: MediaQuery.of(context).size.width * 0.9,
+                height: MediaQuery.of(context).size.height * 0.8,
+                decoration: BoxDecoration(
+                  color: Colors.grey[900]!.withOpacity(0.95),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Colors.grey[700]!, width: 2),
+                ),
+                child: Column(
+                  children: [
+                    // ヘッダー
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: Colors.blue[600]!.withOpacity(0.8),
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(18),
+                          topRight: Radius.circular(18),
+                        ),
+                      ),
+                      child: Text(
+                        '${_days[dayIndex]}曜 ${periodIndex + 1}限の講義を編集',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'misaki',
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                    // コンテンツ
+                    Expanded(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.all(20),
+                        child: Column(
+                          children: [
+                            // 授業名（分散協力型オートコンプリート）
+                            Container(
+                              margin: const EdgeInsets.only(bottom: 15),
+                              child: Autocomplete<String>(
+                                optionsBuilder: (text) {
+                                  if (text.text.isEmpty) return [];
+                                  return getAutocompleteSuggestions(text.text);
+                                },
+                                onSelected: (v) => subjectController.text = v,
+                                fieldViewBuilder: (
+                                  context,
+                                  controller,
+                                  focus,
+                                  onFieldSubmitted,
+                                ) {
+                                  return TextField(
+                                    controller: subjectController,
+                                    focusNode: focus,
+                                    style: const TextStyle(color: Colors.white),
+                                    decoration: InputDecoration(
+                                      labelText: '授業名（全国のユーザーと共有）',
+                                      labelStyle: const TextStyle(
+                                        color: Colors.grey,
+                                      ),
+                                      hintText: '既存の講義名が候補として表示されます',
+                                      hintStyle: TextStyle(
+                                        color: Colors.grey[600],
+                                      ),
+                                      enabledBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(10),
+                                        borderSide: BorderSide(
+                                          color: Colors.grey[600]!,
+                                        ),
+                                      ),
+                                      focusedBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(10),
+                                        borderSide: BorderSide(
+                                          color: Colors.blue[400]!,
+                                        ),
+                                      ),
+                                      filled: true,
+                                      fillColor: Colors.grey[800]!.withOpacity(
+                                        0.5,
+                                      ),
+                                      suffixIcon: Icon(
+                                        Icons.people,
+                                        color: Colors.blue[400],
+                                        size: 20,
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                            // 教員名
+                            Container(
+                              margin: const EdgeInsets.only(bottom: 15),
+                              child: TextField(
+                                controller: teacherController,
+                                style: const TextStyle(color: Colors.white),
+                                decoration: InputDecoration(
+                                  labelText: '教員名',
+                                  labelStyle: const TextStyle(
+                                    color: Colors.grey,
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                    borderSide: BorderSide(
+                                      color: Colors.grey[600]!,
+                                    ),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                    borderSide: BorderSide(
+                                      color: Colors.blue[400]!,
+                                    ),
+                                  ),
+                                  filled: true,
+                                  fillColor: Colors.grey[800]!.withOpacity(0.5),
+                                ),
+                              ),
+                            ),
+                            // 学部
+                            Container(
+                              margin: const EdgeInsets.only(bottom: 15),
+                              child: TextField(
+                                controller: facultyController,
+                                style: const TextStyle(color: Colors.white),
+                                decoration: InputDecoration(
+                                  labelText: '学部',
+                                  labelStyle: const TextStyle(
+                                    color: Colors.grey,
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                    borderSide: BorderSide(
+                                      color: Colors.grey[600]!,
+                                    ),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                    borderSide: BorderSide(
+                                      color: Colors.blue[400]!,
+                                    ),
+                                  ),
+                                  filled: true,
+                                  fillColor: Colors.grey[800]!.withOpacity(0.5),
+                                ),
+                              ),
+                            ),
+                            // 教室
+                            Container(
+                              margin: const EdgeInsets.only(bottom: 15),
+                              child: TextField(
+                                controller: classroomController,
+                                style: const TextStyle(color: Colors.white),
+                                decoration: InputDecoration(
+                                  labelText: '教室',
+                                  labelStyle: const TextStyle(
+                                    color: Colors.grey,
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                    borderSide: BorderSide(
+                                      color: Colors.grey[600]!,
+                                    ),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                    borderSide: BorderSide(
+                                      color: Colors.blue[400]!,
+                                    ),
+                                  ),
+                                  filled: true,
+                                  fillColor: Colors.grey[800]!.withOpacity(0.5),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    // ボタン
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: () => Navigator.of(context).pop(),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.grey[600],
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 12,
+                                ),
+                              ),
+                              child: const Text(
+                                'キャンセル',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontFamily: 'misaki',
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 15),
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: () async {
+                                await _updateCourseData(
+                                  dayIndex,
+                                  periodIndex,
+                                  subjectController.text.trim(),
+                                  teacherController.text.trim(),
+                                  classroomController.text.trim(),
+                                  facultyController.text.trim(),
+                                );
+                                Navigator.of(context).pop();
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.blue[600],
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 12,
+                                ),
+                              ),
+                              child: const Text(
+                                '更新',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontFamily: 'misaki',
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  // 講義データを更新
+  Future<void> _updateCourseData(
+    int dayIndex,
+    int periodIndex,
+    String subjectName,
+    String teacherName,
+    String classroom,
+    String faculty,
+  ) async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) throw Exception('ユーザーがログインしていません');
+
+      // 既存の講義データを取得
+      final docRef = FirebaseFirestore.instance
+          .collection('universities')
+          .doc('other')
+          .collection('courses')
+          .doc(user.uid);
+
+      final snapshot = await docRef.get();
+      List<dynamic> courses = [];
+      if (snapshot.exists &&
+          snapshot.data() != null &&
+          snapshot.data()!.containsKey('courses')) {
+        courses = List.from(snapshot.data()!['courses']);
+      }
+
+      // 該当する講義を更新
+      final courseId = _timetableGrid[dayIndex][periodIndex]?.id;
+      if (courseId != null) {
+        for (int i = 0; i < courses.length; i++) {
+          if (courses[i]['id'] == courseId) {
+            courses[i] = {
+              ...courses[i],
+              'subjectName': subjectName,
+              'originalLocation': teacherName,
+              'classroom': classroom,
+              'faculty': faculty,
+              'updatedAt': DateTime.now().toIso8601String(),
+            };
+            break;
+          }
+        }
+
+        // Firestoreに保存
+        await docRef.set({'courses': courses}, SetOptions(merge: true));
+
+        // 分散協力型データベースに保存
+        await _saveCourseToGlobalDatabase({
+          'subjectName': subjectName,
+          'originalLocation': teacherName,
+          'faculty': faculty,
+          'classroom': classroom,
+        });
+
+        // ローカルの時間割グリッドを更新
+        if (mounted) {
+          setState(() {
+            _timetableGrid[dayIndex][periodIndex] = TimetableEntry(
+              id: courseId,
+              subjectName: subjectName,
+              classroom: classroom,
+              originalLocation: teacherName,
+              dayOfWeek: dayIndex,
+              period: periodIndex + 1,
+              date: '',
+              faculty: faculty,
+            );
+          });
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('講義を更新しました'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      print('講義更新エラー: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('講義の更新に失敗しました: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  // 分散協力型データベースに保存（講義更新用）
+  Future<void> _saveCourseToGlobalDatabase(
+    Map<String, dynamic> courseData,
+  ) async {
+    try {
+      String normalizeSubjectName(String subjectName) {
+        String normalized = subjectName.trim().toLowerCase();
+        normalized = normalized
+            .replaceAll('（', '(')
+            .replaceAll('）', ')')
+            .replaceAll('　', ' ')
+            .replaceAll('  ', ' ');
+        return normalized;
+      }
+
+      final normalizedName = normalizeSubjectName(
+        courseData['subjectName'] ?? '',
+      );
+      final globalDocRef = FirebaseFirestore.instance
+          .collection('globalCourses')
+          .doc(normalizedName);
+
+      await globalDocRef.set({
+        'subjectName': courseData['subjectName'],
+        'normalizedName': normalizedName,
+        'teacherName': courseData['originalLocation'],
+        'faculty': courseData['faculty'],
+        'classroom': courseData['classroom'],
+        'lastUpdated': DateTime.now().toIso8601String(),
+        'usageCount': FieldValue.increment(1),
+      }, SetOptions(merge: true));
+
+      print('グローバルデータベースに保存完了');
+    } catch (e) {
+      print('グローバルデータベース保存エラー: $e');
+    }
   }
 
   Future<TimeOfDay?> pickTime(
@@ -3466,6 +3892,33 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
   // 他大学用: Firestoreから取得した講義リスト
   List<TimetableEntry> _otherUnivCourses = [];
 
+  // 分散協力型データベース用: 全ユーザーの講義データ（オートコンプリート用）
+  List<Map<String, dynamic>> _globalCourseData = [];
+
+  // 学部リスト
+  final List<String> _facultyList = [
+    '文学部',
+    '教育学部',
+    '法学部',
+    '経済学部',
+    '理学部',
+    '医学部',
+    '歯学部',
+    '薬学部',
+    '工学部',
+    '農学部',
+    '獣医学部',
+    '水産学部',
+    '芸術学部',
+    'スポーツ科学部',
+    '国際教養学部',
+    '情報科学部',
+    '環境学部',
+    '看護学部',
+    '福祉学部',
+    'その他',
+  ];
+
   // 他大学用: 講義追加ダイアログ
   Future<void> _showAddCourseDialog() async {
     final _subjectController = TextEditingController();
@@ -3570,8 +4023,12 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
 
   // 他大学用: Firestoreから講義を取得
   Future<void> _loadOtherUnivCourses() async {
+    print('他大学用コースデータ読み込み開始');
     final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
+    if (user == null) {
+      print('ユーザーがログインしていません');
+      return;
+    }
     final docRef = FirebaseFirestore.instance
         .collection('universities')
         .doc('other')
@@ -3590,10 +4047,12 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                 )
                 .toList();
       });
+      print('他大学用コースデータ読み込み完了: ${_otherUnivCourses.length}件');
     } else {
       setState(() {
         _otherUnivCourses = [];
       });
+      print('他大学用コースデータが存在しません');
     }
   }
 
@@ -3618,7 +4077,7 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
     await _loadOtherUnivCourses();
   }
 
-  // --- 他大学用: 講義追加・編集ダイアログ ---
+  // --- 他大学用: 講義追加・編集ダイアログ（分散協力型データベース対応） ---
   Future<void> _showOtherUnivCourseDialog(
     int dayIdx,
     int period, {
@@ -3633,116 +4092,381 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
     final _teacherController = TextEditingController(
       text: entry?.originalLocation ?? '',
     );
-    // オートコンプリート候補取得
-    final allCourses = await _fetchAllOtherUnivCourses();
-    final subjectCandidates =
-        allCourses.map((e) => e.subjectName).toSet().toList();
+    String _selectedFaculty = '';
+
+    // 分散協力型データベースからオートコンプリート候補取得
+    await _loadGlobalCourseData();
+    final subjectCandidates = _getAutocompleteSuggestions('');
     final teacherCandidates =
-        allCourses.map((e) => e.originalLocation).toSet().toList();
-    await showDialog(
+        _globalCourseData
+            .where((course) => (course['teacherName'] ?? '').isNotEmpty)
+            .map((course) => course['teacherName'] as String)
+            .toSet()
+            .toList();
+
+    showDialog(
       context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text('${_days[dayIdx]}曜 ${period}限の講義'),
-          content: SingleChildScrollView(
+      builder: (BuildContext context) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          child: Container(
+            width: MediaQuery.of(context).size.width * 0.9,
+            decoration: BoxDecoration(
+              color: Colors.grey[900]!.withOpacity(0.95),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: Colors.grey[700]!, width: 2),
+            ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Autocomplete<String>(
-                  optionsBuilder:
-                      (text) =>
-                          subjectCandidates
-                              .where((s) => s.contains(text.text))
-                              .toList(),
-                  initialValue: TextEditingValue(text: _subjectController.text),
-                  onSelected: (v) => _subjectController.text = v,
-                  fieldViewBuilder: (
-                    context,
-                    controller,
-                    focus,
-                    onFieldSubmitted,
-                  ) {
-                    controller.text = _subjectController.text;
-                    return TextField(
-                      controller: controller,
-                      focusNode: focus,
-                      decoration: const InputDecoration(labelText: '授業名'),
-                    );
-                  },
+                // ヘッダー
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.blue[600]!.withOpacity(0.8),
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(18),
+                      topRight: Radius.circular(18),
+                    ),
+                  ),
+                  child: Text(
+                    '${_days[dayIdx]}曜 ${period}限の講義',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      fontFamily: 'misaki',
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
                 ),
-                Autocomplete<String>(
-                  optionsBuilder:
-                      (text) =>
-                          teacherCandidates
-                              .where((s) => s.contains(text.text))
-                              .toList(),
-                  initialValue: TextEditingValue(text: _teacherController.text),
-                  onSelected: (v) => _teacherController.text = v,
-                  fieldViewBuilder: (
-                    context,
-                    controller,
-                    focus,
-                    onFieldSubmitted,
-                  ) {
-                    controller.text = _teacherController.text;
-                    return TextField(
-                      controller: controller,
-                      focusNode: focus,
-                      decoration: const InputDecoration(labelText: '教員名'),
-                    );
-                  },
+                // コンテンツ
+                Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    children: [
+                      // 授業名（分散協力型オートコンプリート）
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 15),
+                        child: Autocomplete<String>(
+                          optionsBuilder: (text) {
+                            if (text.text.isEmpty) return subjectCandidates;
+                            return _getAutocompleteSuggestions(text.text);
+                          },
+                          initialValue: TextEditingValue(
+                            text: _subjectController.text,
+                          ),
+                          onSelected: (v) => _subjectController.text = v,
+                          fieldViewBuilder: (
+                            context,
+                            controller,
+                            focus,
+                            onFieldSubmitted,
+                          ) {
+                            controller.text = _subjectController.text;
+                            return TextField(
+                              controller: controller,
+                              focusNode: focus,
+                              style: const TextStyle(color: Colors.white),
+                              decoration: InputDecoration(
+                                labelText: '授業名（全国のユーザーと共有）',
+                                labelStyle: const TextStyle(color: Colors.grey),
+                                hintText: '既存の講義名が候補として表示されます',
+                                hintStyle: TextStyle(color: Colors.grey[600]),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                  borderSide: BorderSide(
+                                    color: Colors.grey[600]!,
+                                  ),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                  borderSide: BorderSide(
+                                    color: Colors.blue[400]!,
+                                  ),
+                                ),
+                                filled: true,
+                                fillColor: Colors.grey[800]!.withOpacity(0.5),
+                                suffixIcon: Icon(
+                                  Icons.people,
+                                  color: Colors.blue[400],
+                                  size: 20,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      // 教員名（分散協力型オートコンプリート）
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 15),
+                        child: Autocomplete<String>(
+                          optionsBuilder: (text) {
+                            if (text.text.isEmpty) return teacherCandidates;
+                            return teacherCandidates
+                                .where(
+                                  (s) => s.toLowerCase().contains(
+                                    text.text.toLowerCase(),
+                                  ),
+                                )
+                                .toList();
+                          },
+                          initialValue: TextEditingValue(
+                            text: _teacherController.text,
+                          ),
+                          onSelected: (v) => _teacherController.text = v,
+                          fieldViewBuilder: (
+                            context,
+                            controller,
+                            focus,
+                            onFieldSubmitted,
+                          ) {
+                            controller.text = _teacherController.text;
+                            return TextField(
+                              controller: controller,
+                              focusNode: focus,
+                              style: const TextStyle(color: Colors.white),
+                              decoration: InputDecoration(
+                                labelText: '教員名（全国のユーザーと共有）',
+                                labelStyle: const TextStyle(color: Colors.grey),
+                                hintText: '既存の教員名が候補として表示されます',
+                                hintStyle: TextStyle(color: Colors.grey[600]),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                  borderSide: BorderSide(
+                                    color: Colors.grey[600]!,
+                                  ),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                  borderSide: BorderSide(
+                                    color: Colors.blue[400]!,
+                                  ),
+                                ),
+                                filled: true,
+                                fillColor: Colors.grey[800]!.withOpacity(0.5),
+                                suffixIcon: Icon(
+                                  Icons.people,
+                                  color: Colors.blue[400],
+                                  size: 20,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      // 学部選択
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 15),
+                        child: DropdownButtonFormField<String>(
+                          value:
+                              _selectedFaculty.isNotEmpty
+                                  ? _selectedFaculty
+                                  : null,
+                          items:
+                              _facultyList.map((faculty) {
+                                return DropdownMenuItem(
+                                  value: faculty,
+                                  child: Text(
+                                    faculty,
+                                    style: const TextStyle(color: Colors.white),
+                                  ),
+                                );
+                              }).toList(),
+                          onChanged: (value) {
+                            _selectedFaculty = value ?? '';
+                          },
+                          style: const TextStyle(color: Colors.white),
+                          decoration: InputDecoration(
+                            labelText: '学部',
+                            labelStyle: const TextStyle(color: Colors.grey),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide: BorderSide(color: Colors.grey[600]!),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide: BorderSide(color: Colors.blue[400]!),
+                            ),
+                            filled: true,
+                            fillColor: Colors.grey[800]!.withOpacity(0.5),
+                          ),
+                          dropdownColor: Colors.grey[900],
+                        ),
+                      ),
+                      // 教室
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 20),
+                        child: TextField(
+                          controller: _classroomController,
+                          style: const TextStyle(color: Colors.white),
+                          decoration: InputDecoration(
+                            labelText: '教室',
+                            labelStyle: const TextStyle(color: Colors.grey),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide: BorderSide(color: Colors.grey[600]!),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide: BorderSide(color: Colors.blue[400]!),
+                            ),
+                            filled: true,
+                            fillColor: Colors.grey[800]!.withOpacity(0.5),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                TextField(
-                  controller: _classroomController,
-                  decoration: const InputDecoration(labelText: '教室'),
+                // ボタン
+                Container(
+                  padding: const EdgeInsets.only(
+                    bottom: 20,
+                    left: 20,
+                    right: 20,
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      if (entry != null)
+                        Expanded(
+                          child: Container(
+                            margin: const EdgeInsets.only(right: 10),
+                            child: ElevatedButton(
+                              onPressed: () async {
+                                await _deleteOtherUnivCourse(entry.id);
+                                Navigator.of(context).pop();
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.red[600],
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 12,
+                                ),
+                              ),
+                              child: const Text(
+                                '削除',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontFamily: 'misaki',
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      Expanded(
+                        child: Container(
+                          margin: const EdgeInsets.only(right: 10),
+                          child: ElevatedButton(
+                            onPressed: () => Navigator.of(context).pop(),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.grey[600],
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                            child: const Text(
+                              'キャンセル',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontFamily: 'misaki',
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () async {
+                            if (_subjectController.text.trim().isEmpty) return;
+                            final courseId =
+                                entry?.courseId ??
+                                DateTime.now().millisecondsSinceEpoch
+                                    .toString();
+
+                            // 分散協力型データベース用の拡張データを作成
+                            final extendedData = {
+                              'id': courseId,
+                              'subjectName': _subjectController.text.trim(),
+                              'classroom': _classroomController.text.trim(),
+                              'teacherName': _teacherController.text.trim(),
+                              'faculty': _selectedFaculty,
+                              'dayOfWeek': dayIdx,
+                              'period': period,
+                              'date': '',
+                              'color':
+                                  _neonColors[_subjectController.text
+                                              .trim()
+                                              .hashCode %
+                                          _neonColors.length]
+                                      .value,
+                              'createdAt': DateTime.now().toIso8601String(),
+                              'updatedAt': DateTime.now().toIso8601String(),
+                            };
+
+                            final newEntry = TimetableEntry(
+                              id: courseId,
+                              subjectName: _subjectController.text.trim(),
+                              classroom: _classroomController.text.trim(),
+                              originalLocation: _teacherController.text.trim(),
+                              dayOfWeek: dayIdx,
+                              period: period,
+                              date: '',
+                              color:
+                                  _neonColors[_subjectController.text
+                                          .trim()
+                                          .hashCode %
+                                      _neonColors.length],
+                            );
+                            if (entry == null) {
+                              await _addOtherUnivCourseWithExtendedData(
+                                newEntry,
+                                extendedData,
+                              );
+                            } else {
+                              await _updateOtherUnivCourseWithExtendedData(
+                                newEntry,
+                                extendedData,
+                              );
+                            }
+                            Navigator.of(context).pop();
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blue[600],
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                          child: Text(
+                            entry == null ? '追加' : '保存',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontFamily: 'misaki',
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
           ),
-          actions: [
-            if (entry != null)
-              TextButton(
-                onPressed: () async {
-                  await _deleteOtherUnivCourse(entry.id);
-                  Navigator.of(context).pop();
-                },
-                child: const Text('削除', style: TextStyle(color: Colors.red)),
-              ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('キャンセル'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                if (_subjectController.text.trim().isEmpty) return;
-                final newEntry = TimetableEntry(
-                  id:
-                      entry?.id ??
-                      DateTime.now().millisecondsSinceEpoch.toString(),
-                  subjectName: _subjectController.text.trim(),
-                  classroom: _classroomController.text.trim(),
-                  originalLocation: _teacherController.text.trim(),
-                  dayOfWeek: dayIdx,
-                  period: period,
-                  date: '',
-                  color: Colors.blue,
-                );
-                if (entry == null) {
-                  await _addOtherUnivCourse(newEntry);
-                } else {
-                  await _updateOtherUnivCourse(newEntry);
-                }
-                Navigator.of(context).pop();
-              },
-              child: Text(entry == null ? '追加' : '保存'),
-            ),
-          ],
         );
       },
     );
   }
 
-  // --- 他大学用: Firestore全ユーザーの講義を取得（オートコンプリート候補用） ---
+  // --- 分散協力型データベース: 全ユーザーの講義データを取得（オートコンプリート候補用） ---
   Future<List<TimetableEntry>> _fetchAllOtherUnivCourses() async {
     final snap =
         await FirebaseFirestore.instance
@@ -3760,6 +4484,202 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
       }
     }
     return all;
+  }
+
+  // --- 分散協力型データベース: 全ユーザーの講義データを取得（標準化・集積用） ---
+  Future<void> _loadGlobalCourseData() async {
+    print('分散協力型データベース: 全ユーザーの講義データ読み込み開始');
+    try {
+      final snap =
+          await FirebaseFirestore.instance
+              .collection('universities')
+              .doc('other')
+              .collection('courses')
+              .get();
+
+      List<Map<String, dynamic>> allCourses = [];
+      for (final doc in snap.docs) {
+        if (doc.data().containsKey('courses')) {
+          final List<dynamic> data = doc.data()['courses'];
+          allCourses.addAll(data.map((e) => Map<String, dynamic>.from(e)));
+        }
+      }
+
+      // 講義名でグループ化して標準化・集積
+      Map<String, Map<String, dynamic>> standardizedCourses = {};
+      for (final course in allCourses) {
+        final subjectName = course['subjectName'] ?? '';
+        final normalizedName = _normalizeSubjectName(subjectName);
+
+        if (standardizedCourses.containsKey(normalizedName)) {
+          // 既存の講義情報を更新（より詳細な情報があれば）
+          final existing = standardizedCourses[normalizedName]!;
+          if ((course['faculty'] ?? '').isNotEmpty &&
+              (existing['faculty'] ?? '').isEmpty) {
+            existing['faculty'] = course['faculty'];
+          }
+          if ((course['teacherName'] ?? '').isNotEmpty &&
+              (existing['teacherName'] ?? '').isEmpty) {
+            existing['teacherName'] = course['teacherName'];
+          }
+          // 使用回数をカウント
+          existing['usageCount'] = (existing['usageCount'] ?? 0) + 1;
+        } else {
+          // 新しい講義情報を追加
+          course['normalizedName'] = normalizedName;
+          course['usageCount'] = 1;
+          standardizedCourses[normalizedName] = course;
+        }
+      }
+
+      setState(() {
+        _globalCourseData = standardizedCourses.values.toList();
+      });
+
+      print('分散協力型データベース: ${_globalCourseData.length}件の標準化された講義データを読み込み完了');
+    } catch (e) {
+      print('分散協力型データベース: データ読み込みエラー: $e');
+    }
+  }
+
+  // --- 講義名の標準化（オートコンプリート用） ---
+  String _normalizeSubjectName(String subjectName) {
+    // 基本的な正規化（空白除去、小文字化）
+    String normalized = subjectName.trim().toLowerCase();
+
+    // 一般的な表記揺れを統一
+    normalized = normalized
+        .replaceAll('（', '(')
+        .replaceAll('）', ')')
+        .replaceAll('　', ' ')
+        .replaceAll('  ', ' ');
+
+    return normalized;
+  }
+
+  // --- オートコンプリート候補を取得（標準化されたデータから） ---
+  List<String> _getAutocompleteSuggestions(String query) {
+    if (query.isEmpty) return [];
+
+    final normalizedQuery = _normalizeSubjectName(query);
+    final suggestions = <String>[];
+
+    for (final course in _globalCourseData) {
+      final subjectName = course['subjectName'] ?? '';
+      final normalizedName = course['normalizedName'] ?? '';
+
+      if (normalizedName.contains(normalizedQuery) ||
+          subjectName.toLowerCase().contains(normalizedQuery)) {
+        suggestions.add(subjectName);
+      }
+    }
+
+    // 使用回数でソート（人気順）
+    suggestions.sort((a, b) {
+      final aCourse = _globalCourseData.firstWhere(
+        (course) => course['subjectName'] == a,
+        orElse: () => {'usageCount': 0},
+      );
+      final bCourse = _globalCourseData.firstWhere(
+        (course) => course['subjectName'] == b,
+        orElse: () => {'usageCount': 0},
+      );
+      return (bCourse['usageCount'] ?? 0).compareTo(aCourse['usageCount'] ?? 0);
+    });
+
+    return suggestions.take(10).toList(); // 上位10件まで
+  }
+
+  // --- 分散協力型データベース: 講義追加（拡張データ付き） ---
+  Future<void> _addOtherUnivCourseWithExtendedData(
+    TimetableEntry entry,
+    Map<String, dynamic> extendedData,
+  ) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    // ユーザー固有のコースデータを保存
+    final docRef = FirebaseFirestore.instance
+        .collection('universities')
+        .doc('other')
+        .collection('courses')
+        .doc(user.uid);
+    final snapshot = await docRef.get();
+    List<dynamic> courses = [];
+    if (snapshot.exists &&
+        snapshot.data() != null &&
+        snapshot.data()!.containsKey('courses')) {
+      courses = List.from(snapshot.data()!['courses']);
+    }
+    courses.add(entry.toMap());
+    await docRef.set({'courses': courses}, SetOptions(merge: true));
+
+    // 分散協力型データベースに拡張データを保存
+    await _saveToGlobalDatabase(extendedData);
+
+    await _loadOtherUnivCourses();
+    await _loadGlobalCourseData(); // グローバルデータも更新
+  }
+
+  // --- 分散協力型データベース: 講義編集（拡張データ付き） ---
+  Future<void> _updateOtherUnivCourseWithExtendedData(
+    TimetableEntry entry,
+    Map<String, dynamic> extendedData,
+  ) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    // ユーザー固有のコースデータを更新
+    final docRef = FirebaseFirestore.instance
+        .collection('universities')
+        .doc('other')
+        .collection('courses')
+        .doc(user.uid);
+    final snapshot = await docRef.get();
+    List<dynamic> courses = [];
+    if (snapshot.exists &&
+        snapshot.data() != null &&
+        snapshot.data()!.containsKey('courses')) {
+      courses = List.from(snapshot.data()!['courses']);
+    }
+    final idx = courses.indexWhere((e) => e['id'] == entry.id);
+    if (idx != -1) {
+      courses[idx] = entry.toMap();
+    }
+    await docRef.set({'courses': courses}, SetOptions(merge: true));
+
+    // 分散協力型データベースに拡張データを保存
+    await _saveToGlobalDatabase(extendedData);
+
+    await _loadOtherUnivCourses();
+    await _loadGlobalCourseData(); // グローバルデータも更新
+  }
+
+  // --- 分散協力型データベース: グローバルデータベースに保存 ---
+  Future<void> _saveToGlobalDatabase(Map<String, dynamic> courseData) async {
+    try {
+      // 標準化された講義名でグローバルデータベースに保存
+      final normalizedName = _normalizeSubjectName(
+        courseData['subjectName'] ?? '',
+      );
+      final globalDocRef = FirebaseFirestore.instance
+          .collection('globalCourses')
+          .doc(normalizedName);
+
+      await globalDocRef.set({
+        'subjectName': courseData['subjectName'],
+        'normalizedName': normalizedName,
+        'teacherName': courseData['teacherName'],
+        'faculty': courseData['faculty'],
+        'classroom': courseData['classroom'],
+        'lastUpdated': DateTime.now().toIso8601String(),
+        'usageCount': FieldValue.increment(1),
+      }, SetOptions(merge: true));
+
+      print('分散協力型データベース: グローバルデータベースに保存完了');
+    } catch (e) {
+      print('分散協力型データベース: グローバルデータベース保存エラー: $e');
+    }
   }
 
   // --- 他大学用: 講義編集 ---

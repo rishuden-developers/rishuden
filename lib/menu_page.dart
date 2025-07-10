@@ -44,7 +44,10 @@ class MenuPage extends ConsumerWidget {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => SettingPage()),
+                  MaterialPageRoute(
+                    builder:
+                        (context) => const SettingPage(universityType: 'main'),
+                  ),
                 );
               },
             ),

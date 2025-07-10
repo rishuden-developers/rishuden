@@ -4,7 +4,8 @@ import 'delete_account_card.dart';
 import 'logout_card.dart';
 
 class SettingPage extends StatefulWidget {
-  const SettingPage({super.key});
+  final String universityType;
+  const SettingPage({super.key, this.universityType = 'main'});
 
   @override
   State<SettingPage> createState() => _SettingPageState();
@@ -47,7 +48,7 @@ class _SettingPageState extends State<SettingPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                CalendarSettingCard(),
+                CalendarSettingCard(universityType: widget.universityType),
                 Card(
                   margin: const EdgeInsets.symmetric(vertical: 8.0),
                   shape: RoundedRectangleBorder(

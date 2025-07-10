@@ -4,7 +4,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class CalendarSettingCard extends StatefulWidget {
-  const CalendarSettingCard({super.key});
+  final String universityType;
+  const CalendarSettingCard({super.key, this.universityType = 'main'});
 
   @override
   State<CalendarSettingCard> createState() => _CalendarSettingCardState();
@@ -77,7 +78,10 @@ class _CalendarSettingCardState extends State<CalendarSettingCard> {
             SnackBar(
               content: const Text(
                 'カレンダーURLを保存しました！\n新規発行のURLは反映まで最大1日程度かかる場合があります。',
-                style: TextStyle(fontFamily: 'Noto Sans JP', color: Colors.white),
+                style: TextStyle(
+                  fontFamily: 'Noto Sans JP',
+                  color: Colors.white,
+                ),
               ),
               backgroundColor: Colors.black.withOpacity(0.85),
               shape: RoundedRectangleBorder(
@@ -98,7 +102,10 @@ class _CalendarSettingCardState extends State<CalendarSettingCard> {
             SnackBar(
               content: const Text(
                 '保存に失敗しました',
-                style: TextStyle(fontFamily: 'Noto Sans JP', color: Colors.white),
+                style: TextStyle(
+                  fontFamily: 'Noto Sans JP',
+                  color: Colors.white,
+                ),
               ),
               backgroundColor: Colors.black.withOpacity(0.85),
               shape: RoundedRectangleBorder(
@@ -129,10 +136,39 @@ class _CalendarSettingCardState extends State<CalendarSettingCard> {
   }
 
   Future<void> _openKoan() async {
-    const String koanUrl =
-        'https://koan.osaka-u.ac.jp/campusweb/campusportal.do?page=main';
-    final Uri url = Uri.parse(koanUrl);
-    await launchUrl(url, mode: LaunchMode.externalApplication);
+    if (widget.universityType == 'other') {
+      // 他大学の場合は汎用的なメッセージを表示
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder:
+              (context) => AlertDialog(
+                title: const Text('大学システムについて'),
+                content: const Text(
+                  'お使いの大学のポータルサイトや学習管理システムにアクセスして、'
+                  'カレンダー連携機能からiCal形式(.ics)のURLを取得してください。\n\n'
+                  '一般的な手順：\n'
+                  '1. 大学のポータルサイトにログイン\n'
+                  '2. 授業スケジュールやカレンダー機能を探す\n'
+                  '3. カレンダー連携やiCalエクスポート機能を利用\n'
+                  '4. 表示されたURLをコピー',
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('OK'),
+                  ),
+                ],
+              ),
+        );
+      }
+    } else {
+      // 大阪大学の場合はKOANを開く
+      const String koanUrl =
+          'https://koan.osaka-u.ac.jp/campusweb/campusportal.do?page=main';
+      final Uri url = Uri.parse(koanUrl);
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+    }
   }
 
   @override
@@ -164,9 +200,11 @@ class _CalendarSettingCardState extends State<CalendarSettingCard> {
                   fit: BoxFit.fitWidth,
                 ),
                 const SizedBox(height: 16),
-                const Text(
-                  'KOANの休講・スケジュールを選び、カレンダー連携を選択し、URLを作成を押した後、コピーして、下の入力欄に貼り付けてください。\n例: https://koan.osaka-u.ac.jp/...\n\n※ 新規発行のカレンダーURLは反映まで最大1日程度かかる場合があります。',
-                  style: TextStyle(fontSize: 13, color: Colors.black87),
+                Text(
+                  widget.universityType == 'other'
+                      ? 'お使いの大学のポータルサイトや学習管理システムから取得したiCal形式(.ics)のURLを下の入力欄に貼り付けてください。\n例: https://your-university.edu/...\n\n※ 新規発行のカレンダーURLは反映まで最大1日程度かかる場合があります。'
+                      : 'KOANの休講・スケジュールを選び、カレンダー連携を選択し、URLを作成を押した後、コピーして、下の入力欄に貼り付けてください。\n例: https://koan.osaka-u.ac.jp/...\n\n※ 新規発行のカレンダーURLは反映まで最大1日程度かかる場合があります。',
+                  style: const TextStyle(fontSize: 13, color: Colors.black87),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 8),
@@ -190,11 +228,14 @@ class _CalendarSettingCardState extends State<CalendarSettingCard> {
             const SizedBox(height: 16),
             TextField(
               controller: _urlController,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'カレンダーURL',
-                hintText: 'https://koan.osaka-u.ac.jp/...',
-                border: OutlineInputBorder(),
-                contentPadding: EdgeInsets.symmetric(
+                hintText:
+                    widget.universityType == 'other'
+                        ? 'https://your-university.edu/...'
+                        : 'https://koan.osaka-u.ac.jp/...',
+                border: const OutlineInputBorder(),
+                contentPadding: const EdgeInsets.symmetric(
                   horizontal: 12,
                   vertical: 10,
                 ),
@@ -233,9 +274,12 @@ class _CalendarSettingCardState extends State<CalendarSettingCard> {
                 child: ElevatedButton.icon(
                   onPressed: _openKoan,
                   icon: const Icon(Icons.open_in_new, size: 20),
-                  label: const Text(
-                    'KOANを開く',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  label: Text(
+                    widget.universityType == 'other' ? '大学システムについて' : 'KOANを開く',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.green[600],
@@ -267,13 +311,19 @@ class _CalendarSettingCardState extends State<CalendarSettingCard> {
                     color: Colors.grey[100],
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Text(
-                    '1. 大学のシステム（KOAN等）にログイン\n'
-                    '2. 休講・スケジュールを押す\n'
-                    '3. カレンダー連携を押す\n'
-                    '4. URLを作成を押す\n'
-                    '5. 表示されたURLをコピー',
-                    style: TextStyle(
+                  child: Text(
+                    widget.universityType == 'other'
+                        ? '1. お使いの大学のポータルサイトにログイン\n'
+                            '2. 授業スケジュールやカレンダー機能を探す\n'
+                            '3. カレンダー連携やiCalエクスポート機能を利用\n'
+                            '4. URLを作成またはエクスポートを押す\n'
+                            '5. 表示されたURLをコピー'
+                        : '1. 大学のシステム（KOAN等）にログイン\n'
+                            '2. 休講・スケジュールを押す\n'
+                            '3. カレンダー連携を押す\n'
+                            '4. URLを作成を押す\n'
+                            '5. 表示されたURLをコピー',
+                    style: const TextStyle(
                       fontSize: 12,
                       color: Colors.black87,
                       height: 1.5,
