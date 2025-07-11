@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../login_page.dart';
+import '../welcome_page.dart';
 
 class DeleteAccountCard extends StatefulWidget {
   const DeleteAccountCard({super.key});
@@ -178,7 +178,7 @@ class _DeleteAccountCardState extends State<DeleteAccountCard> {
         });
 
         Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (context) => const LoginPage()),
+          MaterialPageRoute(builder: (context) => const WelcomePage()),
           (Route<dynamic> route) => false,
         );
 

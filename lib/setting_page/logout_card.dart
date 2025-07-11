@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../login_page.dart';
+import '../welcome_page.dart';
 
 class LogoutCard extends StatelessWidget {
   const LogoutCard({super.key});
@@ -20,7 +20,7 @@ class LogoutCard extends StatelessWidget {
               await FirebaseAuth.instance.signOut();
               if (context.mounted) {
                 Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(builder: (_) => const LoginPage()),
+                  MaterialPageRoute(builder: (_) => const WelcomePage()),
                   (route) => false,
                 );
               }

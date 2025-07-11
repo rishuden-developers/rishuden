@@ -26,11 +26,17 @@ import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 
 import 'menu_page.dart';
+import 'course_registration_page.dart';
 
 class MainPage extends ConsumerStatefulWidget {
   final bool showLoginBonus;
+  final String universityType;
 
-  const MainPage({super.key, this.showLoginBonus = false});
+  const MainPage({
+    super.key,
+    this.showLoginBonus = false,
+    this.universityType = 'main',
+  });
 
   @override
   ConsumerState<MainPage> createState() => _MainPageState();
@@ -92,8 +98,61 @@ class _MainPageState extends ConsumerState<MainPage> {
     );
   }
 
+  // 他大学版についてのダイアログ
+  void _showOtherUnivInfoDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('他大学版について'),
+            content: const Text(
+              'このアプリは他大学の学生向けに開発中のバージョンです。\n\n'
+              '現在は基本的な時間割機能のみ利用可能です。\n'
+              '今後、クエスト機能やレビュー機能なども追加予定です。',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+    );
+  }
+
+  // 開発状況のダイアログ
+  void _showDevelopmentStatusDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('開発状況'),
+            content: const Text(
+              '【実装済み】\n'
+              '• 時間割表示・編集\n'
+              '• 授業の追加・削除\n'
+              '• 基本的なUI\n\n'
+              '【開発中】\n'
+              '• クエスト機能\n'
+              '• レビュー機能\n'
+              '• ランキング機能\n\n'
+              '【予定】\n'
+              '• 他大学向けカスタマイズ\n'
+              '• 追加機能',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    print('大学タイプ:  [33m [1m' + widget.universityType + '\u001b[0m');
     // ログインボーナス通知を表示（一度だけ）
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (widget.showLoginBonus && !_hasShownLoginBonus) {
@@ -124,8 +183,9 @@ class _MainPageState extends ConsumerState<MainPage> {
         diagnosedCharacterName: '剣士',
         answers: const [],
         userName: userName,
+        universityType: widget.universityType,
       ),
-      const TimeSchedulePage(),
+      TimeSchedulePage(universityType: widget.universityType),
       const ItemPage(),
     ];
 
@@ -146,6 +206,28 @@ class _MainPageState extends ConsumerState<MainPage> {
           IndexedStack(index: currentPage.index, children: pages),
           // parkページ用のアイコンボタン
           if (currentPage == AppPage.park)
+            Positioned(
+              top: MediaQuery.of(context).padding.top,
+              right: 5,
+              child: IconButton(
+                icon: const Icon(
+                  Icons.menu,
+                  color: Colors.white,
+                  size: 32,
+                  shadows: [
+                    Shadow(
+                      color: Colors.black54,
+                      blurRadius: 4.0,
+                      offset: Offset(1.0, 1.0),
+                    ),
+                  ],
+                ),
+                onPressed: () => _scaffoldKey.currentState?.openEndDrawer(),
+              ),
+            ),
+          // 他大学用の時間割ページでもメニューボタンを表示
+          if (currentPage == AppPage.timetable &&
+              widget.universityType == 'other')
             Positioned(
               top: MediaQuery.of(context).padding.top,
               right: 5,
@@ -188,12 +270,12 @@ class _MainPageState extends ConsumerState<MainPage> {
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
+                  children: [
                     Icon(Icons.menu_book, color: Colors.white, size: 36),
                     SizedBox(height: 10),
                     Text(
-                      '冒険のメニュー',
-                      style: TextStyle(
+                      widget.universityType == 'other' ? '他大学メニュー' : '冒険のメニュー',
+                      style: const TextStyle(
                         fontFamily: 'NotoSansJP',
                         color: Colors.white,
                         fontSize: 22,
@@ -203,20 +285,43 @@ class _MainPageState extends ConsumerState<MainPage> {
                   ],
                 ),
               ),
-              _buildDrawerTile(Icons.school_outlined, 'KOAN', () {
-                _launchURL(
-                  'https://koan.osaka-u.ac.jp/campusweb/campusportal.do?page=main',
-                );
-              }),
-              _buildDrawerTile(Icons.book_outlined, 'CLE', () {
-                _launchURL('https://www.cle.osaka-u.ac.jp/ultra/course');
-              }),
-              _buildDrawerTile(Icons.person_outline, 'マイハンダイ', () {
-                _launchURL('https://my.osaka-u.ac.jp/');
-              }),
-              _buildDrawerTile(Icons.mail_outline, 'OU-Mail', () {
-                _launchURL('https://outlook.office.com/mail/');
-              }),
+              // 大阪大学専用のメニュー項目
+              if (widget.universityType != 'other') ...[
+                _buildDrawerTile(Icons.school_outlined, 'KOAN', () {
+                  _launchURL(
+                    'https://koan.osaka-u.ac.jp/campusweb/campusportal.do?page=main',
+                  );
+                }),
+                _buildDrawerTile(Icons.book_outlined, 'CLE', () {
+                  _launchURL('https://www.cle.osaka-u.ac.jp/ultra/course');
+                }),
+                _buildDrawerTile(Icons.person_outline, 'マイハンダイ', () {
+                  _launchURL('https://my.osaka-u.ac.jp/');
+                }),
+                _buildDrawerTile(Icons.mail_outline, 'OU-Mail', () {
+                  _launchURL('https://outlook.office.com/mail/');
+                }),
+              ],
+              // 他大学用のメニュー項目
+              if (widget.universityType == 'other') ...[
+                _buildDrawerTile(Icons.info_outline, '他大学版について', () {
+                  Navigator.pop(context);
+                  _showOtherUnivInfoDialog(context);
+                }),
+                _buildDrawerTile(Icons.bug_report, '開発状況', () {
+                  Navigator.pop(context);
+                  _showDevelopmentStatusDialog(context);
+                }),
+                _buildDrawerTile(Icons.school, '講義登録', () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const CourseRegistrationPage(),
+                    ),
+                  );
+                }),
+              ],
               Divider(color: Colors.amber[200]),
               _buildDrawerTile(Icons.mail, 'お問い合わせ', () {
                 Navigator.pop(context);
@@ -234,7 +339,11 @@ class _MainPageState extends ConsumerState<MainPage> {
                 Navigator.pop(context);
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const SettingPage()),
+                  MaterialPageRoute(
+                    builder:
+                        (context) =>
+                            SettingPage(universityType: widget.universityType),
+                  ),
                 );
               }),
               _buildDrawerTile(Icons.image, '背景画像を変更', () async {
@@ -299,10 +408,8 @@ class _MainPageState extends ConsumerState<MainPage> {
           ),
         ),
       ),
-
     );
   }
-
 }
 
 class AuthWrapper extends StatelessWidget {
@@ -380,5 +487,3 @@ class AuthWrapper extends StatelessWidget {
     );
   }
 }
-
-

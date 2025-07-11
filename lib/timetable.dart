@@ -71,6 +71,20 @@ DateTime _getPeriodEndTime(DateTime date, int period) {
   return DateTime(date.year, date.month, date.day, int.parse(timeParts[0]), int.parse(timeParts[1]));
 }
 
+// 時限から開始・終了時刻を取得する公開関数
+Map<String, DateTime> getPeriodStartAndEndTimes(DateTime date, int period) {
+  if (period < 1 || period > _periodTimes.length) {
+    // 不正な時限の場合は、現在時刻などを返すか、エラーを投げる
+    // ここでは例として現在時刻を返す
+    final now = DateTime.now();
+    return {'start': now, 'end': now.add(const Duration(hours: 1))};
+  }
+  return {
+    'start': _getPeriodStartTime(date, period),
+    'end': _getPeriodEndTime(date, period),
+  };
+}
+
 /// 今週のイベントをリストで返す（曜日・時限順ソート済み）
 Future<List<Map<String, dynamic>>> _getWeeklyEventList(DateTime date) async {
   final user = FirebaseAuth.instance.currentUser;

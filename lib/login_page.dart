@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'character_question_page.dart';
 import 'register_page.dart';
+import 'main_page.dart';
 
 class LoginPage extends StatefulWidget {
-  const LoginPage({super.key});
+  final String universityType;
+  const LoginPage({super.key, this.universityType = 'main'});
 
   @override
   State<LoginPage> createState() => _LoginPageState();
@@ -58,12 +60,23 @@ class _LoginPageState extends State<LoginPage> {
         return;
       }
 
-      // キャラクター診断ページへ遷移
+      // 大学タイプに応じて遷移先を分岐
       if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => CharacterQuestionPage()),
-        );
+        if (widget.universityType == 'other') {
+          // 他大学の場合は直接メインページへ（キャラクター診断はスキップ）
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => MainPage(universityType: 'other'),
+            ),
+          );
+        } else {
+          // 大阪大学の場合はキャラクター診断ページへ
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => CharacterQuestionPage()),
+          );
+        }
       }
     } catch (e) {
       String msg = e.toString();
@@ -83,7 +96,10 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF2C3E50), // 暗い青色色調の背景
+      backgroundColor:
+          widget.universityType == 'other'
+              ? const Color(0xFF8B0000) // 他大学の場合は暗い赤色
+              : const Color(0xFF2C3E50), // 大阪大学の場合は暗い青色色調の背景
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Column(
@@ -91,11 +107,34 @@ class _LoginPageState extends State<LoginPage> {
           crossAxisAlignment: CrossAxisAlignment.stretch, // 子要素を水平方向に伸ばす
           children: [
             const SizedBox(height: 100), // 上部の余白
+            // 他大学の場合は「開発中」ラベルを表示
+            if (widget.universityType == 'other')
+              Container(
+                margin: const EdgeInsets.only(bottom: 20),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.red.withOpacity(0.8),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Colors.white, width: 2),
+                ),
+                child: const Text(
+                  '開発中',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'NotoSansJP',
+                  ),
+                ),
+              ),
             // アプリ名
-            const Text(
-              '履修伝説',
+            Text(
+              widget.universityType == 'other' ? '履修伝説（他大学版）' : '履修伝説',
               textAlign: TextAlign.center,
-              style: TextStyle(
+              style: const TextStyle(
                 color: Colors.white,
                 fontSize: 48,
                 fontWeight: FontWeight.bold,
@@ -103,13 +142,12 @@ class _LoginPageState extends State<LoginPage> {
             ),
             const SizedBox(height: 8),
             // サブタイトル/キャッチフレーズ
-            const Text(
-              'さあ、冒険を始めよう。',
+            Text(
+              widget.universityType == 'other'
+                  ? '他大学向けバージョン（開発中）'
+                  : 'さあ、冒険を始めよう。',
               textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Colors.white70,
-                fontSize: 18,
-              ),
+              style: const TextStyle(color: Colors.white70, fontSize: 18),
             ),
             const SizedBox(height: 64),
             // Email入力フィールド
@@ -166,7 +204,10 @@ class _LoginPageState extends State<LoginPage> {
             ElevatedButton(
               onPressed: _login,
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF3498DB), // 青色基調
+                backgroundColor:
+                    widget.universityType == 'other'
+                        ? const Color(0xFFDC143C) // 他大学の場合は赤色
+                        : const Color(0xFF3498DB), // 大阪大学の場合は青色基調
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),

@@ -102,8 +102,12 @@ class _UserDataCheckerState extends State<UserDataChecker> {
         if (snapshot.hasData && snapshot.data!.exists) {
           final data = snapshot.data!.data() as Map<String, dynamic>;
           if (data.containsKey('character') && data['character'] != null) {
-            // キャラクター設定済み - ボーナスフラグを渡す
-            return MainPage(showLoginBonus: _bonusGiven);
+            // キャラクター設定済み - 大学タイプを取得してボーナスフラグを渡す
+            final universityType = data['universityType'] as String? ?? 'main';
+            return MainPage(
+              universityType: universityType,
+              showLoginBonus: _bonusGiven,
+            );
           }
         }
 
