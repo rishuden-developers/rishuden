@@ -16,6 +16,8 @@ class TimetableEntry {
   final String originalLocation;
   final int dayOfWeek;
   final int period;
+  final DateTime startTime;
+  final DateTime endTime;
   final Color color;
   final bool isCancelled;
   final AttendancePolicy initialPolicy;
@@ -43,6 +45,8 @@ class TimetableEntry {
     required this.dayOfWeek,
     required this.period,
     required this.date,
+    required this.startTime,
+    required this.endTime,
     this.isCancelled = false,
     this.color = Colors.white,
     this.initialPolicy = AttendancePolicy.flexible,
@@ -60,6 +64,8 @@ class TimetableEntry {
       'originalLocation': originalLocation,
       'dayOfWeek': dayOfWeek,
       'period': period,
+      'startTime': startTime.toIso8601String(),
+      'endTime': endTime.toIso8601String(),
       'date': date,
       'isCancelled': isCancelled,
       'color': color.value,
@@ -80,6 +86,8 @@ class TimetableEntry {
           map['originalLocation'] as String? ?? map['classroom'] as String,
       dayOfWeek: map['dayOfWeek'],
       period: map['period'],
+      startTime: DateTime.parse(map['startTime']),
+      endTime: DateTime.parse(map['endTime']),
       date: map['date'],
       isCancelled: map['isCancelled'] ?? false,
       color: Color(map['color']),

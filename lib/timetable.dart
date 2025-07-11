@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'timetable_entry.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:rishuden/services/notification_service.dart';
 
 // dateを含む週の月曜日と日曜日のDateTimeを計算する関数
 DateTime _getThisMonday(DateTime date) {
@@ -47,6 +48,27 @@ int _getClassPeriodNumber(DateTime start) {
       break;
   }
   return 0; // 該当しない場合は0を返す
+}
+
+// 時限ごとの開始・終了時刻を定義
+final List<List<String>> _periodTimes = const [
+  ["8:50", "10:20"],
+  ["10:30", "12:00"],
+  ["13:30", "15:00"],
+  ["15:10", "16:40"],
+  ["16:50", "18:20"],
+  ["18:30", "20:00"],
+];
+
+// 時限番号から開始時刻と終了時刻をDateTimeオブジェクトとして取得するヘルパー関数
+DateTime _getPeriodStartTime(DateTime date, int period) {
+  final timeParts = _periodTimes[period - 1][0].split(':');
+  return DateTime(date.year, date.month, date.day, int.parse(timeParts[0]), int.parse(timeParts[1]));
+}
+
+DateTime _getPeriodEndTime(DateTime date, int period) {
+  final timeParts = _periodTimes[period - 1][1].split(':');
+  return DateTime(date.year, date.month, date.day, int.parse(timeParts[0]), int.parse(timeParts[1]));
 }
 
 /// 今週のイベントをリストで返す（曜日・時限順ソート済み）
@@ -100,6 +122,9 @@ Future<List<Map<String, dynamic>>> _getWeeklyEventList(DateTime date) async {
           .where((e) => e['dtend'] != null && e['type'] == 'VEVENT')
           .map((e) {
             final start = _parseIcsDateToDateTime(e['dtstart'].dt);
+            final period = _getClassPeriodNumber(start);
+            final actualStartTime = _getPeriodStartTime(start, period);
+            final actualEndTime = _getPeriodEndTime(start, period);
             final subject = e['summary'];
             final match = holidayReg.firstMatch(subject);
             if (match != null) {
@@ -111,9 +136,10 @@ Future<List<Map<String, dynamic>>> _getWeeklyEventList(DateTime date) async {
               return null; // 休講は除外
             }
             return {
-              'dtstart': start,
+              'dtstart': actualStartTime,
+              'dtend': actualEndTime,
               'weekday': start.weekday - 1, // 0=月曜, 6=日曜
-              'period': _getClassPeriodNumber(start),
+              'period': period,
               'location': e["location"] ?? '（場所未定）',
               'subject': subject,
             };
@@ -167,6 +193,8 @@ Future<List<TimetableEntry>> getWeeklyTimetableEntries(DateTime date) async {
 
     final description = ev['subject'] as String;
     final location = ev['location'] as String;
+    final DateTime startTime = ev['dtstart'];
+    final DateTime endTime = ev['dtend'];
 
     // ★★★ 教室名を整形するロジックを強化 ★★★
     String formattedLocation = '';
@@ -232,9 +260,22 @@ Future<List<TimetableEntry>> getWeeklyTimetableEntries(DateTime date) async {
       dayOfWeek: weekday, // 曜日（0=月曜, 6=日曜）
       period: period, // 時限（1〜6）
       date: dateStr,
+      startTime: startTime,
+      endTime: endTime,
       isCancelled: ev['isCancelled'], // 休講フラグ
     );
     timetableEntries.add(info);
+
+    // 授業終了時に通知をスケジュール
+    if (info.attitude == AttendanceAttitude.everytime && !info.isCancelled) {
+      NotificationService().scheduleAttendanceNotification(
+        id: info.hashCode, // ユニークな通知ID
+        subjectName: info.subjectName,
+        period: info.period.toString(),
+        date: info.date,
+        endTime: info.endTime,
+      );
+    }
   }
 
   return timetableEntries;

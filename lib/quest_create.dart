@@ -486,7 +486,7 @@ class _QuestCreationWidgetState extends ConsumerState<QuestCreationWidget> {
                       style: const TextStyle(fontSize: 12),
                     ),
                     Text(
-                      'タスク: $selectedTaskType',
+                      'タスク: $selectedTaskType',  
                       style: const TextStyle(fontSize: 12),
                     ),
                     Text(
