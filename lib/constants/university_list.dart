@@ -821,6 +821,29 @@ class UniversityList {
     return universityName == osakaUniversity;
   }
 
+  // 明治大学かどうかを判定
+  static bool isMeijiUniversity(String universityName) {
+    return universityName == '明治大学';
+  }
+
+  // 早稲田大学かどうかを判定
+  static bool isWasedaUniversity(String universityName) {
+    return universityName == '早稲田大学';
+  }
+
+  // 大学名からuniversityTypeを取得
+  static String getUniversityType(String universityName) {
+    if (isOsakaUniversity(universityName)) {
+      return 'main';
+    } else if (isMeijiUniversity(universityName)) {
+      return 'meiji';
+    } else if (isWasedaUniversity(universityName)) {
+      return 'waseda';
+    } else {
+      return 'other';
+    }
+  }
+
   // 大学名から検索（部分一致）
   static List<String> searchUniversities(String query) {
     if (query.isEmpty) return allUniversities;

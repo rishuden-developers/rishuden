@@ -4731,7 +4731,7 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
       // 講義登録画面と同じ保存方法を使用
       final docRef = FirebaseFirestore.instance
           .collection('universities')
-          .doc('other')
+          .doc(_getUniversityDocPath())
           .collection('courses')
           .doc(user.uid);
 
@@ -4782,7 +4782,7 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
       // 講義登録画面と同じ保存方法を使用
       final docRef = FirebaseFirestore.instance
           .collection('universities')
-          .doc('other')
+          .doc(_getUniversityDocPath())
           .collection('courses')
           .doc(user.uid);
 
@@ -4861,7 +4861,7 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
     if (user == null) return;
     final docRef = FirebaseFirestore.instance
         .collection('universities')
-        .doc('other')
+        .doc(_getUniversityDocPath())
         .collection('courses')
         .doc(user.uid);
     final snapshot = await docRef.get();
@@ -4877,6 +4877,32 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
     }
     await docRef.set({'courses': courses}, SetOptions(merge: true));
     await _loadOtherUnivCourses();
+  }
+
+  // 大学別のデータ保存先を取得
+  String _getUniversityDocPath() {
+    switch (widget.universityType) {
+      case 'meiji':
+        return 'meiji';
+      case 'waseda':
+        return 'waseda';
+      case 'other':
+      default:
+        return 'other';
+    }
+  }
+
+  // 大学名を取得
+  String _getUniversityName() {
+    switch (widget.universityType) {
+      case 'meiji':
+        return '明治大学';
+      case 'waseda':
+        return '早稲田大学';
+      case 'other':
+      default:
+        return '他大学';
+    }
   }
 }
 

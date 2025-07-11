@@ -295,7 +295,10 @@ class _MainPageState extends ConsumerState<MainPage> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => const CourseRegistrationPage(),
+                      builder:
+                          (context) => CourseRegistrationPage(
+                            universityType: widget.universityType,
+                          ),
                     ),
                   );
                 }),

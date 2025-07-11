@@ -7,7 +7,8 @@ import 'dart:math';
 import 'timetable_entry.dart';
 
 class CourseRegistrationPage extends StatefulWidget {
-  const CourseRegistrationPage({super.key});
+  final String universityType;
+  const CourseRegistrationPage({super.key, this.universityType = 'main'});
 
   @override
   State<CourseRegistrationPage> createState() => _CourseRegistrationPageState();
@@ -145,9 +146,11 @@ class _CourseRegistrationPageState extends State<CourseRegistrationPage> {
 
     try {
       print('ユーザーID: ${user.uid}');
+      print('大学タイプ: ${widget.universityType}');
+
       final docRef = FirebaseFirestore.instance
           .collection('universities')
-          .doc('other')
+          .doc(_getUniversityDocPath())
           .collection('courses')
           .doc(user.uid);
 
@@ -336,7 +339,7 @@ class _CourseRegistrationPageState extends State<CourseRegistrationPage> {
       // ユーザー固有のコースデータを保存
       final docRef = FirebaseFirestore.instance
           .collection('universities')
-          .doc('other')
+          .doc(_getUniversityDocPath())
           .collection('courses')
           .doc(user.uid);
 
@@ -902,7 +905,7 @@ class _CourseRegistrationPageState extends State<CourseRegistrationPage> {
 
       final docRef = FirebaseFirestore.instance
           .collection('universities')
-          .doc('other')
+          .doc(_getUniversityDocPath())
           .collection('courses')
           .doc(user.uid);
 
@@ -1377,6 +1380,32 @@ class _CourseRegistrationPageState extends State<CourseRegistrationPage> {
     );
   }
 
+  // 大学別のデータ保存先を取得
+  String _getUniversityDocPath() {
+    switch (widget.universityType) {
+      case 'meiji':
+        return 'meiji';
+      case 'waseda':
+        return 'waseda';
+      case 'other':
+      default:
+        return 'other';
+    }
+  }
+
+  // 大学名を取得
+  String _getUniversityName() {
+    switch (widget.universityType) {
+      case 'meiji':
+        return '明治大学';
+      case 'waseda':
+        return '早稲田大学';
+      case 'other':
+      default:
+        return '他大学';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     print('CourseRegistrationPage build開始');
@@ -1384,9 +1413,12 @@ class _CourseRegistrationPageState extends State<CourseRegistrationPage> {
       return Scaffold(
         backgroundColor: const Color(0xFF1a1a1a),
         appBar: AppBar(
-          title: const Text(
-            '講義登録',
-            style: TextStyle(color: Colors.white, fontFamily: 'Noto Sans JP'),
+          title: Text(
+            '${_getUniversityName()}講義登録',
+            style: const TextStyle(
+              color: Colors.white,
+              fontFamily: 'Noto Sans JP',
+            ),
           ),
           backgroundColor: Colors.blue[600],
           iconTheme: const IconThemeData(color: Colors.white),

@@ -119,8 +119,7 @@ class _WelcomePageState extends State<WelcomePage> {
     });
 
     // 大学タイプを判定
-    String universityType =
-        UniversityList.isOsakaUniversity(universityName) ? 'main' : 'other';
+    String universityType = UniversityList.getUniversityType(universityName);
 
     if (universityType == 'main') {
       Navigator.push(
@@ -205,9 +204,7 @@ class _WelcomePageState extends State<WelcomePage> {
                               Navigator.pop(context);
                               // 大学タイプを判定
                               String universityType =
-                                  UniversityList.isOsakaUniversity(university)
-                                      ? 'main'
-                                      : 'other';
+                                  UniversityList.getUniversityType(university);
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
