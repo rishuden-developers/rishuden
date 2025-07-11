@@ -10,7 +10,8 @@ import 'package:flutter/services.dart';
 import 'main_page.dart';
 import 'services/notification_service.dart';
 import 'services/background_message_handler.dart';
-// import 'json_paste_upload_page.dart'; // ← もう不要なら削除してOK
+
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   try {
@@ -24,7 +25,9 @@ void main() async {
     FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
 
     // 通知サービスを初期化
-    await NotificationService().initialize();
+    final notificationService = NotificationService();
+    notificationService.setNavigatorKey(navigatorKey);
+    await notificationService.initialize();
 
     await initializeDateFormatting('ja_JP', null);
     runApp(ProviderScope(child: const MyApp()));
@@ -47,6 +50,7 @@ class MyApp extends StatelessWidget {
       title: 'Rishuden',
       theme: ThemeData(primarySwatch: Colors.blue),
       debugShowCheckedModeBanner: false,
+      navigatorKey: navigatorKey,
       home: AuthWrapper(),
     );
   }

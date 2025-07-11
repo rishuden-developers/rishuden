@@ -9,19 +9,37 @@
 
 const { onRequest } = require("firebase-functions/v2/https");
 const { onDocumentCreated } = require("firebase-functions/v2/firestore");
-const logger = require("firebase-functions/logger");
+const { onSchedule } = require("firebase-functions/v2/scheduler");
+const ical = require("node-ical");
 
-// Firebase Admin SDKの初期化
-const admin = require("firebase-admin");
-admin.initializeApp();
+// icsの表記形式をDateに変換する関数
+function _parseIcsDateToDateTime(dtStr) {
+  // icsの表記形式は "20231001T120000Z" のような形式
+  return new Date(
+    `${dtStr.substring(0, 4)}-${dtStr.substring(4, 6)}-${dtStr.substring(6, 8)}` +
+    `T${dtStr.substring(9, 11)}:${dtStr.substring(11, 13)}:${dtStr.substring(13, 15)}`
+  );
+}
 
-// Create and deploy your first functions
-// https://firebase.google.com/docs/functions/get-started
-
-// exports.helloWorld = onRequest((request, response) => {
-//   logger.info("Hello logs!", {structuredData: true});
-//   response.send("Hello from Firebase!");
-// });
+// 開始時間から授業の時限を計算する関数
+function _getClassPeriodNumber(startHour) {
+  switch (startHour) {
+    case 8:
+      return 1;
+    case 10:
+      return 2;
+    case 13:
+      return 3;
+    case 14:
+      return 4;
+    case 16:
+      return 5;
+    case 18:
+      return 6;
+    default:
+      return 0;
+  }
+}
 
 // クエスト作成時に同じ授業を取っているユーザーにプッシュ通知を送信
 exports.sendPushOnQuestCreated = onDocumentCreated(
@@ -230,6 +248,154 @@ exports.sendPushOnTakoyakiReceived = onDocumentCreated(
 // クエスト締切1時間前通知を送信（定期的に実行）
 exports.sendQuestDeadlineNotifications = onRequest(
   async (request, response) => {
+
+// ログインボーナス通知を毎日8:30に送信
+exports.sendLoginBonusNotification = onSchedule("30 8 * * *", async (event) => {
+  try {
+    logger.info("Starting login bonus notification check");
+
+    // 全ユーザーのFCMトークンを取得
+    const usersSnapshot = await admin.firestore().collection("users").get();
+    const tokens = [];
+    usersSnapshot.forEach((doc) => {
+      const userData = doc.data();
+      if (userData.fcmToken) {
+        tokens.push(userData.fcmToken);
+      }
+    });
+
+    if (tokens.length === 0) {
+      logger.info("No FCM tokens found for any user");
+      return;
+    }
+
+    // プッシュ通知のペイロードを作成
+    const payload = {
+      notification: {
+        title: "ログインボーナスのお知らせ！",
+        body: "今日のログインボーナスを受け取ろう！",
+      },
+      data: {
+        type: "login_bonus",
+      },
+    };
+
+    // プッシュ通知を送信
+    const response = await admin.messaging().sendToDevice(tokens, payload);
+
+    logger.info(`Login bonus notification sent to ${tokens.length} users`);
+    logger.info(
+      `Success count: ${response.successCount}, Failure count: ${response.failureCount}`
+    );
+
+    // 失敗したトークンを処理
+    if (response.failureCount > 0) {
+      response.results.forEach((result, index) => {
+        if (!result.success) {
+          logger.error(
+            `Failed to send login bonus notification to token: ${tokens[index]}`
+          );
+        }
+      });
+    }
+  } catch (error) {
+    logger.error("Error sending login bonus notification:", error);
+  }
+});
+
+// 毎日8:30に時間割を更新し、休講情報を通知
+exports.updateTimetableAndNotifyCancellations = onSchedule("30 8 * * *", async (event) => {
+  try {
+    logger.info("Starting timetable update and cancellation notification check");
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // 今日の0時に設定
+
+    const usersSnapshot = await admin.firestore().collection("users").get();
+
+    for (const userDoc of usersSnapshot.docs) {
+      const userId = userDoc.id;
+      const userData = userDoc.data();
+      const calendarUrl = userData.calendarUrl;
+      const fcmToken = userData.fcmToken;
+
+      if (!calendarUrl || !fcmToken) {
+        logger.info(`Skipping user ${userId}: Missing calendarUrl or fcmToken`);
+        continue;
+      }
+
+      try {
+        const data = await ical.async.fromURL(calendarUrl);
+        const todayTimetable = [];
+        const cancelledClasses = [];
+
+        for (const key in data) {
+          const event = data[key];
+          if (event.type === "VEVENT" && event.start && event.summary) {
+            const eventStart = new Date(event.start);
+            eventStart.setHours(0, 0, 0, 0);
+
+            // 今日のイベントのみを対象
+            if (eventStart.getTime() === today.getTime()) {
+              const subject = event.summary;
+              const location = event.location || "";
+              const period = _getClassPeriodNumber(new Date(event.start).getHours());
+
+              const isCancelled = subject.includes("[休]");
+
+              const timetableEntry = {
+                subject: subject,
+                location: location,
+                period: period,
+                isCancelled: isCancelled,
+              };
+              todayTimetable.push(timetableEntry);
+
+              if (isCancelled) {
+                cancelledClasses.push(timetableEntry);
+              }
+            }
+          }
+        }
+
+        // Firestoreに今日の時間割を保存/更新
+        await admin.firestore().collection("users").doc(userId).collection("timetables").doc(today.toISOString().split('T')[0]).set({
+          date: today,
+          entries: todayTimetable,
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        }, { merge: true });
+
+        logger.info(`Timetable updated for user ${userId} for ${today.toISOString().split('T')[0]}`);
+
+        // 休講通知を送信
+        if (cancelledClasses.length > 0) {
+          const cancellationMessages = cancelledClasses.map(cls => 
+            `${cls.period}時限 ${cls.subject} (${cls.location})`
+          ).join("\n");
+
+          const payload = {
+            notification: {
+              title: "休講情報のお知らせ！",
+              body: `今日の休講があります！\n${cancellationMessages}`,
+            },
+            data: {
+              type: "cancellation_notification",
+              date: today.toISOString().split('T')[0],
+            },
+          };
+
+          await admin.messaging().sendToDevice(fcmToken, payload);
+          logger.info(`Cancellation notification sent to user ${userId}`);
+        }
+      } catch (error) {
+        logger.error(`Error processing timetable for user ${userId}:`, error);
+      }
+    }
+  } catch (error) {
+    logger.error("Error in timetable update and cancellation notification:", error);
+  }
+});
+
     try {
       logger.info("Starting quest deadline notification check");
 

@@ -3,6 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'character_question_page.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'dart:io' show Platform;
 
 class RegisterPage extends StatefulWidget {
   final String universityType;
@@ -77,6 +79,16 @@ class _RegisterPageState extends State<RegisterPage> {
                         if (mounted) Navigator.of(context).pop(); // ダイアログを閉じる
                         // 認証済みなら次の画面へ遷移
                         if (mounted) {
+                          // Androidの場合のみ正確なアラーム権限を要求
+                          if (Platform.isAndroid) {
+                            final AndroidFlutterLocalNotificationsPlugin?
+                                androidImplementation =
+                                FlutterLocalNotificationsPlugin()
+                                    .resolvePlatformSpecificImplementation<
+                                        AndroidFlutterLocalNotificationsPlugin>();
+                            await androidImplementation
+                                ?.requestExactAlarmsPermission();
+                          }
                           Navigator.of(context).pushReplacement(
                             MaterialPageRoute(
                               builder: (_) => CharacterQuestionPage(),

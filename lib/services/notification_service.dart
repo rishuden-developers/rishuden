@@ -3,6 +3,10 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:timezone/timezone.dart' as tz;
+import 'package:timezone/data/latest.dart' as tz;
+import 'package:rishuden/attendance_record_page.dart';
+import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
@@ -12,6 +16,14 @@ class NotificationService {
   final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
   final FlutterLocalNotificationsPlugin _localNotifications =
       FlutterLocalNotificationsPlugin();
+
+  // NavigatorKeyを保持するためのフィールド
+  GlobalKey<NavigatorState>? _navigatorKey;
+
+  // NavigatorKeyを設定するメソッド
+  void setNavigatorKey(GlobalKey<NavigatorState> key) {
+    _navigatorKey = key;
+  }
 
   // 通知チャンネルの設定
   static const AndroidNotificationChannel _channel = AndroidNotificationChannel(
@@ -24,6 +36,10 @@ class NotificationService {
   // 初期化
   Future<void> initialize() async {
     try {
+      // タイムゾーンデータを初期化
+      tz.initializeTimeZones();
+      // デバイスのローカルタイムゾーンを設定
+      tz.setLocalLocation(tz.getLocation(Intl.getCurrentLocale()));
       // 通知権限を要求
       await _requestPermission();
 
@@ -184,7 +200,28 @@ class NotificationService {
   // 通知タップ時の処理
   void _onNotificationTapped(NotificationResponse response) {
     print('Notification tapped: ${response.payload}');
-    // 必要に応じて特定の画面に遷移する処理を追加
+    if (response.payload != null &&
+        response.payload!.startsWith('attendance_record:')) {
+      final parts = response.payload!.split(':');
+      if (parts.length == 4) {
+        final subjectName = parts[1];
+        final period = parts[2];
+        final date = parts[3];
+        // NavigatorKeyを使って画面遷移
+        if (_navigatorKey?.currentState != null) {
+          _navigatorKey!.currentState!.push(
+            MaterialPageRoute(
+              builder:
+                  (context) => AttendanceRecordPage(
+                    subjectName: subjectName,
+                    period: period,
+                    date: date,
+                  ),
+            ),
+          );
+        }
+      }
+    }
   }
 
   // 通知タップ時の処理（FCM）
@@ -240,6 +277,7 @@ class NotificationService {
     required String senderName,
     required String reason,
   }) async {
+    // ローカル通知は自分のデバイスにのみ表示
     await showLocalNotification(
       title: 'たこ焼きを貰いました！',
       body: '$senderName から $reason でたこ焼きを送ってもらいました！',
@@ -263,6 +301,45 @@ class NotificationService {
   Future<void> refreshFCMToken() async {
     print('Manually refreshing FCM token...');
     await _getAndSaveFCMToken();
+  }
+
+  // 出席記録通知をスケジューリング
+  Future<void> scheduleAttendanceNotification({
+    required int id,
+    required String subjectName,
+    required String period,
+    required String date,
+    required DateTime endTime,
+  }) async {
+    final now = tz.TZDateTime.now(tz.local);
+    final scheduledTime = tz.TZDateTime.from(endTime, tz.local);
+
+    // 授業終了時刻が現在時刻より後の場合のみスケジュール
+    if (scheduledTime.isAfter(now)) {
+      await _localNotifications.zonedSchedule(
+        id,
+        '出席を記録しましょう！',
+        '${subjectName} (${period}時限) の授業が終わりました。出席を記録しますか？',
+        scheduledTime,
+        const NotificationDetails(
+          android: AndroidNotificationDetails(
+            'attendance_channel',
+            '出席記録通知',
+            channelDescription: '授業終了後の出席記録を促す通知',
+            importance: Importance.max,
+            priority: Priority.high,
+          ),
+          iOS: DarwinNotificationDetails(),
+        ),
+
+        payload: 'attendance_record:${subjectName}:${period}:${date}',
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        matchDateTimeComponents: DateTimeComponents.dateAndTime,
+      );
+      print(
+        'Scheduled attendance notification for $subjectName at $scheduledTime',
+      );
+    }
   }
 
   // クエスト締切1時間前のローカル通知をスケジューリング

@@ -335,15 +335,7 @@ class _CreditReviewPageState extends ConsumerState<CreditReviewPage> {
                 left: 0,
                 right: 0,
                 bottom: 0,
-                child: CommonBottomNavigation(
-                  onNavigate: (page) {
-                    ref.read(currentPageProvider.notifier).state = page;
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(builder: (context) => MainPage()),
-                    );
-                  },
-                ),
+                child: CommonBottomNavigation(),
               ),
             ],
           ),

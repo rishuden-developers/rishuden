@@ -3471,6 +3471,11 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
 
         // ローカルの時間割グリッドを更新
         if (mounted) {
+          // timetable.dartの関数を使って開始・終了時刻を取得
+          final times = getPeriodStartAndEndTimes(DateTime.now(), periodIndex + 1);
+          final startTime = times['start']!;
+          final endTime = times['end']!;
+
           setState(() {
             _timetableGrid[dayIndex][periodIndex] = TimetableEntry(
               id: courseId,
@@ -3479,8 +3484,10 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
               originalLocation: teacherName,
               dayOfWeek: dayIndex,
               period: periodIndex + 1,
-              date: '',
+              date: '', // 他大学モードでは日付は重要でないため空文字
               faculty: faculty,
+              startTime: startTime,
+              endTime: endTime,
             );
           });
         }
@@ -3979,15 +3986,23 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
             ElevatedButton(
               onPressed: () async {
                 if (_subjectController.text.trim().isEmpty) return;
+
+                // timetable.dartの関数を使って開始・終了時刻を取得
+                final times = getPeriodStartAndEndTimes(DateTime.now(), _selectedPeriod);
+                final startTime = times['start']!;
+                final endTime = times['end']!;
+
                 final entry = TimetableEntry(
                   id: DateTime.now().millisecondsSinceEpoch.toString(),
                   subjectName: _subjectController.text.trim(),
                   classroom: _classroomController.text.trim(),
-                  originalLocation: _classroomController.text.trim(),
+                  originalLocation: _teacherController.text.trim(), // 教員名も保存
                   dayOfWeek: _selectedDay,
                   period: _selectedPeriod,
-                  date: '',
-                  color: Colors.blue,
+                  date: '', // 他大学モードでは日付は重要でないため空文字
+                  color: Colors.blue, // 色は固定または選択式に
+                  startTime: startTime,
+                  endTime: endTime,
                 );
                 await _addOtherUnivCourse(entry);
                 Navigator.of(context).pop();
@@ -4411,6 +4426,11 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                               'updatedAt': DateTime.now().toIso8601String(),
                             };
 
+                            // timetable.dartの関数を使って開始・終了時刻を取得
+                            final times = getPeriodStartAndEndTimes(DateTime.now(), period);
+                            final startTime = times['start']!;
+                            final endTime = times['end']!;
+
                             final newEntry = TimetableEntry(
                               id: courseId,
                               subjectName: _subjectController.text.trim(),
@@ -4424,6 +4444,8 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                                           .trim()
                                           .hashCode %
                                       _neonColors.length],
+                              startTime: startTime,
+                              endTime: endTime,
                             );
                             if (entry == null) {
                               await _addOtherUnivCourseWithExtendedData(

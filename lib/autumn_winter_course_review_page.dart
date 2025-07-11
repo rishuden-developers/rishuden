@@ -250,15 +250,7 @@ class _AutumnWinterCourseReviewPageState
                 left: 0,
                 right: 0,
                 bottom: 0,
-                child: CommonBottomNavigation(
-                  onNavigate: (page) {
-                    ref.read(currentPageProvider.notifier).state = page;
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(builder: (context) => MainPage()),
-                    );
-                  },
-                ),
+                child: CommonBottomNavigation(),
               ),
             ],
           ),
@@ -593,11 +585,31 @@ class _TakoyakiButtonState extends State<_TakoyakiButton> {
   Future<void> _sendTakoyaki() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null || widget.userId == null) return;
+
     // Firestoreで投稿者にたこ焼きを1つ加算
     await FirebaseFirestore.instance
         .collection('users')
         .doc(widget.userId)
         .update({'takoyakiCount': FieldValue.increment(1)});
+
+    // レビュー作成者のユーザー名を取得
+    final reviewCreatorDoc = await FirebaseFirestore.instance.collection('users').doc(widget.userId).get();
+    final reviewCreatorName = reviewCreatorDoc.data()?['userName'] ?? '名無し';
+
+    // 通知をFirestoreに直接追加
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(widget.userId)
+        .collection('notifications')
+        .add({
+          'type': 'takoyaki_received',
+          'senderId': user.uid,
+          'reason': 'あなたのレビュー',
+          'reviewId': widget.reviewId,
+          'createdAt': FieldValue.serverTimestamp(),
+          'isRead': false,
+        });
+
     // ローカルで送信済みフラグを保存
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('takoyaki_sent_${widget.reviewId}_${user.uid}', true);

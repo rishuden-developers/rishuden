@@ -16,6 +16,8 @@ class TimetableEntry {
   final String originalLocation;
   final int dayOfWeek;
   final int period;
+  final DateTime startTime; // from HEAD
+  final DateTime endTime;   // from HEAD
   final Color color;
   final bool isCancelled;
   final AttendancePolicy initialPolicy;
@@ -33,7 +35,7 @@ class TimetableEntry {
   AttendanceAttitude attitude;
 
   /// 学部情報
-  String? faculty;
+  String? faculty; // from main
 
   /// 最終更新日時
   DateTime lastUpdated;
@@ -46,12 +48,14 @@ class TimetableEntry {
     required this.dayOfWeek,
     required this.period,
     required this.date,
+    required this.startTime, // from HEAD
+    required this.endTime,   // from HEAD
     this.isCancelled = false,
     this.color = Colors.white,
     this.initialPolicy = AttendancePolicy.flexible,
     this.attendanceCount = 0,
     this.attitude = AttendanceAttitude.everytime,
-    this.faculty,
+    this.faculty, // from main
     DateTime? lastUpdated,
   }) : this.lastUpdated = lastUpdated ?? DateTime.now();
 
@@ -64,6 +68,8 @@ class TimetableEntry {
       'originalLocation': originalLocation,
       'dayOfWeek': dayOfWeek,
       'period': period,
+      'startTime': startTime.toIso8601String(), // from HEAD
+      'endTime': endTime.toIso8601String(),   // from HEAD
       'date': date,
       'isCancelled': isCancelled,
       'color': color.value,
@@ -71,7 +77,7 @@ class TimetableEntry {
       'courseId': courseId,
       'attendanceCount': attendanceCount,
       'attitude': attitude.index,
-      'faculty': faculty,
+      'faculty': faculty, // from main
       'lastUpdated': lastUpdated.toIso8601String(),
     };
   }
@@ -175,6 +181,34 @@ class TimetableEntry {
         print('日時変換エラー: $e, 値: ${map['lastUpdated']}');
         lastUpdated = DateTime.now();
       }
+      
+      // startTime and endTime from HEAD, with safety from main
+      DateTime startTime;
+      try {
+        final startTimeStr = map['startTime']?.toString();
+        if (startTimeStr != null && startTimeStr.isNotEmpty) {
+          startTime = DateTime.parse(startTimeStr);
+        } else {
+          startTime = DateTime.now(); // Fallback
+        }
+      } catch (e) {
+        print('startTime変換エラー: $e, 値: ${map['startTime']}');
+        startTime = DateTime.now(); // Fallback
+      }
+
+      DateTime endTime;
+      try {
+        final endTimeStr = map['endTime']?.toString();
+        if (endTimeStr != null && endTimeStr.isNotEmpty) {
+          endTime = DateTime.parse(endTimeStr);
+        } else {
+          endTime = DateTime.now(); // Fallback
+        }
+      } catch (e) {
+        print('endTime変換エラー: $e, 値: ${map['endTime']}');
+        endTime = DateTime.now(); // Fallback
+      }
+
 
       final entry = TimetableEntry(
         id: id,
@@ -184,12 +218,14 @@ class TimetableEntry {
         dayOfWeek: dayOfWeek,
         period: period,
         date: date,
+        startTime: startTime, // from HEAD
+        endTime: endTime,     // from HEAD
         isCancelled: isCancelled,
         color: color,
         initialPolicy: initialPolicy,
         attendanceCount: attendanceCount,
         attitude: attitude,
-        faculty: faculty,
+        faculty: faculty, // from main
         lastUpdated: lastUpdated,
       );
 
@@ -216,6 +252,8 @@ class TimetableEntry {
         dayOfWeek: 0,
         period: 1,
         date: '',
+        startTime: DateTime.now(), // Fallback
+        endTime: DateTime.now(),   // Fallback
       );
     }
   }
