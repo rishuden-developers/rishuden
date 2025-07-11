@@ -2847,7 +2847,7 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 16,
-                  fontFamily: 'misaki',
+                  fontFamily: 'Noto Sans JP',
                 ),
               ),
             ],
@@ -3214,7 +3214,7 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                           color: Colors.white,
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
-                          fontFamily: 'misaki',
+                          fontFamily: 'Noto Sans JP',
                         ),
                         textAlign: TextAlign.center,
                       ),
@@ -4265,7 +4265,7 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                       color: Colors.white,
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      fontFamily: 'misaki',
+                      fontFamily: 'Noto Sans JP',
                     ),
                     textAlign: TextAlign.center,
                   ),
@@ -4482,7 +4482,7 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                                 '削除',
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
-                                  fontFamily: 'misaki',
+                                  fontFamily: 'Noto Sans JP',
                                 ),
                               ),
                             ),
@@ -4505,7 +4505,7 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                               'キャンセル',
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
-                                fontFamily: 'misaki',
+                                fontFamily: 'Noto Sans JP',
                               ),
                             ),
                           ),
@@ -4579,7 +4579,7 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                             entry == null ? '追加' : '保存',
                             style: const TextStyle(
                               fontWeight: FontWeight.bold,
-                              fontFamily: 'misaki',
+                              fontFamily: 'Noto Sans JP',
                             ),
                           ),
                         ),

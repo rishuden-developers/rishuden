@@ -719,7 +719,7 @@ class _CourseRegistrationPageState extends State<CourseRegistrationPage> {
                       color: Colors.white,
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
-                      fontFamily: 'misaki',
+                      fontFamily: 'Noto Sans JP',
                     ),
                     textAlign: TextAlign.center,
                   ),
@@ -842,7 +842,7 @@ class _CourseRegistrationPageState extends State<CourseRegistrationPage> {
                             '閉じる',
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
-                              fontFamily: 'misaki',
+                              fontFamily: 'Noto Sans JP',
                             ),
                           ),
                         ),
@@ -866,7 +866,7 @@ class _CourseRegistrationPageState extends State<CourseRegistrationPage> {
                             '単位レビューを見る',
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
-                              fontFamily: 'misaki',
+                              fontFamily: 'Noto Sans JP',
                             ),
                           ),
                         ),
@@ -1039,7 +1039,7 @@ class _CourseRegistrationPageState extends State<CourseRegistrationPage> {
                           color: Colors.white,
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
-                          fontFamily: 'misaki',
+                          fontFamily: 'Noto Sans JP',
                         ),
                         textAlign: TextAlign.center,
                       ),
@@ -1355,7 +1355,7 @@ class _CourseRegistrationPageState extends State<CourseRegistrationPage> {
                                 'キャンセル',
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
-                                  fontFamily: 'misaki',
+                                  fontFamily: 'Noto Sans JP',
                                 ),
                               ),
                             ),
@@ -1397,7 +1397,7 @@ class _CourseRegistrationPageState extends State<CourseRegistrationPage> {
                                         '登録',
                                         style: TextStyle(
                                           fontWeight: FontWeight.bold,
-                                          fontFamily: 'misaki',
+                                          fontFamily: 'Noto Sans JP',
                                         ),
                                       ),
                             ),
@@ -1424,7 +1424,7 @@ class _CourseRegistrationPageState extends State<CourseRegistrationPage> {
         appBar: AppBar(
           title: const Text(
             '講義登録',
-            style: TextStyle(color: Colors.white, fontFamily: 'misaki'),
+            style: TextStyle(color: Colors.white, fontFamily: 'Noto Sans JP'),
           ),
           backgroundColor: Colors.blue[600],
           iconTheme: const IconThemeData(color: Colors.white),
@@ -1707,7 +1707,7 @@ class _CourseRegistrationPageState extends State<CourseRegistrationPage> {
                                               style: TextStyle(
                                                 fontSize: 11,
                                                 fontWeight: FontWeight.bold,
-                                                fontFamily: 'misaki',
+                                                fontFamily: 'Noto Sans JP',
                                               ),
                                             ),
                                             style: ElevatedButton.styleFrom(
@@ -1811,7 +1811,7 @@ class _CourseRegistrationPageState extends State<CourseRegistrationPage> {
           icon: const Icon(Icons.add, color: Colors.white),
           label: const Text(
             '講義を登録',
-            style: TextStyle(color: Colors.white, fontFamily: 'misaki'),
+            style: TextStyle(color: Colors.white, fontFamily: 'Noto Sans JP'),
           ),
         ),
       );
@@ -1823,7 +1823,7 @@ class _CourseRegistrationPageState extends State<CourseRegistrationPage> {
         appBar: AppBar(
           title: const Text(
             '講義登録',
-            style: TextStyle(color: Colors.white, fontFamily: 'misaki'),
+            style: TextStyle(color: Colors.white, fontFamily: 'Noto Sans JP'),
           ),
           backgroundColor: Colors.blue[600],
           iconTheme: const IconThemeData(color: Colors.white),
