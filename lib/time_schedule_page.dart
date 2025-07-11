@@ -4728,22 +4728,23 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
     if (user == null) return;
 
     try {
-      // 新しい形式: 他大学の授業データを個別ドキュメントとして保存
-      await FirebaseFirestore.instance
+      // 講義登録画面と同じ保存方法を使用
+      final docRef = FirebaseFirestore.instance
           .collection('universities')
           .doc('other')
           .collection('courses')
-          .doc(entry.id)
-          .set({
-            'subjectName': entry.subjectName,
-            'classroom': entry.classroom,
-            'teacher': entry.originalLocation,
-            'dayOfWeek': _days[entry.dayOfWeek],
-            'period': entry.period,
-            'university': '他大学',
-            'createdAt': FieldValue.serverTimestamp(),
-            'createdBy': user.uid,
-          });
+          .doc(user.uid);
+
+      final snapshot = await docRef.get();
+      List<dynamic> courses = [];
+      if (snapshot.exists &&
+          snapshot.data() != null &&
+          snapshot.data()!.containsKey('courses')) {
+        courses = List.from(snapshot.data()!['courses']);
+      }
+
+      courses.add(extendedData);
+      await docRef.set({'courses': courses}, SetOptions(merge: true));
 
       // 時間割に追加
       final cellKey = '${_days[entry.dayOfWeek]}_${entry.period}';
@@ -4778,20 +4779,30 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
     if (user == null) return;
 
     try {
-      // 新しい形式: 他大学の授業データを個別ドキュメントとして更新
-      await FirebaseFirestore.instance
+      // 講義登録画面と同じ保存方法を使用
+      final docRef = FirebaseFirestore.instance
           .collection('universities')
           .doc('other')
           .collection('courses')
-          .doc(entry.id)
-          .update({
-            'subjectName': entry.subjectName,
-            'classroom': entry.classroom,
-            'teacher': entry.originalLocation,
-            'dayOfWeek': _days[entry.dayOfWeek],
-            'period': entry.period,
-            'updatedAt': FieldValue.serverTimestamp(),
-          });
+          .doc(user.uid);
+
+      final snapshot = await docRef.get();
+      List<dynamic> courses = [];
+      if (snapshot.exists &&
+          snapshot.data() != null &&
+          snapshot.data()!.containsKey('courses')) {
+        courses = List.from(snapshot.data()!['courses']);
+      }
+
+      // 既存の講義を更新
+      final idx = courses.indexWhere((e) => e['id'] == entry.id);
+      if (idx != -1) {
+        courses[idx] = extendedData;
+      } else {
+        courses.add(extendedData);
+      }
+
+      await docRef.set({'courses': courses}, SetOptions(merge: true));
 
       // 時間割を更新
       final cellKey = '${_days[entry.dayOfWeek]}_${entry.period}';

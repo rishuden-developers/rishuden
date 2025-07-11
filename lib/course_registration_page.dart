@@ -353,6 +353,19 @@ class _CourseRegistrationPageState extends State<CourseRegistrationPage> {
 
       print('Firestoreに保存完了');
 
+      // 時間割データも保存（カレンダーページと同じ方法）
+      final cellKey = '${_days[_selectedDay]}_${_selectedPeriod}';
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('timetable')
+          .doc('notes')
+          .set({
+            cellKey: _subjectController.text.trim(),
+            'courseIds': {cellKey: courseId},
+            'teacherNames': {cellKey: _teacherController.text.trim()},
+          }, SetOptions(merge: true));
+
       // 分散協力型データベースに拡張データを保存
       try {
         await _saveToGlobalDatabase(extendedData);
@@ -528,44 +541,18 @@ class _CourseRegistrationPageState extends State<CourseRegistrationPage> {
           // 既に講義が登録されている場合は、カレンダーにのみ追加
           print('選択した曜日・コマには既に講義が登録されています。カレンダーにのみ追加します。');
 
-          // カレンダー用の講義データを作成
-          final calendarCourseData = {
-            'id': courseId,
-            'subjectName': course.subjectName,
-            'classroom': course.classroom,
-            'originalLocation': course.originalLocation,
-            'faculty': course.faculty ?? '',
-            'dayOfWeek': selectedDay,
-            'period': selectedPeriod,
-            'date': '',
-            'color': _getRandomColor().value,
-            'isCancelled': false,
-            'initialPolicy': 1,
-            'attendanceCount': 0,
-            'attitude': 0,
-            'lastUpdated': DateTime.now().toIso8601String(),
-            'isCalendarOnly': true,
-          };
-
-          // カレンダー専用のコレクションに保存
-          final calendarDocRef = FirebaseFirestore.instance
+          // カレンダーにも追加（カレンダーページと同じ方法で時間割データを保存）
+          final cellKey = '${_days[selectedDay]}_${selectedPeriod}';
+          await FirebaseFirestore.instance
               .collection('users')
               .doc(user.uid)
-              .collection('calendar')
-              .doc('courses');
-
-          final calendarSnapshot = await calendarDocRef.get();
-          List<dynamic> calendarCourses = [];
-          if (calendarSnapshot.exists &&
-              calendarSnapshot.data() != null &&
-              calendarSnapshot.data()!.containsKey('courses')) {
-            calendarCourses = List.from(calendarSnapshot.data()!['courses']);
-          }
-
-          calendarCourses.add(calendarCourseData);
-          await calendarDocRef.set({
-            'courses': calendarCourses,
-          }, SetOptions(merge: true));
+              .collection('timetable')
+              .doc('notes')
+              .set({
+                cellKey: course.subjectName,
+                'courseIds': {cellKey: courseId},
+                'teacherNames': {cellKey: course.originalLocation},
+              }, SetOptions(merge: true));
 
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -623,43 +610,18 @@ class _CourseRegistrationPageState extends State<CourseRegistrationPage> {
             print('分散協力型データベース保存エラー（無視）: $e');
           }
 
-          // カレンダーにも追加
-          final calendarCourseData = {
-            'id': courseId,
-            'subjectName': course.subjectName,
-            'classroom': course.classroom,
-            'originalLocation': course.originalLocation,
-            'faculty': course.faculty ?? '',
-            'dayOfWeek': selectedDay,
-            'period': selectedPeriod,
-            'date': '',
-            'color': _getRandomColor().value,
-            'isCancelled': false,
-            'initialPolicy': 1,
-            'attendanceCount': 0,
-            'attitude': 0,
-            'lastUpdated': DateTime.now().toIso8601String(),
-            'isCalendarOnly': true,
-          };
-
-          final calendarDocRef = FirebaseFirestore.instance
+          // カレンダーにも追加（カレンダーページと同じ方法で時間割データを保存）
+          final cellKey = '${_days[selectedDay]}_${selectedPeriod}';
+          await FirebaseFirestore.instance
               .collection('users')
               .doc(user.uid)
-              .collection('calendar')
-              .doc('courses');
-
-          final calendarSnapshot = await calendarDocRef.get();
-          List<dynamic> calendarCourses = [];
-          if (calendarSnapshot.exists &&
-              calendarSnapshot.data() != null &&
-              calendarSnapshot.data()!.containsKey('courses')) {
-            calendarCourses = List.from(calendarSnapshot.data()!['courses']);
-          }
-
-          calendarCourses.add(calendarCourseData);
-          await calendarDocRef.set({
-            'courses': calendarCourses,
-          }, SetOptions(merge: true));
+              .collection('timetable')
+              .doc('notes')
+              .set({
+                cellKey: course.subjectName,
+                'courseIds': {cellKey: courseId},
+                'teacherNames': {cellKey: course.originalLocation},
+              }, SetOptions(merge: true));
 
           // データを再読み込み
           await _loadData();
