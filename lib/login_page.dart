@@ -62,14 +62,12 @@ class _LoginPageState extends State<LoginPage> {
 
       // 大学タイプに応じて遷移先を分岐
       if (mounted) {
-        // 他大学・大阪大学共通でキャラクター診断ページへ
+        // ログイン成功後は直接メインページへ遷移（キャラクター診断をスキップ）
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
             builder:
-                (context) => CharacterQuestionPage(
-                  universityType: widget.universityType,
-                ),
+                (context) => MainPage(universityType: widget.universityType),
           ),
         );
       }
@@ -91,10 +89,7 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor:
-          widget.universityType == 'other'
-              ? const Color(0xFF8B0000) // 他大学の場合は暗い赤色
-              : const Color(0xFF2C3E50), // 大阪大学の場合は暗い青色色調の背景
+      backgroundColor: const Color(0xFF2C3E50), // 大阪大学と同じ暗い青色色調の背景
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Column(
@@ -102,32 +97,9 @@ class _LoginPageState extends State<LoginPage> {
           crossAxisAlignment: CrossAxisAlignment.stretch, // 子要素を水平方向に伸ばす
           children: [
             const SizedBox(height: 100), // 上部の余白
-            // 他大学の場合は「開発中」ラベルを表示
-            if (widget.universityType == 'other')
-              Container(
-                margin: const EdgeInsets.only(bottom: 20),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.red.withOpacity(0.8),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.white, width: 2),
-                ),
-                child: const Text(
-                  '開発中',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    fontFamily: 'NotoSansJP',
-                  ),
-                ),
-              ),
             // アプリ名
             Text(
-              widget.universityType == 'other' ? '履修伝説（他大学版）' : '履修伝説',
+              '履修伝説',
               textAlign: TextAlign.center,
               style: const TextStyle(
                 color: Colors.white,
@@ -138,9 +110,7 @@ class _LoginPageState extends State<LoginPage> {
             const SizedBox(height: 8),
             // サブタイトル/キャッチフレーズ
             Text(
-              widget.universityType == 'other'
-                  ? '他大学向けバージョン（開発中）'
-                  : 'さあ、冒険を始めよう。',
+              'さあ、冒険を始めよう。',
               textAlign: TextAlign.center,
               style: const TextStyle(color: Colors.white70, fontSize: 18),
             ),
@@ -199,10 +169,7 @@ class _LoginPageState extends State<LoginPage> {
             ElevatedButton(
               onPressed: _login,
               style: ElevatedButton.styleFrom(
-                backgroundColor:
-                    widget.universityType == 'other'
-                        ? const Color(0xFFDC143C) // 他大学の場合は赤色
-                        : const Color(0xFF3498DB), // 大阪大学の場合は青色基調
+                backgroundColor: const Color(0xFF3498DB), // 大阪大学と同じ青色基調
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),

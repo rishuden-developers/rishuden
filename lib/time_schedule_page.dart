@@ -19,6 +19,7 @@ import 'timetable.dart';
 import 'providers/timetable_provider.dart';
 import 'providers/global_course_mapping_provider.dart';
 import 'providers/background_image_provider.dart';
+import 'other_university_course_selection_dialog.dart';
 
 enum AttendanceStatus { present, absent, late, none }
 
@@ -1043,12 +1044,19 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                 'DEBUG: Cell tapped - dayIndex: $dayIndex, periodIndex: $periodIndex, subject: ${entry.subjectName}',
               );
               if (widget.universityType == 'other') {
-                // 他大学用の場合は専用のダイアログを表示
-                _showOtherUnivCourseDialog(
-                  dayIndex,
-                  periodIndex + 1,
-                  entry: entry,
-                );
+                // 他大学用の場合は、空のコマなら授業選択ダイアログ、既存の授業なら編集ダイアログを表示
+                if (entry.subjectName.isEmpty) {
+                  _showOtherUniversityCourseSelectionDialog(
+                    dayIndex,
+                    periodIndex + 1,
+                  );
+                } else {
+                  _showOtherUnivCourseDialog(
+                    dayIndex,
+                    periodIndex + 1,
+                    entry: entry,
+                  );
+                }
               } else {
                 // 大阪大学用の場合は従来通りメモダイアログを表示
                 _showNoteDialog(
@@ -1509,6 +1517,25 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                 periodIndex = tappedRowIndex; // 1限、2限
               } else {
                 periodIndex = tappedRowIndex - 1; // 3限以降
+              }
+
+              // ★★★ 他大学用の場合は、空のコマを押した時に授業選択ダイアログを表示 ★★★
+              if (widget.universityType == 'other') {
+                if (periodIndex >= 0 &&
+                    periodIndex < _timetableGrid[dayIndex].length &&
+                    (_timetableGrid[dayIndex][periodIndex] == null ||
+                        _timetableGrid[dayIndex][periodIndex]!
+                            .subjectName
+                            .isEmpty)) {
+                  print(
+                    'DEBUG: Empty class slot tapped - showing course selection dialog',
+                  );
+                  _showOtherUniversityCourseSelectionDialog(
+                    dayIndex,
+                    periodIndex + 1,
+                  );
+                  return;
+                }
               }
 
               // ★★★ 授業コマが存在する場合は、何もしない ★★★
@@ -4029,30 +4056,80 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
       print('ユーザーがログインしていません');
       return;
     }
-    final docRef = FirebaseFirestore.instance
-        .collection('universities')
-        .doc('other')
-        .collection('courses')
-        .doc(user.uid);
-    final snapshot = await docRef.get();
-    if (snapshot.exists &&
-        snapshot.data() != null &&
-        snapshot.data()!.containsKey('courses')) {
-      final List<dynamic> data = snapshot.data()!['courses'];
-      setState(() {
-        _otherUnivCourses =
-            data
-                .map(
-                  (e) => TimetableEntry.fromMap(Map<String, dynamic>.from(e)),
-                )
-                .toList();
-      });
-      print('他大学用コースデータ読み込み完了: ${_otherUnivCourses.length}件');
-    } else {
+
+    // 新しい形式: ユーザーの時間割データから授業を取得
+    try {
+      final timetableRef = FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('timetable')
+          .doc('notes');
+
+      final timetableSnapshot = await timetableRef.get();
+      if (timetableSnapshot.exists) {
+        final timetableData = timetableSnapshot.data()!;
+        final courseIds = Map<String, String>.from(
+          timetableData['courseIds'] ?? {},
+        );
+
+        // 他大学の授業データを取得
+        List<TimetableEntry> courses = [];
+        for (var entry in courseIds.entries) {
+          final cellKey = entry.key; // 例: "月_1"
+          final courseId = entry.value;
+
+          // セルキーから曜日と時限を解析
+          final parts = cellKey.split('_');
+          if (parts.length == 2) {
+            final dayOfWeek = parts[0];
+            final period = int.tryParse(parts[1]);
+
+            if (period != null) {
+              // 他大学の授業データから詳細情報を取得
+              final courseDoc =
+                  await FirebaseFirestore.instance
+                      .collection('universities')
+                      .doc('other')
+                      .collection('courses')
+                      .doc(courseId)
+                      .get();
+
+              if (courseDoc.exists) {
+                final courseData = courseDoc.data()!;
+                final dayIndex = _days.indexOf(dayOfWeek);
+
+                courses.add(
+                  TimetableEntry(
+                    id: courseId,
+                    subjectName: courseData['subjectName'] ?? '',
+                    classroom: courseData['classroom'] ?? '',
+                    originalLocation: courseData['teacher'] ?? '',
+                    dayOfWeek: dayIndex,
+                    period: period,
+                    date: '',
+                    color: _neonColors[courseId.hashCode % _neonColors.length],
+                  ),
+                );
+              }
+            }
+          }
+        }
+
+        setState(() {
+          _otherUnivCourses = courses;
+        });
+        print('他大学用コースデータ読み込み完了: ${_otherUnivCourses.length}件');
+      } else {
+        setState(() {
+          _otherUnivCourses = [];
+        });
+        print('他大学用コースデータが存在しません');
+      }
+    } catch (e) {
+      print('他大学用コースデータ読み込みエラー: $e');
       setState(() {
         _otherUnivCourses = [];
       });
-      print('他大学用コースデータが存在しません');
     }
   }
 
@@ -4060,21 +4137,73 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
   Future<void> _deleteOtherUnivCourse(String id) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
-    final docRef = FirebaseFirestore.instance
-        .collection('universities')
-        .doc('other')
-        .collection('courses')
-        .doc(user.uid);
-    final snapshot = await docRef.get();
-    List<dynamic> courses = [];
-    if (snapshot.exists &&
-        snapshot.data() != null &&
-        snapshot.data()!.containsKey('courses')) {
-      courses = List.from(snapshot.data()!['courses']);
+
+    try {
+      // 授業データを取得してセルキーを特定
+      final courseDoc =
+          await FirebaseFirestore.instance
+              .collection('universities')
+              .doc('other')
+              .collection('courses')
+              .doc(id)
+              .get();
+
+      if (courseDoc.exists) {
+        final courseData = courseDoc.data()!;
+        final dayOfWeek = courseData['dayOfWeek'] as String;
+        final period = courseData['period'] as int;
+        final cellKey = '${dayOfWeek}_$period';
+
+        // 他大学の授業データを削除
+        await FirebaseFirestore.instance
+            .collection('universities')
+            .doc('other')
+            .collection('courses')
+            .doc(id)
+            .delete();
+
+        // 時間割から削除
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .collection('timetable')
+            .doc('notes')
+            .update({
+              cellKey: FieldValue.delete(),
+              'courseIds.$cellKey': FieldValue.delete(),
+              'teacherNames.$cellKey': FieldValue.delete(),
+            });
+      }
+
+      await _loadOtherUnivCourses();
+    } catch (e) {
+      print('他大学用授業削除エラー: $e');
+      throw e;
     }
-    courses.removeWhere((e) => e['id'] == id);
-    await docRef.set({'courses': courses}, SetOptions(merge: true));
-    await _loadOtherUnivCourses();
+  }
+
+  // --- 他大学用: 授業選択ダイアログ ---
+  void _showOtherUniversityCourseSelectionDialog(int dayIndex, int period) {
+    final dayOfWeek = _days[dayIndex];
+    final university = '他大学'; // 他大学用の場合は固定値
+
+    showDialog(
+      context: context,
+      builder:
+          (context) => OtherUniversityCourseSelectionDialog(
+            university: university,
+            dayOfWeek: dayOfWeek,
+            period: period,
+            onCourseSelected: () {
+              // 授業が選択されたら時間割を再読み込み
+              _loadTimetableData();
+            },
+            onAddNewCourse: (dayIdx, period) {
+              // 新しい授業追加ダイアログを表示
+              _showOtherUnivCourseDialog(dayIdx, period);
+            },
+          ),
+    );
   }
 
   // --- 他大学用: 講義追加・編集ダイアログ（分散協力型データベース対応） ---
@@ -4598,27 +4727,46 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
-    // ユーザー固有のコースデータを保存
-    final docRef = FirebaseFirestore.instance
-        .collection('universities')
-        .doc('other')
-        .collection('courses')
-        .doc(user.uid);
-    final snapshot = await docRef.get();
-    List<dynamic> courses = [];
-    if (snapshot.exists &&
-        snapshot.data() != null &&
-        snapshot.data()!.containsKey('courses')) {
-      courses = List.from(snapshot.data()!['courses']);
+    try {
+      // 新しい形式: 他大学の授業データを個別ドキュメントとして保存
+      await FirebaseFirestore.instance
+          .collection('universities')
+          .doc('other')
+          .collection('courses')
+          .doc(entry.id)
+          .set({
+            'subjectName': entry.subjectName,
+            'classroom': entry.classroom,
+            'teacher': entry.originalLocation,
+            'dayOfWeek': _days[entry.dayOfWeek],
+            'period': entry.period,
+            'university': '他大学',
+            'createdAt': FieldValue.serverTimestamp(),
+            'createdBy': user.uid,
+          });
+
+      // 時間割に追加
+      final cellKey = '${_days[entry.dayOfWeek]}_${entry.period}';
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('timetable')
+          .doc('notes')
+          .set({
+            cellKey: entry.subjectName,
+            'courseIds': {cellKey: entry.id},
+            'teacherNames': {cellKey: entry.originalLocation},
+          }, SetOptions(merge: true));
+
+      // 分散協力型データベースに拡張データを保存
+      await _saveToGlobalDatabase(extendedData);
+
+      await _loadOtherUnivCourses();
+      await _loadGlobalCourseData(); // グローバルデータも更新
+    } catch (e) {
+      print('他大学用授業追加エラー: $e');
+      throw e;
     }
-    courses.add(entry.toMap());
-    await docRef.set({'courses': courses}, SetOptions(merge: true));
-
-    // 分散協力型データベースに拡張データを保存
-    await _saveToGlobalDatabase(extendedData);
-
-    await _loadOtherUnivCourses();
-    await _loadGlobalCourseData(); // グローバルデータも更新
   }
 
   // --- 分散協力型データベース: 講義編集（拡張データ付き） ---
@@ -4629,30 +4777,44 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
-    // ユーザー固有のコースデータを更新
-    final docRef = FirebaseFirestore.instance
-        .collection('universities')
-        .doc('other')
-        .collection('courses')
-        .doc(user.uid);
-    final snapshot = await docRef.get();
-    List<dynamic> courses = [];
-    if (snapshot.exists &&
-        snapshot.data() != null &&
-        snapshot.data()!.containsKey('courses')) {
-      courses = List.from(snapshot.data()!['courses']);
-    }
-    final idx = courses.indexWhere((e) => e['id'] == entry.id);
-    if (idx != -1) {
-      courses[idx] = entry.toMap();
-    }
-    await docRef.set({'courses': courses}, SetOptions(merge: true));
+    try {
+      // 新しい形式: 他大学の授業データを個別ドキュメントとして更新
+      await FirebaseFirestore.instance
+          .collection('universities')
+          .doc('other')
+          .collection('courses')
+          .doc(entry.id)
+          .update({
+            'subjectName': entry.subjectName,
+            'classroom': entry.classroom,
+            'teacher': entry.originalLocation,
+            'dayOfWeek': _days[entry.dayOfWeek],
+            'period': entry.period,
+            'updatedAt': FieldValue.serverTimestamp(),
+          });
 
-    // 分散協力型データベースに拡張データを保存
-    await _saveToGlobalDatabase(extendedData);
+      // 時間割を更新
+      final cellKey = '${_days[entry.dayOfWeek]}_${entry.period}';
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('timetable')
+          .doc('notes')
+          .update({
+            cellKey: entry.subjectName,
+            'courseIds.$cellKey': entry.id,
+            'teacherNames.$cellKey': entry.originalLocation,
+          });
 
-    await _loadOtherUnivCourses();
-    await _loadGlobalCourseData(); // グローバルデータも更新
+      // 分散協力型データベースに拡張データを保存
+      await _saveToGlobalDatabase(extendedData);
+
+      await _loadOtherUnivCourses();
+      await _loadGlobalCourseData(); // グローバルデータも更新
+    } catch (e) {
+      print('他大学用授業更新エラー: $e');
+      throw e;
+    }
   }
 
   // --- 分散協力型データベース: グローバルデータベースに保存 ---

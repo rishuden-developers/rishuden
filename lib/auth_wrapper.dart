@@ -35,7 +35,9 @@ class AuthWrapper extends StatelessWidget {
             }
             final userData = userSnapshot.data!.data() as Map<String, dynamic>?;
             if (userData == null || !userData.containsKey('character')) {
-              return CharacterQuestionPage();
+              // キャラクター診断をスキップして直接メインページへ
+              final universityType = userData?['universityType'] ?? 'main';
+              return MainPage(universityType: universityType);
             }
             if (!userData.containsKey('profileCompleted') ||
                 userData['profileCompleted'] != true) {

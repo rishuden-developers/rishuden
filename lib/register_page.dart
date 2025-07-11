@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'character_question_page.dart';
+import 'main_page.dart';
 
 class RegisterPage extends StatefulWidget {
   final String universityType;
@@ -36,8 +37,9 @@ class _RegisterPageState extends State<RegisterPage> {
             .collection('users')
             .doc(userCredential.user!.uid)
             .set({
-              'universityType': 'main',
-              'universityName': '大阪大学',
+              'universityType': widget.universityType,
+              'universityName':
+                  widget.universityType == 'other' ? '他大学' : '大阪大学',
               'calendarUrl': _calendarUrlController.text.trim(),
               'profileCompleted': false, // 新規登録時はfalseに設定
             }, SetOptions(merge: true));
@@ -75,11 +77,14 @@ class _RegisterPageState extends State<RegisterPage> {
                       final user = FirebaseAuth.instance.currentUser;
                       if (user != null && user.emailVerified) {
                         if (mounted) Navigator.of(context).pop(); // ダイアログを閉じる
-                        // 認証済みなら次の画面へ遷移
+                        // 認証済みならメインページへ遷移（キャラクター診断をスキップ）
                         if (mounted) {
                           Navigator.of(context).pushReplacement(
                             MaterialPageRoute(
-                              builder: (_) => CharacterQuestionPage(),
+                              builder:
+                                  (_) => MainPage(
+                                    universityType: widget.universityType,
+                                  ),
                             ),
                           );
                         }
@@ -122,13 +127,19 @@ class _RegisterPageState extends State<RegisterPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF2C3E50), // 暗い青色色調の背景
+      backgroundColor:
+          widget.universityType == 'other'
+              ? const Color(0xFF8B0000) // 他大学の場合は暗い赤色
+              : const Color(0xFF2C3E50), // 大阪大学の場合は暗い青色色調の背景
       appBar: AppBar(
         title: const Text(
           'アカウント作成',
           style: TextStyle(color: Colors.white),
         ), // タイトル色を白に
-        backgroundColor: const Color(0xFF2C3E50), // AppBarの背景色を合わせる
+        backgroundColor:
+            widget.universityType == 'other'
+                ? const Color(0xFF8B0000) // 他大学の場合は暗い赤色
+                : const Color(0xFF2C3E50), // 大阪大学の場合は暗い青色色調の背景
         iconTheme: const IconThemeData(color: Colors.white), // 戻るボタンのアイコン色を白に
         elevation: 0, // AppBarの影をなくす
       ),
@@ -144,7 +155,10 @@ class _RegisterPageState extends State<RegisterPage> {
             TextField(
               controller: _emailController,
               decoration: InputDecoration(
-                labelText: '大学のメールアドレスを入力', // ラベルテキストを簡潔に
+                labelText:
+                    widget.universityType == 'other'
+                        ? 'メールアドレスを入力'
+                        : '大学のメールアドレスを入力', // ラベルテキストを簡潔に
                 labelStyle: const TextStyle(color: Colors.white70),
                 enabledBorder: OutlineInputBorder(
                   borderSide: const BorderSide(color: Colors.white54),
@@ -186,12 +200,20 @@ class _RegisterPageState extends State<RegisterPage> {
             // 利用規約リンク
             Center(
               child: GestureDetector(
-                child: const Text(
+                child: Text(
                   '利用規約',
                   style: TextStyle(
-                    color: Colors.blueAccent,
+                    color:
+                        widget.universityType == 'other'
+                            ? Colors
+                                .redAccent // 他大学の場合は赤色
+                            : Colors.blueAccent, // 大阪大学の場合は青色
                     decoration: TextDecoration.underline,
-                    decorationColor: Colors.blueAccent, // 下線を青色に
+                    decorationColor:
+                        widget.universityType == 'other'
+                            ? Colors
+                                .redAccent // 他大学の場合は赤色
+                            : Colors.blueAccent, // 大阪大学の場合は青色
                     fontSize: 16,
                   ),
                 ),
@@ -211,7 +233,10 @@ class _RegisterPageState extends State<RegisterPage> {
                       _agreedToTerms = value ?? false;
                     });
                   },
-                  activeColor: const Color(0xFF3498DB),
+                  activeColor:
+                      widget.universityType == 'other'
+                          ? const Color(0xFFDC143C) // 他大学の場合は赤色
+                          : const Color(0xFF3498DB), // 大阪大学の場合は青色
                   checkColor: Colors.white,
                 ),
                 const Text(
@@ -223,67 +248,77 @@ class _RegisterPageState extends State<RegisterPage> {
 
             const SizedBox(height: 16),
 
-            // KOANリンク
-            Center(
-              child: GestureDetector(
-                onTap: () async {
-                  final Uri url = Uri.parse('https://koan.osaka-u.ac.jp/');
-                  if (await canLaunchUrl(url)) {
-                    await launchUrl(url, mode: LaunchMode.externalApplication);
-                  }
-                },
-                child: const Text(
-                  'KOANにアクセス',
-                  style: TextStyle(
-                    color: Colors.blueAccent,
-                    decoration: TextDecoration.underline,
-                    decorationColor: Colors.blueAccent,
-                    fontSize: 16,
+            // KOANリンク（他大学の場合は非表示）
+            if (widget.universityType != 'other')
+              Center(
+                child: GestureDetector(
+                  onTap: () async {
+                    final Uri url = Uri.parse('https://koan.osaka-u.ac.jp/');
+                    if (await canLaunchUrl(url)) {
+                      await launchUrl(
+                        url,
+                        mode: LaunchMode.externalApplication,
+                      );
+                    }
+                  },
+                  child: const Text(
+                    'KOANにアクセス',
+                    style: TextStyle(
+                      color: Colors.blueAccent,
+                      decoration: TextDecoration.underline,
+                      decorationColor: Colors.blueAccent,
+                      fontSize: 16,
+                    ),
                   ),
                 ),
               ),
-            ),
 
             const SizedBox(height: 16),
 
-            // カレンダー画像と説明
-            Center(
-              // 画像を中央に配置
-              child: Image.asset(
-                'assets/calender.png', // assetsフォルダに画像があることを前提
-                width: 320, // 280から320にさらに拡大
-                height: 150, // 120から150に拡大
-                fit: BoxFit.contain,
+            // カレンダー画像と説明（他大学の場合は非表示）
+            if (widget.universityType != 'other') ...[
+              Center(
+                // 画像を中央に配置
+                child: Image.asset(
+                  'assets/calender.png', // assetsフォルダに画像があることを前提
+                  width: 320, // 280から320にさらに拡大
+                  height: 150, // 120から150に拡大
+                  fit: BoxFit.contain,
+                ),
               ),
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              'KOANの課題ページのURLをコピーして、下の入力欄に貼り付けてください。\n例: https://koan.osaka-u.ac.jp/...\n\n※ 新規発行のカレンダーURLは反映まで最大1日程度かかる場合があります。',
-              style: TextStyle(fontSize: 13, color: Colors.white70), // テキスト色を白に
-              textAlign: TextAlign.center,
-            ),
+              const SizedBox(height: 12),
+              const Text(
+                'KOANの課題ページのURLをコピーして、下の入力欄に貼り付けてください。\n例: https://koan.osaka-u.ac.jp/...\n\n※ 新規発行のカレンダーURLは反映まで最大1日程度かかる場合があります。',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Colors.white70,
+                ), // テキスト色を白に
+                textAlign: TextAlign.center,
+              ),
+            ],
             const SizedBox(height: 12),
 
-            // カレンダーURL入力フィールド
-            TextField(
-              controller: _calendarUrlController,
-              decoration: InputDecoration(
-                labelText: 'カレンダーURL (.ics形式)',
-                labelStyle: const TextStyle(color: Colors.white70),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: const BorderSide(color: Colors.white54),
-                  borderRadius: BorderRadius.circular(8),
+            // カレンダーURL入力フィールド（他大学の場合は非表示）
+            if (widget.universityType != 'other')
+              TextField(
+                controller: _calendarUrlController,
+                decoration: InputDecoration(
+                  labelText: 'カレンダーURL (.ics形式)',
+                  labelStyle: const TextStyle(color: Colors.white70),
+                  enabledBorder: OutlineInputBorder(
+                    borderSide: const BorderSide(color: Colors.white54),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderSide: const BorderSide(color: Colors.blueAccent),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  fillColor: Colors.white.withOpacity(0.1),
+                  filled: true,
                 ),
-                focusedBorder: OutlineInputBorder(
-                  borderSide: const BorderSide(color: Colors.blueAccent),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                fillColor: Colors.white.withOpacity(0.1),
-                filled: true,
+                style: const TextStyle(color: Colors.white),
+                keyboardType: TextInputType.url,
               ),
-              style: const TextStyle(color: Colors.white),
-              keyboardType: TextInputType.url,
-            ),
             if (_error != null) ...[
               const SizedBox(height: 12),
               Text(
@@ -309,8 +344,10 @@ class _RegisterPageState extends State<RegisterPage> {
               style: ElevatedButton.styleFrom(
                 backgroundColor:
                     _agreedToTerms
-                        ? const Color(0xFF3498DB)
-                        : Colors.grey, // 青色基調
+                        ? (widget.universityType == 'other'
+                            ? const Color(0xFFDC143C) // 他大学の場合は赤色
+                            : const Color(0xFF3498DB)) // 大阪大学の場合は青色基調
+                        : Colors.grey,
                 padding: const EdgeInsets.symmetric(
                   vertical: 16,
                   horizontal: 24,

@@ -708,7 +708,7 @@ class _ParkPageState extends ConsumerState<ParkPage> {
                           ),
                           const SizedBox(height: 16),
                           const Text(
-                            'アプリ開発サークル\n"ぽちぽちのつどい"はみんなの生活を豊かにするアプリを日夜開発中！\n\n',
+                            'アプリ開発サークル\n"ぽちぽちのつどい"はみんなの生活を豊かにするアプリを開発しています！\n\n',
                             style: TextStyle(
                               fontFamily: 'NotoSansJP',
                               fontSize: 16,
@@ -953,54 +953,7 @@ class _ParkPageState extends ConsumerState<ParkPage> {
                   ),
                 ),
               ),
-              // 他大学の場合は赤い点を表示
-              if (widget.universityType == 'other')
-                Positioned(
-                  right: 105,
-                  top: -5,
-                  child: Container(
-                    width: 12,
-                    height: 12,
-                    decoration: BoxDecoration(
-                      color: Colors.red,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 2),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.red.withOpacity(0.6),
-                          blurRadius: 8,
-                          spreadRadius: 2,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              // 他大学の場合は「開発中」ラベルを表示
-              if (widget.universityType == 'other')
-                Positioned(
-                  top: 10,
-                  left: 10,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.red.withOpacity(0.8),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.white, width: 1),
-                    ),
-                    child: const Text(
-                      '開発中',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        fontFamily: 'NotoSansJP',
-                      ),
-                    ),
-                  ),
-                ),
+
               Positioned(
                 right: 50,
                 top: 0,

@@ -106,7 +106,7 @@ class _MainPageState extends ConsumerState<MainPage> {
           (context) => AlertDialog(
             title: const Text('他大学版について'),
             content: const Text(
-              'このアプリは他大学の学生向けに開発中のバージョンです。\n\n'
+              'このアプリは他大学の学生向けのバージョンです。\n\n'
               '現在は基本的な時間割機能のみ利用可能です。\n'
               '今後、クエスト機能やレビュー機能なども追加予定です。',
             ),
@@ -225,28 +225,6 @@ class _MainPageState extends ConsumerState<MainPage> {
                 onPressed: () => _scaffoldKey.currentState?.openEndDrawer(),
               ),
             ),
-          // 他大学用の時間割ページでもメニューボタンを表示
-          if (currentPage == AppPage.timetable &&
-              widget.universityType == 'other')
-            Positioned(
-              top: MediaQuery.of(context).padding.top,
-              right: 5,
-              child: IconButton(
-                icon: const Icon(
-                  Icons.menu,
-                  color: Colors.white,
-                  size: 32,
-                  shadows: [
-                    Shadow(
-                      color: Colors.black54,
-                      blurRadius: 4.0,
-                      offset: Offset(1.0, 1.0),
-                    ),
-                  ],
-                ),
-                onPressed: () => _scaffoldKey.currentState?.openEndDrawer(),
-              ),
-            ),
         ],
       ),
       bottomNavigationBar: const CommonBottomNavigation(),
@@ -322,6 +300,7 @@ class _MainPageState extends ConsumerState<MainPage> {
                   );
                 }),
               ],
+
               Divider(color: Colors.amber[200]),
               _buildDrawerTile(Icons.mail, 'お問い合わせ', () {
                 Navigator.pop(context);
