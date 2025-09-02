@@ -1,0 +1,3 @@
+# AdMob app-ads.txt
+# 推奨: この内容はAdMob管理画面の指示に合わせて更新してください。
+google.com, pub-7200045710813069, DIRECT, f08c47fec0942fa0

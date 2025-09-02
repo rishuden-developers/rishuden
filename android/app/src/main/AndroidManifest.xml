@@ -11,6 +11,10 @@
         android:label="rishuden"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
+        <!-- AdMob App ID -->
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="ca-app-pub-7200045710813069~2812506729" />
         <activity
             android:name=".MainActivity"
             android:exported="true"

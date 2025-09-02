@@ -53,5 +53,8 @@
 	<array>
 		<integer>1</integer>
 	</array>
+	<!-- AdMob App ID -->
+	<key>GADApplicationIdentifier</key>
+	<string>ca-app-pub-7200045710813069~2812506729</string>
 </dict>
 </plist>

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'welcome_page.dart';
 import 'firebase_options.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -10,6 +9,7 @@ import 'package:flutter/services.dart';
 import 'main_page.dart';
 import 'services/notification_service.dart';
 import 'services/background_message_handler.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -30,6 +30,9 @@ void main() async {
     await notificationService.initialize();
 
     await initializeDateFormatting('ja_JP', null);
+
+    // Google Mobile Ads 初期化
+    await MobileAds.instance.initialize();
     runApp(ProviderScope(child: const MyApp()));
   } catch (e) {
     print('Error initializing app: $e');
