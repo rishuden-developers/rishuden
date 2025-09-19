@@ -2,15 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'credit_review_page.dart';
-import 'autumn_winter_review_input_page.dart';
-import 'autumn_winter_course_review_page.dart';
+
 import 'providers/timetable_provider.dart';
-import 'common_bottom_navigation.dart'; // ボトムナビゲーション用
-import 'main_page.dart';
-import 'providers/current_page_provider.dart';
+import 'common_bottom_navigation.dart';
+import 'autumn_winter_course_review_page.dart';
 import 'credit_input_page.dart' show tagOptions;
-import 'providers/background_image_provider.dart';
 
 class AutumnWinterCourseCardListPage extends ConsumerStatefulWidget {
   const AutumnWinterCourseCardListPage({super.key});
@@ -22,21 +18,16 @@ class AutumnWinterCourseCardListPage extends ConsumerStatefulWidget {
 
 class _AutumnWinterCourseCardListPageState
     extends ConsumerState<AutumnWinterCourseCardListPage> {
+  final _searchController = TextEditingController();
+
   List<Map<String, dynamic>> _allCourses = [];
-  List<Map<String, dynamic>> _pagedCourses = [];
   List<Map<String, dynamic>> _filteredCourses = [];
   bool _isLoading = true;
-  static const int pageSize = 20;
-  int _currentPage = 1;
-  PageController _pageController = PageController();
 
-  // 検索・フィルター用
-  final TextEditingController _searchController = TextEditingController();
   String? _selectedFaculty;
   String? _selectedTag;
-  bool _isSearchExpanded = false; // 検索機能の表示/非表示
 
-  final List<String> _faculties = [
+  final List<String> _faculties = const [
     '工学部',
     '理学部',
     '医学部',
@@ -59,801 +50,568 @@ class _AutumnWinterCourseCardListPageState
 
   @override
   void dispose() {
-    _pageController.dispose();
     _searchController.dispose();
     super.dispose();
   }
+
+  // ===== numerics helper =====
+  double _asDouble(dynamic v) => v is num ? v.toDouble() : 0.0;
 
   Future<void> _loadAllCourses() async {
     setState(() => _isLoading = true);
     try {
       final snapshot =
           await FirebaseFirestore.instance.collection('course_data').get();
-      final List<Map<String, dynamic>> allCourses = [];
+
+      final List<Map<String, dynamic>> all = [];
       for (final doc in snapshot.docs) {
-        final data = doc.data() as Map<String, dynamic>?;
-        if (data != null &&
-            data.containsKey('data') &&
+        final data = doc.data();
+        if (data.containsKey('data') &&
             data['data'] is Map &&
             (data['data'] as Map)['courses'] is List) {
           final List<dynamic> courseList = (data['data'] as Map)['courses'];
-          for (final course in courseList) {
-            if (course is Map<String, dynamic>) {
-              final lectureName = course['lectureName'] ?? course['name'] ?? '';
-              final teacherName =
-                  course['teacherName'] ??
-                  course['instructor'] ??
-                  course['teacher'] ??
-                  '';
-              final classroom = course['classroom'] ?? course['room'] ?? '';
-              final category = course['category'] ?? '';
-              final semester = course['semester'] ?? '';
-              String finalTeacherName = teacherName;
+          for (final c in courseList) {
+            if (c is Map<String, dynamic>) {
+              final lectureName = c['lectureName'] ?? c['name'] ?? '';
+              var teacherName =
+                  c['teacherName'] ?? c['instructor'] ?? c['teacher'] ?? '';
+              final classroom = c['classroom'] ?? c['room'] ?? '';
+              final category = c['category'] ?? '';
+              final semester = c['semester'] ?? '';
+
               if (lectureName.isNotEmpty) {
                 final timetableTeacherName =
                     ref.read(timetableProvider)['teacherNames']?[lectureName];
                 if (timetableTeacherName != null &&
                     timetableTeacherName.isNotEmpty) {
-                  finalTeacherName = timetableTeacherName;
+                  teacherName = timetableTeacherName;
                 }
               }
-              allCourses.add({
-                'lectureName': lectureName,
-                'teacherName': finalTeacherName,
-                'classroom': classroom,
-                'category': category,
-                'semester': semester,
-                'avgSatisfaction': 0.0,
-                'avgEasiness': 0.0,
-                'reviewCount': 0,
-                'hasMyReview': false,
-              });
+
+              if (lectureName.isNotEmpty) {
+                all.add({
+                  'lectureName': lectureName,
+                  'teacherName': teacherName,
+                  'classroom': classroom,
+                  'category': category,
+                  'semester': semester,
+                  'avgSatisfaction': 0.0,
+                  'avgEasiness': 0.0,
+                  'reviewCount': 0,
+                  'hasMyReview': false,
+                });
+              }
             }
           }
         }
       }
 
-      // 秋冬学期用: 授業名・教員名でレビュー情報を取得
-      await _loadReviewStatsForAutumnWinter(allCourses);
+      await _attachReviewStats(all);
 
       setState(() {
-        _allCourses = allCourses;
-        _filteredCourses = allCourses;
-        _currentPage = 1;
-        _pagedCourses = _getPagedCourses(1);
+        _allCourses = all;
+        _filteredCourses = all;
         _isLoading = false;
       });
     } catch (e) {
-      print('Error loading autumn/winter courses: $e');
+      debugPrint('Error loading autumn/winter courses: $e');
       setState(() => _isLoading = false);
     }
   }
 
-  // 秋冬学期用: 授業名・教員名でレビュー統計を取得
-  Future<void> _loadReviewStatsForAutumnWinter(
-    List<Map<String, dynamic>> courses,
-  ) async {
+  // 授業名×教員名でレビュー統計を付与
+  Future<void> _attachReviewStats(List<Map<String, dynamic>> courses) async {
+    final user = FirebaseAuth.instance.currentUser;
+
     for (int i = 0; i < courses.length; i++) {
-      final lectureName = courses[i]['lectureName'];
-      final teacherName = courses[i]['teacherName'];
+      final lecture = courses[i]['lectureName'] as String? ?? '';
+      final teacher = courses[i]['teacherName'] as String? ?? '';
+      if (lecture.isEmpty || teacher.isEmpty) continue;
 
-      if (lectureName.isNotEmpty && teacherName.isNotEmpty) {
-        try {
-          // 授業名と教員名でレビューを検索
-          final reviewsSnapshot =
-              await FirebaseFirestore.instance
-                  .collection('reviews')
-                  .where('lectureName', isEqualTo: lectureName)
-                  .where('teacherName', isEqualTo: teacherName)
-                  .get();
+      try {
+        final snap =
+            await FirebaseFirestore.instance
+                .collection('reviews')
+                .where('lectureName', isEqualTo: lecture)
+                .where('teacherName', isEqualTo: teacher)
+                .get();
 
-          final reviews = reviewsSnapshot.docs;
-          if (reviews.isNotEmpty) {
-            double totalSatisfaction = 0.0;
-            double totalEasiness = 0.0;
-            bool hasMyReview = false;
-            final user = FirebaseAuth.instance.currentUser;
+        if (snap.docs.isEmpty) continue;
 
-            for (final doc in reviews) {
-              final data = doc.data();
-              final satisfaction = (data['overallSatisfaction'] ?? 0.0) * 1.0;
-              final easiness = (data['easiness'] ?? 0.0) * 1.0;
+        double sat = 0.0, ease = 0.0;
+        bool mine = false;
 
-              totalSatisfaction += satisfaction;
-              totalEasiness += easiness;
-
-              // 自分のレビューがあるかチェック
-              if (user != null && data['userId'] == user.uid) {
-                hasMyReview = true;
-              }
-            }
-
-            courses[i] = {
-              ...courses[i],
-              'avgSatisfaction': totalSatisfaction / reviews.length,
-              'avgEasiness': totalEasiness / reviews.length,
-              'reviewCount': reviews.length,
-              'hasMyReview': hasMyReview,
-            };
-          }
-        } catch (e) {
-          print('Error fetching reviews for $lectureName - $teacherName: $e');
+        for (final d in snap.docs) {
+          final m = d.data();
+          final s = (m['overallSatisfaction'] ?? m['satisfaction'] ?? 0);
+          final e = (m['easiness'] ?? m['ease'] ?? 0);
+          sat += _asDouble(s);
+          ease += _asDouble(e);
+          if (user != null && m['userId'] == user.uid) mine = true;
         }
+
+        courses[i] = {
+          ...courses[i],
+          'avgSatisfaction': sat / snap.docs.length,
+          'avgEasiness': ease / snap.docs.length,
+          'reviewCount': snap.docs.length,
+          'hasMyReview': mine,
+        };
+      } catch (e) {
+        debugPrint('Error fetching stats for $lecture / $teacher: $e');
       }
     }
   }
 
-  List<Map<String, dynamic>> _getPagedCourses(int page) {
-    final start = (page - 1) * pageSize;
-    final end =
-        (start + pageSize) > _filteredCourses.length
-            ? _filteredCourses.length
-            : (start + pageSize);
-    return _filteredCourses.sublist(start, end);
-  }
-
-  // フィルタリングを適用
-  void _applyFilters() async {
+  // ===== filter/search =====
+  Future<void> _applyFilters() async {
     List<Map<String, dynamic>> filtered = _allCourses;
 
-    // 検索クエリでフィルタリング
-    if (_searchController.text.isNotEmpty) {
-      final searchLower = _searchController.text.toLowerCase();
+    final q = _searchController.text.trim().toLowerCase();
+    if (q.isNotEmpty) {
       filtered =
-          filtered.where((course) {
-            final lectureName =
-                (course['lectureName'] ?? '').toString().toLowerCase();
-            final teacherName =
-                (course['teacherName'] ?? '').toString().toLowerCase();
-            return lectureName.contains(searchLower) ||
-                teacherName.contains(searchLower);
+          filtered.where((c) {
+            final l = (c['lectureName'] ?? '').toString().toLowerCase();
+            final t = (c['teacherName'] ?? '').toString().toLowerCase();
+            return l.contains(q) || t.contains(q);
           }).toList();
     }
 
-    // 学部フィルター（その学部の人がレビューを投稿している授業を絞り込み）
     if (_selectedFaculty != null && _selectedFaculty!.isNotEmpty) {
       filtered = await _filterByFaculty(filtered, _selectedFaculty!);
     }
-
-    // タグフィルター（そのタグが使われている授業を絞り込み）
     if (_selectedTag != null && _selectedTag!.isNotEmpty) {
       filtered = await _filterByTag(filtered, _selectedTag!);
     }
 
-    setState(() {
-      _filteredCourses = filtered;
-      _currentPage = 1;
-      _pagedCourses = _getPagedCourses(1);
-    });
+    setState(() => _filteredCourses = filtered);
   }
 
-  // 学部フィルター（その学部の人がレビューを投稿している授業を絞り込み）
   Future<List<Map<String, dynamic>>> _filterByFaculty(
     List<Map<String, dynamic>> courses,
     String faculty,
   ) async {
     try {
-      // 指定された学部のユーザーを取得
-      final usersSnapshot =
+      final usersSnap =
           await FirebaseFirestore.instance
               .collection('users')
               .where('department', isEqualTo: faculty)
               .get();
-
-      final userIds = usersSnapshot.docs.map((doc) => doc.id).toList();
-
+      final userIds = usersSnap.docs.map((d) => d.id).toList();
       if (userIds.isEmpty) return [];
 
-      // その学部のユーザーがレビューを投稿している授業のlectureNameとteacherNameを取得
-      final reviewsSnapshot =
+      final reviewsSnap =
           await FirebaseFirestore.instance
               .collection('reviews')
               .where('userId', whereIn: userIds)
               .get();
 
-      final reviewedLectures =
-          reviewsSnapshot.docs.map((doc) {
-            final data = doc.data();
+      final pairs =
+          reviewsSnap.docs.map((d) {
+            final m = d.data();
             return {
-              'lectureName': data['lectureName'] ?? '',
-              'teacherName': data['teacherName'] ?? '',
+              'lectureName': m['lectureName'] ?? '',
+              'teacherName': m['teacherName'] ?? '',
             };
           }).toSet();
 
-      // 該当する授業のみを返す
-      return courses.where((course) {
-        final lectureName = course['lectureName'] ?? '';
-        final teacherName = course['teacherName'] ?? '';
-        return reviewedLectures.any(
-          (review) =>
-              review['lectureName'] == lectureName &&
-              review['teacherName'] == teacherName,
-        );
+      return courses.where((c) {
+        final l = c['lectureName'] ?? '';
+        final t = c['teacherName'] ?? '';
+        return pairs.any((p) => p['lectureName'] == l && p['teacherName'] == t);
       }).toList();
     } catch (e) {
-      print('Error filtering by faculty: $e');
+      debugPrint('Error filtering by faculty: $e');
       return courses;
     }
   }
 
-  // タグフィルター（そのタグが使われている授業を絞り込み）
   Future<List<Map<String, dynamic>>> _filterByTag(
     List<Map<String, dynamic>> courses,
     String tag,
   ) async {
     try {
-      // 指定されたタグが使われているレビューを取得
-      final reviewsSnapshot =
+      final reviewsSnap =
           await FirebaseFirestore.instance
               .collection('reviews')
               .where('tags', arrayContains: tag)
               .get();
 
-      final reviewedLectures =
-          reviewsSnapshot.docs.map((doc) {
-            final data = doc.data();
+      final pairs =
+          reviewsSnap.docs.map((d) {
+            final m = d.data();
             return {
-              'lectureName': data['lectureName'] ?? '',
-              'teacherName': data['teacherName'] ?? '',
+              'lectureName': m['lectureName'] ?? '',
+              'teacherName': m['teacherName'] ?? '',
             };
           }).toSet();
 
-      // 該当する授業のみを返す
-      return courses.where((course) {
-        final lectureName = course['lectureName'] ?? '';
-        final teacherName = course['teacherName'] ?? '';
-        return reviewedLectures.any(
-          (review) =>
-              review['lectureName'] == lectureName &&
-              review['teacherName'] == teacherName,
-        );
+      return courses.where((c) {
+        final l = c['lectureName'] ?? '';
+        final t = c['teacherName'] ?? '';
+        return pairs.any((p) => p['lectureName'] == l && p['teacherName'] == t);
       }).toList();
     } catch (e) {
-      print('Error filtering by tag: $e');
+      debugPrint('Error filtering by tag: $e');
       return courses;
-    }
-  }
-
-  void _nextPage() {
-    if (_currentPage * pageSize < _filteredCourses.length) {
-      setState(() {
-        _currentPage++;
-        _pagedCourses = _getPagedCourses(_currentPage);
-      });
-      _pageController.animateToPage(
-        _currentPage - 1,
-        duration: Duration(milliseconds: 300),
-        curve: Curves.ease,
-      );
-    }
-  }
-
-  void _prevPage() {
-    if (_currentPage > 1) {
-      setState(() {
-        _currentPage--;
-        _pagedCourses = _getPagedCourses(_currentPage);
-      });
-      _pageController.animateToPage(
-        _currentPage - 1,
-        duration: Duration(milliseconds: 300),
-        curve: Curves.ease,
-      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final double topOffset =
-        kToolbarHeight + MediaQuery.of(context).padding.top;
-    final int totalPages = (_filteredCourses.length / pageSize).ceil();
-    return Stack(
-      children: [
-        Positioned.fill(
-          child: Image.asset(
-            ref.watch(backgroundImagePathProvider),
-            fit: BoxFit.cover,
-          ),
-        ),
-        Positioned.fill(child: Container(color: Colors.black.withOpacity(0.5))),
-        Material(
-          type: MaterialType.transparency,
-          child: Stack(
-            children: [
-              // AppBar
-              Positioned(
-                top: 0,
-                left: 0,
-                right: 0,
-                child: AppBar(
-                  title: const Text('秋冬学期の授業一覧'),
-                  backgroundColor: Colors.transparent,
-                  elevation: 0,
-                  foregroundColor: Colors.white,
-                  actions: [
-                    // 検索アイコン
-                    IconButton(
-                      icon: Icon(
-                        _isSearchExpanded ? Icons.close : Icons.search,
-                        color: Colors.white,
-                      ),
-                      onPressed: () {
+    const mainBlue = Color(0xFF2E6DB6);
+    final bg = Colors.grey[100];
+
+    return Scaffold(
+      backgroundColor: bg,
+      appBar: AppBar(
+        title: const Text('秋冬学期の授業一覧'),
+        centerTitle: true,
+        backgroundColor: mainBlue,
+        elevation: 0,
+      ),
+      body:
+          _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : RefreshIndicator(
+                onRefresh: _loadAllCourses,
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+                  children: [
+                    _SearchAndFilterBar(
+                      controller: _searchController,
+                      faculties: _faculties,
+                      tags: _tags,
+                      selectedFaculty: _selectedFaculty,
+                      selectedTag: _selectedTag,
+                      onChanged: (q) => _applyFilters(),
+                      onFacultyChanged: (v) {
+                        setState(() => _selectedFaculty = v);
+                        _applyFilters();
+                      },
+                      onTagChanged: (v) {
+                        setState(() => _selectedTag = v);
+                        _applyFilters();
+                      },
+                      onClear: () {
                         setState(() {
-                          _isSearchExpanded = !_isSearchExpanded;
-                          // 検索を閉じる時は検索条件をクリア
-                          if (!_isSearchExpanded) {
-                            _searchController.clear();
-                            _selectedFaculty = null;
-                            _selectedTag = null;
-                            _applyFilters();
-                          }
+                          _searchController.clear();
+                          _selectedFaculty = null;
+                          _selectedTag = null;
                         });
+                        _applyFilters();
                       },
                     ),
+                    const SizedBox(height: 12),
+                    ..._filteredCourses.map(
+                      (c) => _CourseTileSimple(course: c, asDouble: _asDouble),
+                    ),
+                    if (_filteredCourses.isEmpty)
+                      const Padding(
+                        padding: EdgeInsets.all(24),
+                        child: Center(child: Text('該当する授業がありません')),
+                      ),
                   ],
                 ),
               ),
-              // 横スクロールページビュー
-              Positioned(
-                top: topOffset,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                child:
-                    _isLoading
-                        ? const Center(
-                          child: CircularProgressIndicator(color: Colors.white),
-                        )
-                        : Column(
-                          children: [
-                            // 検索・フィルターUI（折りたたみ式）
-                            if (_isSearchExpanded) ...[
-                              _buildSearchAndFilterUI(),
-                              const SizedBox(height: 10),
-                            ],
-                            // ページネーションUI
-                            Padding(
-                              padding: const EdgeInsets.symmetric(
-                                vertical: 8.0,
-                              ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  TextButton.icon(
-                                    style: TextButton.styleFrom(
-                                      minimumSize: Size(32, 32),
-                                      padding: EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 4,
-                                      ),
-                                      tapTargetSize:
-                                          MaterialTapTargetSize.shrinkWrap,
-                                    ),
-                                    onPressed:
-                                        _currentPage > 1 ? _prevPage : null,
-                                    icon: const Icon(
-                                      Icons.chevron_left,
-                                      size: 18,
-                                    ),
-                                    label: const Text(
-                                      '',
-                                      style: TextStyle(fontSize: 12),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    '${((_currentPage - 1) * pageSize + 1)}-${((_currentPage - 1) * pageSize + _pagedCourses.length)}件 / 全${_filteredCourses.length}件',
-                                    style: const TextStyle(
-                                      fontSize: 13,
-                                      color: Colors.grey,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  TextButton.icon(
-                                    style: TextButton.styleFrom(
-                                      minimumSize: Size(32, 32),
-                                      padding: EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 4,
-                                      ),
-                                      tapTargetSize:
-                                          MaterialTapTargetSize.shrinkWrap,
-                                    ),
-                                    onPressed:
-                                        _currentPage * pageSize <
-                                                _filteredCourses.length
-                                            ? _nextPage
-                                            : null,
-                                    icon: const Icon(
-                                      Icons.chevron_right,
-                                      size: 18,
-                                    ),
-                                    label: const Text(
-                                      '',
-                                      style: TextStyle(fontSize: 12),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            // 横スクロールPageView
-                            Expanded(
-                              child: PageView.builder(
-                                controller: _pageController,
-                                itemCount: totalPages,
-                                onPageChanged: (pageIdx) {
-                                  setState(() {
-                                    _currentPage = pageIdx + 1;
-                                    _pagedCourses = _getPagedCourses(
-                                      _currentPage,
-                                    );
-                                  });
-                                },
-                                itemBuilder: (context, pageIdx) {
-                                  final paged = _getPagedCourses(pageIdx + 1);
-                                  return ListView.builder(
-                                    physics: ClampingScrollPhysics(),
-                                    padding: const EdgeInsets.fromLTRB(
-                                      16,
-                                      0,
-                                      16,
-                                      80,
-                                    ),
-                                    itemCount: paged.length,
-                                    itemBuilder: (context, index) {
-                                      return Align(
-                                        alignment: Alignment.center,
-                                        child: FractionallySizedBox(
-                                          widthFactor: 0.80,
-                                          child: Card(
-                                            margin: const EdgeInsets.symmetric(
-                                              vertical: 8.0,
-                                            ),
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(15),
-                                            ),
-                                            elevation: 5,
-                                            color: Colors.white,
-                                            child: InkWell(
-                                              onTap: () {
-                                                Navigator.push(
-                                                  context,
-                                                  MaterialPageRoute(
-                                                    builder:
-                                                        (
-                                                          context,
-                                                        ) => AutumnWinterCourseReviewPage(
-                                                          lectureName:
-                                                              paged[index]['lectureName'],
-                                                          teacherName:
-                                                              paged[index]['teacherName'],
-                                                        ),
-                                                  ),
-                                                );
-                                              },
-                                              borderRadius:
-                                                  BorderRadius.circular(15),
-                                              child: Padding(
-                                                padding: const EdgeInsets.all(
-                                                  16.0,
-                                                ),
-                                                child: Column(
-                                                  crossAxisAlignment:
-                                                      CrossAxisAlignment.start,
-                                                  children: [
-                                                    Text(
-                                                      paged[index]['lectureName'] ??
-                                                          '',
-                                                      style: const TextStyle(
-                                                        fontSize: 18,
-                                                        fontWeight:
-                                                            FontWeight.bold,
-                                                        color: Colors.black,
-                                                      ),
-                                                    ),
-                                                    const SizedBox(height: 8),
-                                                    if ((paged[index]['classroom'] ??
-                                                            '')
-                                                        .isNotEmpty)
-                                                      Text(
-                                                        '教室: ${paged[index]['classroom']}',
-                                                        style: TextStyle(
-                                                          fontSize: 14,
-                                                          color:
-                                                              Colors.grey[700],
-                                                        ),
-                                                      ),
-                                                    const SizedBox(height: 8),
-                                                    Row(
-                                                      children: [
-                                                        Text(
-                                                          '教員: ',
-                                                          style: TextStyle(
-                                                            fontSize: 14,
-                                                            color:
-                                                                Colors
-                                                                    .grey[700],
-                                                          ),
-                                                        ),
-                                                        Expanded(
-                                                          child: Text(
-                                                            (paged[index]['teacherName'] ??
-                                                                        '')
-                                                                    .isNotEmpty
-                                                                ? paged[index]['teacherName']
-                                                                : '未設定',
-                                                            style: TextStyle(
-                                                              fontSize: 14,
-                                                              color:
-                                                                  (paged[index]['teacherName'] ??
-                                                                              '')
-                                                                          .isNotEmpty
-                                                                      ? Colors
-                                                                          .black
-                                                                      : Colors
-                                                                          .grey[500],
-                                                              fontStyle:
-                                                                  (paged[index]['teacherName'] ??
-                                                                              '')
-                                                                          .isEmpty
-                                                                      ? FontStyle
-                                                                          .italic
-                                                                      : FontStyle
-                                                                          .normal,
-                                                            ),
-                                                          ),
-                                                        ),
-                                                      ],
-                                                    ),
-                                                    const SizedBox(height: 12),
-                                                    Row(
-                                                      mainAxisAlignment:
-                                                          MainAxisAlignment
-                                                              .spaceBetween,
-                                                      children: [
-                                                        Row(
-                                                          children: [
-                                                            const Icon(
-                                                              Icons.star,
-                                                              color:
-                                                                  Colors.amber,
-                                                              size: 16,
-                                                            ),
-                                                            const SizedBox(
-                                                              width: 4,
-                                                            ),
-                                                            Text(
-                                                              '${(paged[index]['avgSatisfaction'] ?? 0.0).toStringAsFixed(1)}',
-                                                              style: const TextStyle(
-                                                                fontSize: 12,
-                                                                fontWeight:
-                                                                    FontWeight
-                                                                        .bold,
-                                                                color:
-                                                                    Colors
-                                                                        .amber,
-                                                              ),
-                                                            ),
-                                                          ],
-                                                        ),
-                                                        Row(
-                                                          children: [
-                                                            const Icon(
-                                                              Icons
-                                                                  .sentiment_satisfied,
-                                                              color:
-                                                                  Colors.green,
-                                                              size: 16,
-                                                            ),
-                                                            const SizedBox(
-                                                              width: 4,
-                                                            ),
-                                                            Text(
-                                                              '${(paged[index]['avgEasiness'] ?? 0.0).toStringAsFixed(1)}',
-                                                              style: const TextStyle(
-                                                                fontSize: 12,
-                                                                fontWeight:
-                                                                    FontWeight
-                                                                        .bold,
-                                                                color:
-                                                                    Colors
-                                                                        .green,
-                                                              ),
-                                                            ),
-                                                          ],
-                                                        ),
-                                                        Row(
-                                                          children: [
-                                                            const Icon(
-                                                              Icons.rate_review,
-                                                              color:
-                                                                  Colors.blue,
-                                                              size: 16,
-                                                            ),
-                                                            const SizedBox(
-                                                              width: 4,
-                                                            ),
-                                                            Text(
-                                                              '${paged[index]['reviewCount'] ?? 0}件',
-                                                              style:
-                                                                  const TextStyle(
-                                                                    fontSize:
-                                                                        12,
-                                                                    color:
-                                                                        Colors
-                                                                            .blue,
-                                                                  ),
-                                                            ),
-                                                          ],
-                                                        ),
-                                                      ],
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      );
-                                    },
-                                  );
-                                },
-                              ),
-                            ),
-                          ],
-                        ),
-              ),
-              // ボトムナビ
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: 0,
-                child: CommonBottomNavigation(),
+      bottomNavigationBar: const CommonBottomNavigation(),
+    );
+  }
+}
+
+// ===== 検索＋フィルタ（シンプルUI） =====
+class _SearchAndFilterBar extends StatelessWidget {
+  final TextEditingController controller;
+  final List<String> faculties;
+  final List<String> tags;
+  final String? selectedFaculty;
+  final String? selectedTag;
+  final ValueChanged<String> onChanged;
+  final VoidCallback onClear;
+  final ValueChanged<String?> onFacultyChanged;
+  final ValueChanged<String?> onTagChanged;
+
+  const _SearchAndFilterBar({
+    required this.controller,
+    required this.faculties,
+    required this.tags,
+    required this.selectedFaculty,
+    required this.selectedTag,
+    required this.onChanged,
+    required this.onClear,
+    required this.onFacultyChanged,
+    required this.onTagChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        // Search
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(30),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 6,
+                offset: const Offset(0, 3),
               ),
             ],
           ),
+          child: TextField(
+            controller: controller,
+            onChanged: onChanged,
+            decoration: InputDecoration(
+              hintText: '講義名や教員名で検索...',
+              border: InputBorder.none,
+              prefixIcon: const Icon(Icons.search),
+              suffixIcon:
+                  controller.text.isNotEmpty
+                      ? IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: onClear,
+                      )
+                      : null,
+            ),
+          ),
+        ),
+        const SizedBox(height: 10),
+        // Filters
+        Row(
+          children: [
+            Expanded(
+              child: _DropdownPill(
+                hint: '学部で絞り込む',
+                value: selectedFaculty,
+                items: faculties,
+                onChanged: onFacultyChanged,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: _DropdownPill(
+                hint: 'タグで絞り込む',
+                value: selectedTag,
+                items: tags,
+                onChanged: onTagChanged,
+              ),
+            ),
+          ],
         ),
       ],
     );
   }
+}
 
-  Widget _buildSearchAndFilterUI() {
-    return Container(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        children: [
-          // 検索バー
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(30.0),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.2),
-                  spreadRadius: 1,
-                  blurRadius: 5,
-                  offset: const Offset(0, 3),
-                ),
-              ],
-            ),
-            child: TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: '講義名や教員名で検索...',
-                hintStyle: TextStyle(color: Colors.grey[600]),
-                prefixIcon: Icon(Icons.search, color: Colors.grey[600]),
-                border: InputBorder.none,
-                suffixIcon:
-                    _searchController.text.isNotEmpty
-                        ? IconButton(
-                          icon: Icon(Icons.clear, color: Colors.grey[600]),
-                          onPressed: () {
-                            _searchController.clear();
-                            _applyFilters();
-                          },
-                        )
-                        : null,
-              ),
-              onChanged: (text) {
-                _applyFilters();
-              },
-            ),
-          ),
-          const SizedBox(height: 10),
-          // フィルタードロップダウン
-          Row(
-            children: [
-              Expanded(
-                child: _buildFilterDropdown(
-                  '学部で絞り込む',
-                  _selectedFaculty,
-                  _faculties,
-                  (String? newValue) {
-                    setState(() {
-                      _selectedFaculty = newValue;
-                    });
-                    _applyFilters();
-                  },
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _buildFilterDropdown('タグで絞り込む', _selectedTag, _tags, (
-                  String? newValue,
-                ) {
-                  setState(() {
-                    _selectedTag = newValue;
-                  });
-                  _applyFilters();
-                }),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
+class _DropdownPill extends StatelessWidget {
+  final String hint;
+  final String? value;
+  final List<String> items;
+  final ValueChanged<String?> onChanged;
 
-  Widget _buildFilterDropdown(
-    String hintText,
-    String? selectedValue,
-    List<String> items,
-    ValueChanged<String?> onChanged,
-  ) {
+  const _DropdownPill({
+    required this.hint,
+    required this.value,
+    required this.items,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.9),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.blueAccent[100]!, width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 3,
-            offset: const Offset(0, 2),
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 6,
+            offset: const Offset(0, 3),
           ),
         ],
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
           isExpanded: true,
-          value: selectedValue ?? '',
-          hint: Text(hintText, style: TextStyle(color: Colors.grey[700])),
-          icon: const Icon(Icons.arrow_drop_down, color: Colors.indigo),
-          iconSize: 24,
-          elevation: 16,
-          style: const TextStyle(color: Colors.black87, fontSize: 16),
-          onChanged: (val) {
-            if (val == '') {
-              onChanged(null); // 選択解除
-            } else {
-              onChanged(val);
-            }
-          },
+          value: value,
+          hint: Text(hint, style: TextStyle(color: Colors.grey[700])),
+          icon: const Icon(Icons.arrow_drop_down),
+          onChanged: (val) => onChanged(val?.isEmpty == true ? null : val),
           items: [
-            DropdownMenuItem<String>(
-              value: '',
-              child: Text(
-                '選択解除',
-                style: TextStyle(
-                  color: Colors.grey[600],
-                  fontStyle: FontStyle.italic,
-                ),
-              ),
-            ),
-            DropdownMenuItem<String>(
-              enabled: false,
-              child: Divider(color: Colors.grey[400], height: 1),
-            ),
-            ...items.map<DropdownMenuItem<String>>((String value) {
-              return DropdownMenuItem<String>(value: value, child: Text(value));
-            }).toList(),
+            const DropdownMenuItem<String>(value: null, child: Text('選択解除')),
+            ...items.map((e) => DropdownMenuItem(value: e, child: Text(e))),
           ],
         ),
       ),
+    );
+  }
+}
+
+// ===== 授業カード（シンプル） =====
+class _CourseTileSimple extends StatelessWidget {
+  final Map<String, dynamic> course;
+  final double Function(dynamic) asDouble;
+
+  const _CourseTileSimple({required this.course, required this.asDouble});
+
+  @override
+  Widget build(BuildContext context) {
+    final blue = const Color(0xFF2E6DB6);
+
+    return InkWell(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder:
+                (_) => AutumnWinterCourseReviewPage(
+                  lectureName: course['lectureName'] ?? '',
+                  teacherName: course['teacherName'] ?? '',
+                ),
+          ),
+        );
+      },
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 8),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.06),
+              blurRadius: 10,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // タイトル＋投稿済み
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    course['lectureName'] ?? '',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                if (course['hasMyReview'] == true)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.green[100],
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Text(
+                      '投稿済み',
+                      style: TextStyle(
+                        color: Colors.green,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              (course['teacherName'] ?? '').toString().isNotEmpty
+                  ? course['teacherName']
+                  : '担当未設定',
+              style: TextStyle(color: Colors.grey.shade700, fontSize: 13),
+            ),
+            const SizedBox(height: 12),
+
+            // 指標
+            Row(
+              children: [
+                _metric(
+                  icon: Icons.star_rounded,
+                  color: Colors.amber,
+                  value: asDouble(course['avgSatisfaction']).toStringAsFixed(1),
+                  label: '満足度',
+                ),
+                const SizedBox(width: 14),
+                _metric(
+                  icon: Icons.sentiment_satisfied_alt_rounded,
+                  color: Colors.teal,
+                  value: asDouble(course['avgEasiness']).toStringAsFixed(1),
+                  label: '楽単度',
+                ),
+                const Spacer(),
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.comment_rounded,
+                      size: 18,
+                      color: Colors.blueGrey,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      '${course['reviewCount'] ?? 0}件',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 10),
+            Align(
+              alignment: Alignment.centerRight,
+              child: Icon(Icons.chevron_right_rounded, color: blue),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _metric({
+    required IconData icon,
+    required Color color,
+    required String value,
+    required String label,
+  }) {
+    return Row(
+      children: [
+        Icon(icon, size: 18, color: color),
+        const SizedBox(width: 6),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              value,
+              style: TextStyle(
+                color: color,
+                fontWeight: FontWeight.bold,
+                fontSize: 15,
+              ),
+            ),
+            Text(
+              label,
+              style: const TextStyle(fontSize: 11, color: Colors.grey),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }
