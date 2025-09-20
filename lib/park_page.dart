@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/services.dart';
 import 'dart:async'; // Timer.periodic のために必要
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -10,11 +12,14 @@ import 'character_data.dart' show characterFullDataGlobal;
 import 'level_gauge.dart';
 import 'quest_create.dart'; // QuestCreationWidgetのインポート
 import 'dart:ui';
+import 'dart:convert';
+// ignore: unused_import
 import 'setting_page/setting_page.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'providers/timetable_provider.dart';
 import 'services/notification_service.dart';
 import 'providers/background_image_provider.dart';
+import 'constants/ui_flags.dart' as ui_flags;
 
 class ParkPage extends ConsumerStatefulWidget {
   final String diagnosedCharacterName;
@@ -54,6 +59,7 @@ class _ParkPageState extends ConsumerState<ParkPage> {
     viewportFraction: 1.0,
     keepPage: true,
   );
+  // ignore: unused_field
   int _currentPage = 0;
   Timer? _timer;
 
@@ -63,6 +69,7 @@ class _ParkPageState extends ConsumerState<ParkPage> {
   bool _isCharacterInfoInitialized = false;
   bool isQuestCreationVisible = false;
   int _takoyakiCount = 0;
+  // ignore: unused_field
   double _pageOffset = 0.0;
 
   bool _isTakoyakiClaimed = false;
@@ -71,6 +78,27 @@ class _ParkPageState extends ConsumerState<ParkPage> {
   final GlobalKey<LiquidLevelGaugeState> _gaugeKey =
       GlobalKey<LiquidLevelGaugeState>();
 
+  // --- Simple ToDo UI enhancement states ---
+  // タブは廃止。Myタスクのみを表示。
+  static const Color _cWhite = Color(0xFFFFFFFF);
+  static const Color _cBlack = Color(0xFF000000);
+  static const Color _cBlue = Color(0xFF0B5FFF);
+  // UI 切替フラグをグローバル設定から取得
+  int _segmentIndex = 0; // 0: 未完了, 1: 完了（iOS風セグメント）
+  // 未完了→完了時にチェック円の上でパルスを出すためのIDセット
+  final Set<String> _pulsingChecks = <String>{};
+
+  void _playCheckPulse(String questId) {
+    setState(() {
+      _pulsingChecks.add(questId);
+    });
+  }
+
+  // 授業に関係ないローカルToDo（DBを触らない）
+  List<Map<String, dynamic>> _localTodos = [];
+  // Firestore由来の完了一覧（自分がcompletedUserIdsに含まれる）
+  List<Map<String, dynamic>> _completedQuests = [];
+
   @override
   void initState() {
     super.initState();
@@ -78,6 +106,7 @@ class _ParkPageState extends ConsumerState<ParkPage> {
     _loadCharacterInfoFromFirebase();
     _loadQuestsFromFirestore();
     _loadUserDataFromFirebase();
+    _loadLocalTodos();
   }
 
   @override
@@ -98,6 +127,7 @@ class _ParkPageState extends ConsumerState<ParkPage> {
     });
   }
 
+  // ignore: unused_element
   void _claimDailyTakoyaki() async {
     if (_isTakoyakiClaimed) {
       setState(() {
@@ -382,6 +412,7 @@ class _ParkPageState extends ConsumerState<ParkPage> {
     }
   }
 
+  // ignore: unused_element
   String _getCharacterImagePath(String characterName) {
     return characterFullDataGlobal[characterName]?['image'] ??
         'assets/character_gorilla.png';
@@ -472,12 +503,14 @@ class _ParkPageState extends ConsumerState<ParkPage> {
         return aDeadline.compareTo(bDeadline);
       });
 
-      // 自分が既に完了したクエストを除外
-      final filteredQuests =
-          quests.where((quest) {
-            final completedBy = quest['completedUserIds'] as List<dynamic>?;
-            return completedBy == null || !completedBy.contains(user.uid);
-          }).toList();
+      // 自分が既に完了したクエストを分離
+      final List<Map<String, dynamic>> completedQuests = [];
+      final filteredQuests = quests.where((quest) {
+        final completedBy = quest['completedUserIds'] as List<dynamic>?;
+        final bool isCompleted = completedBy != null && completedBy.contains(user.uid);
+        if (isCompleted) completedQuests.add(quest);
+        return !isCompleted;
+      }).toList();
 
       print(
         'DEBUG: After filtering completed quests: ${filteredQuests.length} quests',
@@ -486,6 +519,7 @@ class _ParkPageState extends ConsumerState<ParkPage> {
       setState(() {
         _quests = filteredQuests;
         _isLoadingQuests = false;
+        _completedQuests = completedQuests;
       });
       print('DEBUG: Quests loaded successfully');
       print('DEBUG: _quests list content: $_quests');
@@ -755,12 +789,17 @@ class _ParkPageState extends ConsumerState<ParkPage> {
 
   @override
   Widget build(BuildContext context) {
-    // Riverpodから時間割データを取得
-    final timetableAsyncValue = ref.watch(timetableProvider);
+    // Riverpodから時間割データを取得（新UIでは未使用だが既存依存を維持）
+  // ignore: unused_local_variable
+  final timetableAsyncValue = ref.watch(timetableProvider);
     final screenHeight = MediaQuery.of(context).size.height;
     final screenWidth = MediaQuery.of(context).size.width;
     final double topBarHeight = screenHeight * 0.08;
     final double logoSize = screenWidth * 0.13;
+
+    if (ui_flags.useSimpleUI) {
+      return _buildSimpleTodoUI(context, screenWidth);
+    }
 
     return Stack(
       children: [
@@ -1057,6 +1096,791 @@ class _ParkPageState extends ConsumerState<ParkPage> {
     );
   }
 
+  // ==========================
+  // Simple ToDo UI (white/black/blue)
+  // ==========================
+  Widget _buildSimpleTodoUI(BuildContext context, double screenWidth) {
+    final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+
+    // Myタスクのみ（作成者が自分のもの）を表示
+    List<Map<String, dynamic>> filtered = _quests;
+    if (currentUserId != null) {
+      filtered = _quests.where((q) => q['createdBy'] == currentUserId).toList();
+    }
+    // 未完了（ローカルはcompleted!=true）
+    final List<Map<String, dynamic>> mergedActive = [
+      ...filtered,
+      ..._localTodos.where((e) => e['completed'] != true),
+    ];
+    // 完了（Firestoreの完了 + ローカルのcompleted==true）
+    final List<Map<String, dynamic>> mergedCompleted = [
+      ..._completedQuests,
+      ..._localTodos.where((e) => e['completed'] == true),
+    ];
+    // 期日のあるものを昇順、その後ろに期日なしを配置
+    int _deadlineCompare(Map<String, dynamic> a, Map<String, dynamic> b) {
+      DateTime? ad;
+      final av = a['deadline'];
+      if (av is Timestamp) {
+        ad = av.toDate();
+      } else if (av is String && av.isNotEmpty) {
+        ad = DateTime.tryParse(av);
+      }
+      DateTime? bd;
+      final bv = b['deadline'];
+      if (bv is Timestamp) {
+        bd = bv.toDate();
+      } else if (bv is String && bv.isNotEmpty) {
+        bd = DateTime.tryParse(bv);
+      }
+      if (ad == null && bd == null) return 0;
+      if (ad == null) return 1; // aが期限なし → 後ろへ
+      if (bd == null) return -1; // bが期限なし → aが前
+      return ad.compareTo(bd);
+    }
+    mergedActive.sort(_deadlineCompare);
+    mergedCompleted.sort(_deadlineCompare);
+  // 2分割表示にするため、ここではリストの選択は行わない
+
+    return Stack(
+      children: [
+        // 背景は白ベース
+        Positioned.fill(child: Container(color: _cWhite)),
+        SafeArea(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // iOS風: 半透明+ブラーのトップバーとヘアライン
+              ClipRect(
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.8),
+                      border: const Border(
+                        bottom: BorderSide(color: Color(0x1A000000), width: 0.5), // hairline
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                _userName.isNotEmpty ? _userName : widget.userName,
+                                style: const TextStyle(
+                                  color: _cBlack,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  fontFamily: 'NotoSansJP',
+                                  letterSpacing: -0.2,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 2),
+                              const Text(
+                                'ToDo リスト',
+                                style: TextStyle(
+                                  color: _cBlack,
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.w800,
+                                  fontFamily: 'NotoSansJP',
+                                  letterSpacing: -0.2,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              // 左端青 -> 右端透明 の太めグラデーションライン（全幅）
+                              SizedBox(
+                                width: double.infinity,
+                                height: 10,
+                                child: DecoratedBox(
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      begin: Alignment.centerLeft,
+                                      end: Alignment.centerRight,
+                                      colors: [
+                                        _cBlue,
+                                        _cBlue.withOpacity(0.6),
+                                        _cBlue.withOpacity(0.2),
+                                        Colors.transparent,
+                                      ],
+                                    ),
+                                    borderRadius: BorderRadius.circular(999),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Row(
+                          children: [
+                            GestureDetector(
+                              onTap: () => _showOztechDialog(context),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: Image.asset('assets/oztech.png', width: 26, height: 26, fit: BoxFit.cover),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            GestureDetector(
+                              onTap: () => _showPotiPotiDialog(context),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: Image.asset('assets/potipoti.png', width: 26, height: 26, fit: BoxFit.cover),
+                              ),
+                            ),
+                            const SizedBox(width: 40),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+
+              // セグメント（未完了/完了）
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                child: CupertinoSlidingSegmentedControl<int>(
+                  groupValue: _segmentIndex,
+                  backgroundColor: Colors.black.withOpacity(0.06),
+                  thumbColor: Colors.white,
+                  children: const {
+                    0: Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      child: Text('未完了', style: TextStyle(fontWeight: FontWeight.w600)),
+                    ),
+                    1: Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      child: Text('完了', style: TextStyle(fontWeight: FontWeight.w600)),
+                    ),
+                  },
+                  onValueChanged: (val) {
+                    if (val == null) return;
+                    HapticFeedback.lightImpact();
+                    setState(() => _segmentIndex = val);
+                  },
+                ),
+              ),
+
+              // 上半分: 未完了 / 下半分: 完了
+              Expanded(
+                child: _isLoadingQuests
+                    ? const Center(child: CircularProgressIndicator())
+                    : (_segmentIndex == 0
+                        ? ((mergedActive.isEmpty)
+                            ? Center(
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: const [
+                                    Icon(CupertinoIcons.tray, color: _cBlue, size: 40),
+                                    SizedBox(height: 8),
+                                    Text('未完了のタスクはありません', style: TextStyle(color: _cBlack, fontFamily: 'NotoSansJP')),
+                                  ],
+                                ),
+                              )
+                            : _buildTodoListView(mergedActive, completedView: false))
+                        : ((mergedCompleted.isEmpty)
+                            ? Center(
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: const [
+                                    Icon(CupertinoIcons.checkmark_seal, color: _cBlue, size: 40),
+                                    SizedBox(height: 8),
+                                    Text('完了したタスクはありません', style: TextStyle(color: _cBlack, fontFamily: 'NotoSansJP')),
+                                  ],
+                                ),
+                              )
+                            : _buildTodoListView(mergedCompleted, completedView: true))),
+              ),
+              const SizedBox(height: 76), // ボトムナビ分の余白
+            ],
+          ),
+        ),
+
+        // 中央下の＋ボタン（既存の追加処理を呼ぶ）
+        Positioned(
+          left: 0,
+          right: 0,
+          // 広告+ボトムナビに被らないように十分上に配置（画面高さで調整）
+          bottom: (MediaQuery.of(context).size.height <= 720) ? 160 : 210,
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minWidth: 160, maxWidth: 240, minHeight: 48),
+              child: ElevatedButton(
+                onPressed: () {
+                  HapticFeedback.lightImpact();
+                  _showAddPicker(context);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _cBlue,
+                  elevation: 0,
+                  shape: const StadiumBorder(),
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                ),
+                child: const Text('＋ 追加', style: TextStyle(color: _cWhite, fontWeight: FontWeight.w700, letterSpacing: 0.2)),
+              ),
+            ),
+          ),
+        ),
+
+        if (isQuestCreationVisible)
+          Positioned.fill(
+            child: Container(
+              color: Colors.black54,
+              alignment: Alignment.center,
+              child: QuestCreationWidget(
+                onCancel: () => setState(() => isQuestCreationVisible = false),
+                onCreate: (selectedClass, taskType, deadline, description) {
+                  _createQuest(selectedClass, taskType, deadline, description);
+                  Future.delayed(const Duration(milliseconds: 100), () {
+                    if (mounted) {
+                      setState(() => isQuestCreationVisible = false);
+                    }
+                  });
+                },
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  // タブは廃止（上下2分割表示）
+
+  void _showAddPicker(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.school, color: _cBlue),
+                title: const Text('授業に紐づくクエストを作成'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  setState(() => isQuestCreationVisible = true);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.note_add, color: _cBlue),
+                title: const Text('メモ（授業外）を作成'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _showLocalTodoDialog(context);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showLocalTodoDialog(BuildContext context) {
+    final titleController = TextEditingController();
+    final descController = TextEditingController();
+    DateTime? pickedDeadline;
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(builder: (ctx, setLocalState) {
+          return AlertDialog(
+            title: const Text('新規メモ（授業外）'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: titleController,
+                    keyboardType: TextInputType.text,
+                    textInputAction: TextInputAction.done,
+                    enableSuggestions: true,
+                    autocorrect: true,
+                    textCapitalization: TextCapitalization.none,
+                    style: const TextStyle(
+                      fontFamily: 'NotoSansJP',
+                    ),
+                    decoration: const InputDecoration(
+                      labelText: 'タイトル',
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: descController,
+                    decoration: const InputDecoration(
+                      labelText: '説明（任意）',
+                    ),
+                    maxLines: 3,
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          pickedDeadline == null
+                              ? '期限: 指定なし'
+                              : '期限: ${DateFormat('MM/dd HH:mm').format(pickedDeadline!)}',
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () async {
+                          final now = DateTime.now();
+                          final date = await showDatePicker(
+                            context: ctx,
+                            initialDate: now,
+                            firstDate: now.subtract(const Duration(days: 365)),
+                            lastDate: now.add(const Duration(days: 365 * 5)),
+                          );
+                          if (date != null) {
+                            final time = await showTimePicker(
+                              context: ctx,
+                              initialTime: TimeOfDay.now(),
+                            );
+                            if (time != null) {
+                              setLocalState(() {
+                                pickedDeadline = DateTime(
+                                  date.year,
+                                  date.month,
+                                  date.day,
+                                  time.hour,
+                                  time.minute,
+                                );
+                              });
+                            }
+                          }
+                        },
+                        child: const Text('期限を選択'),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('キャンセル'),
+              ),
+              TextButton(
+                onPressed: () {
+                  final title = titleController.text.trim();
+                  if (title.isEmpty) return;
+                  _addLocalTodo(
+                    title: title,
+                    description: descController.text.trim(),
+                    deadline: pickedDeadline,
+                  );
+                  Navigator.pop(ctx);
+                },
+                child: const Text('作成'),
+              ),
+            ],
+          );
+        });
+      },
+    );
+  }
+
+  void _addLocalTodo({
+    required String title,
+    String? description,
+    DateTime? deadline,
+  }) async {
+    final id = 'local_${DateTime.now().millisecondsSinceEpoch}';
+    final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+    final todo = {
+      'id': id,
+      'name': title,
+      'description': description ?? '',
+      'deadline': deadline?.toIso8601String(),
+      'createdAt': DateTime.now().toIso8601String(),
+      'createdBy': currentUserId,
+      'isLocal': true,
+    };
+    setState(() {
+      _localTodos.add(todo);
+    });
+    await _saveLocalTodos();
+  }
+
+  Future<void> _loadLocalTodos() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString('localTodos');
+      if (raw != null && raw.isNotEmpty) {
+        final list = (jsonDecode(raw) as List).cast<Map<String, dynamic>>();
+        setState(() {
+          _localTodos = list;
+        });
+      }
+    } catch (e) {
+      debugPrint('Failed to load local todos: $e');
+    }
+  }
+
+  Future<void> _saveLocalTodos() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('localTodos', jsonEncode(_localTodos));
+    } catch (e) {
+      debugPrint('Failed to save local todos: $e');
+    }
+  }
+
+  // タブUIは廃止
+
+  Widget _buildTodoListView(List<Map<String, dynamic>> items, {bool completedView = false}) {
+    return ListView.separated(
+      physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      itemCount: items.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 8),
+      itemBuilder: (context, index) {
+        final taskData = items[index];
+        final questId = taskData['id'] as String;
+        final questName = taskData['name'] as String? ?? '名称未設定';
+        final description = taskData['description'] as String? ?? '';
+        // FirestoreはTimestamp、ローカルはISO文字列
+        DateTime? deadline;
+        final deadlineValue = taskData['deadline'];
+        if (deadlineValue is Timestamp) {
+          deadline = deadlineValue.toDate();
+        } else if (deadlineValue is String && deadlineValue.isNotEmpty) {
+          deadline = DateTime.tryParse(deadlineValue);
+        }
+        final bool isLocal = taskData['isLocal'] == true;
+
+        final now = DateTime.now();
+        bool isExpired = false;
+        bool isDueToday = false;
+        if (deadline != null) {
+          isExpired = deadline.isBefore(now);
+          final d = DateTime(deadline.year, deadline.month, deadline.day);
+          final t = DateTime(now.year, now.month, now.day);
+          isDueToday = d == t; // その日中が期日
+        }
+        final String badgeText = _buildRelativeDueText(deadline);
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Dismissible(
+            key: ValueKey('task-$questId-${completedView ? 'done' : 'active'}'),
+            direction: completedView
+                ? (isLocal ? DismissDirection.startToEnd : DismissDirection.none)
+                : DismissDirection.startToEnd,
+            background: Container(
+              decoration: BoxDecoration(
+                color: completedView ? Colors.orange.shade100 : Colors.green.shade100,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              alignment: Alignment.centerLeft,
+              child: Icon(
+                completedView ? Icons.undo : Icons.check,
+                color: completedView ? Colors.orange : Colors.green,
+              ),
+            ),
+            confirmDismiss: (direction) async {
+              if (completedView) {
+                // 完了一覧: ローカルのみスワイプで未完了へ戻す
+                return isLocal;
+              } else {
+                // 未完了一覧: Firestoreは確認、ローカルは即時
+                if (isLocal) return true;
+                final ok = await showDialog<bool>(
+                      context: context,
+                      builder: (_) => AlertDialog(
+                        title: const Text('討伐の確認'),
+                        content: const Text('このタスクを完了にしますか？'),
+                        actions: [
+                          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('キャンセル')),
+                          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('完了')), 
+                        ],
+                      ),
+                    ) ??
+                    false;
+                return ok;
+              }
+            },
+            onDismissed: (direction) async {
+              if (completedView) {
+                // ローカル完了 → 未完了に戻す
+                if (isLocal) {
+                  final idx = _localTodos.indexWhere((e) => e['id'] == questId);
+                  if (idx != -1) {
+                    setState(() {
+                      _localTodos[idx]['completed'] = false;
+                    });
+                    await _saveLocalTodos();
+                  }
+                }
+              } else {
+                if (isLocal) {
+                  final idx = _localTodos.indexWhere((e) => e['id'] == questId);
+                  if (idx != -1) {
+                    setState(() {
+                      _localTodos[idx]['completed'] = true;
+                    });
+                    await _saveLocalTodos();
+                  }
+                } else {
+                  _confirmAndSubmitTask(questId, taskData);
+                }
+              }
+            },
+            child: AnimatedContainer(
+            decoration: BoxDecoration(
+                color: completedView ? _cBlue.withOpacity(0.04) : _cWhite,
+                borderRadius: BorderRadius.circular(12),
+                // iOS風: 影は基本0、極薄のヘアライン枠
+                boxShadow: const [],
+                border: Border.all(color: Colors.black.withOpacity(0.06), width: 0.5),
+              ),
+              duration: const Duration(milliseconds: 180),
+              curve: Curves.easeOut,
+            child: ListTile(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              leading: InkWell(
+                customBorder: const CircleBorder(),
+                onTap: completedView
+                    ? null
+                    : () {
+                        HapticFeedback.lightImpact();
+                        if (isLocal) {
+                          // ローカルはcompleteフラグを立てて完了側へ
+                          setState(() {
+                            final idx = _localTodos.indexWhere((e) => e['id'] == questId);
+                            if (idx != -1) {
+                              _localTodos[idx]['completed'] = true;
+                            }
+                          });
+                          _saveLocalTodos();
+                          _playCheckPulse(questId);
+                        } else {
+                          // Firestoreは確認の上で完了にする。演出は先に出す。
+                          _playCheckPulse(questId);
+                          _confirmAndSubmitTask(questId, taskData);
+                        }
+                      },
+                child: SizedBox(
+                  width: 22,
+                  height: 22,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    clipBehavior: Clip.none,
+                    children: [
+                      TweenAnimationBuilder<double>(
+                        duration: const Duration(milliseconds: 180),
+                        curve: Curves.easeOut,
+                        tween: Tween(begin: 0, end: completedView ? 1 : 0),
+                        builder: (context, t, child) {
+                          final bool checked = completedView;
+                          return Icon(
+                            checked ? CupertinoIcons.check_mark_circled_solid : CupertinoIcons.circle,
+                            color: checked ? _cBlue : _cBlack,
+                            size: 22,
+                          );
+                        },
+                      ),
+                      if (_pulsingChecks.contains(questId))
+                        TweenAnimationBuilder<double>(
+                          key: ValueKey('pulse-$questId'),
+                          tween: Tween(begin: 0.0, end: 1.0),
+                          duration: const Duration(milliseconds: 450),
+                          onEnd: () {
+                            if (mounted) {
+                              setState(() {
+                                _pulsingChecks.remove(questId);
+                              });
+                            }
+                          },
+                          builder: (context, t, _) {
+                            final double size = 22 + 12 * t; // 22→34
+                            final double opacity = (1 - t).clamp(0.0, 1.0);
+                            return Opacity(
+                              opacity: opacity,
+                              child: Container(
+                                width: size,
+                                height: size,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: _cBlue.withOpacity(opacity),
+                                    width: 2 - 1.2 * t, // 2→0.8
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+              title: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      questName,
+                      style: TextStyle(
+                        color: (isExpired && !completedView) ? Colors.red : _cBlack,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  // 期日バッジ
+                  if (deadline != null)
+                    Semantics(
+                      // アクセシビリティ読み上げ
+                      label: (isExpired
+                              ? '期日 $badgeText, 期限切れ'
+                              : (isDueToday ? '期日 $badgeText, 今日中'
+                                            : '期日 $badgeText')),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.black12,
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              isExpired
+                                  ? Icons.warning_amber_rounded
+                                  : Icons.schedule,
+                              size: 14,
+                              color: (isDueToday || isExpired) ? Colors.red : _cBlack,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              badgeText,
+                              style: TextStyle(
+                                  color: (isDueToday || isExpired) ? Colors.red : _cBlack,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              subtitle: Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(
+                  description.isNotEmpty ? description : (taskData['taskType']?.toString() ?? ''),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: _cBlack, fontSize: 13),
+                ),
+              ),
+              trailing: (completedView && isLocal)
+                  // 完了一覧のローカル項目限定で「未完了へ戻す」
+                  ? IconButton(
+                      tooltip: '未完了へ戻す',
+                      icon: const Icon(CupertinoIcons.arrow_uturn_left, size: 20, color: _cBlue),
+                      onPressed: () {
+                        HapticFeedback.selectionClick();
+                        final idx = _localTodos.indexWhere((e) => e['id'] == questId);
+                        if (idx != -1) {
+                          setState(() {
+                            _localTodos[idx]['completed'] = false;
+                          });
+                          _saveLocalTodos();
+                        }
+                      },
+                    )
+                  : (!isLocal && !completedView)
+                      ? FutureBuilder<bool>(
+                          future: _isCurrentUserSupporting(questId),
+                          builder: (context, snapshot) {
+                            final bool isSupporting = snapshot.data ?? false;
+                            return IconButton(
+                              icon: Icon(isSupporting ? CupertinoIcons.star_fill : CupertinoIcons.star, color: _cBlue),
+                              onPressed: () async {
+                                HapticFeedback.selectionClick();
+                                await _toggleTakoyakiSupport(
+                                  questId,
+                                  taskData['createdBy'] as String?,
+                                  taskData,
+                                );
+                                await _refreshQuests();
+                                if (mounted) setState(() {});
+                              },
+                            );
+                          },
+                        )
+                      : null,
+              onTap: () {
+                if (completedView) return;
+                if (isLocal) return; // ローカルは詳細画面なし
+                _confirmAndSubmitTask(questId, taskData);
+              },
+              onLongPress: () {
+                // 完了一覧のローカル項目は長押しでも未完了へ戻せる
+                if (completedView && isLocal) {
+                  final idx = _localTodos.indexWhere((e) => e['id'] == questId);
+                  if (idx != -1) {
+                    setState(() {
+                      _localTodos[idx]['completed'] = false;
+                    });
+                    _saveLocalTodos();
+                  }
+                }
+              },
+            ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  String _buildRelativeDueText(DateTime? deadline) {
+    if (deadline == null) return '期限なし';
+    final now = DateTime.now();
+    final d = DateTime(deadline.year, deadline.month, deadline.day);
+    final t = DateTime(now.year, now.month, now.day);
+    // 今日なら時刻のみ、それ以外は日付+時刻
+    if (d == t) {
+      return DateFormat('HH:mm').format(deadline);
+    } else {
+      return DateFormat('MM/dd HH:mm').format(deadline);
+    }
+  }
+
+  Future<void> _confirmAndSubmitTask(String questId, Map<String, dynamic> taskData) async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('討伐の確認'),
+          content: const Text('本当に討伐しますか？\n（間違って押した場合は「いいえ」でキャンセルできます）'),
+          actions: [
+            TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('いいえ')),
+            TextButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('はい')),
+          ],
+        );
+      },
+    );
+    if (result == true) {
+      _submitTask(questId, taskData);
+    }
+  }
+
   Widget _buildBulletinBoardPage(Map<String, dynamic> taskData) {
     print('DEBUG: _buildBulletinBoardPage called with taskData: $taskData');
     final screenHeight = MediaQuery.of(context).size.height;
@@ -1066,7 +1890,8 @@ class _ParkPageState extends ConsumerState<ParkPage> {
     final isFadingOut = _fadingOutTaskIndex == questId;
 
     final deadline = taskData['deadline'] as Timestamp?;
-    final bool isExpired =
+  // ignore: unused_local_variable
+  final bool isExpired =
         deadline != null && deadline.toDate().isBefore(DateTime.now());
     final textColor = const Color(0xFF00FFF7); // 蛍光水色
     final detailTextColor = const Color(0xFF00FFF7); // 蛍光水色
@@ -1458,6 +2283,7 @@ class _ParkPageState extends ConsumerState<ParkPage> {
     );
   }
 
+  // ignore: unused_element
   String _formatDeadline(Timestamp deadline) {
     // This is a placeholder. You'll need a proper countdown logic.
     return DateFormat('MM/dd HH:mm').format(deadline.toDate());
@@ -2275,7 +3101,7 @@ class _ParkPageState extends ConsumerState<ParkPage> {
 
       for (String userId in enrolledUserIds) {
         // 自分以外のユーザーに通知を送信
-        if (userId != null && userId != currentUserId) {
+        if (userId != currentUserId) {
           await NotificationService().showNewQuestNotification(
             creatorName: _userName,
             questName: questName,

@@ -8,6 +8,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/services.dart';
 import 'main_page.dart';
 import 'services/notification_service.dart';
+import 'constants/app_theme.dart';
 import 'services/background_message_handler.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
@@ -51,7 +52,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Rishuden',
-      theme: ThemeData(primarySwatch: Colors.blue),
+      theme: AppTheme.lightTheme(),
       debugShowCheckedModeBanner: false,
       navigatorKey: navigatorKey,
       home: AuthWrapper(),
