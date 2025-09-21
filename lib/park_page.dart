@@ -13,6 +13,7 @@ import 'level_gauge.dart';
 import 'quest_create.dart'; // QuestCreationWidgetのインポート
 import 'dart:ui';
 import 'dart:convert';
+import 'dart:math' as math;
 // ignore: unused_import
 import 'setting_page/setting_page.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -1656,15 +1657,18 @@ class _ParkPageState extends ConsumerState<ParkPage> {
                     : () {
                         HapticFeedback.lightImpact();
                         if (isLocal) {
-                          // ローカルはcompleteフラグを立てて完了側へ
-                          setState(() {
-                            final idx = _localTodos.indexWhere((e) => e['id'] == questId);
-                            if (idx != -1) {
-                              _localTodos[idx]['completed'] = true;
-                            }
-                          });
-                          _saveLocalTodos();
+                          // まず演出を出してから、短い遅延で完了へ移動（見えやすさ優先）
                           _playCheckPulse(questId);
+                          Future.delayed(const Duration(milliseconds: 380), () {
+                            if (!mounted) return;
+                            setState(() {
+                              final idx = _localTodos.indexWhere((e) => e['id'] == questId);
+                              if (idx != -1) {
+                                _localTodos[idx]['completed'] = true;
+                              }
+                            });
+                            _saveLocalTodos();
+                          });
                         } else {
                           // Firestoreは確認の上で完了にする。演出は先に出す。
                           _playCheckPulse(questId);
@@ -1691,6 +1695,42 @@ class _ParkPageState extends ConsumerState<ParkPage> {
                           );
                         },
                       ),
+                      // 完了演出: 小さな粒が四方に弾けるバースト
+                      if (_pulsingChecks.contains(questId))
+                        TweenAnimationBuilder<double>(
+                          key: ValueKey('burst-$questId'),
+                          tween: Tween(begin: 0.0, end: 1.0),
+                          duration: const Duration(milliseconds: 450),
+                          curve: Curves.easeOutCubic,
+                          builder: (context, t, _) {
+                            final int particleCount = 10;
+                            final double maxR = 14.0; // 半径
+                            final double r = maxR * t;
+                            final double opacity = (1 - t).clamp(0.0, 1.0);
+                            return Opacity(
+                              opacity: opacity,
+                              child: Stack(
+                                clipBehavior: Clip.none,
+                                children: List.generate(particleCount, (i) {
+                                  final double angle = (2 * math.pi / particleCount) * i;
+                                  final double dx = math.cos(angle) * r;
+                                  final double dy = math.sin(angle) * r;
+                                  return Transform.translate(
+                                    offset: Offset(dx, dy),
+                                    child: Container(
+                                      width: 3,
+                                      height: 3,
+                                      decoration: BoxDecoration(
+                                        color: _cBlue,
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                  );
+                                }),
+                              ),
+                            );
+                          },
+                        ),
                       if (_pulsingChecks.contains(questId))
                         TweenAnimationBuilder<double>(
                           key: ValueKey('pulse-$questId'),
