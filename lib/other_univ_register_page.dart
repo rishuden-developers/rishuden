@@ -5,7 +5,6 @@ import 'character_question_page.dart';
 
 class OtherUnivRegisterPage extends StatefulWidget {
   final String selectedUniversity;
-
   const OtherUnivRegisterPage({Key? key, required this.selectedUniversity})
     : super(key: key);
 
@@ -14,60 +13,53 @@ class OtherUnivRegisterPage extends StatefulWidget {
 }
 
 class _OtherUnivRegisterPageState extends State<OtherUnivRegisterPage> {
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
+  final _email = TextEditingController();
+  final _pw = TextEditingController();
   String? _error;
-  bool _agreedToTerms = false;
+  bool _agree = false;
+  bool _loading = false;
+  bool _obscure = true;
+
+  static const accent = Color(0xFF2E6DB6);
 
   Future<void> _register() async {
     setState(() {
       _error = null;
+      _loading = true;
     });
     try {
-      UserCredential userCredential = await FirebaseAuth.instance
-          .createUserWithEmailAndPassword(
-            email: _emailController.text.trim(),
-            password: _passwordController.text.trim(),
-          );
+      final cred = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        email: _email.text.trim(),
+        password: _pw.text.trim(),
+      );
 
-      if (userCredential.user != null) {
+      if (cred.user != null) {
         await FirebaseFirestore.instance
             .collection('users')
-            .doc(userCredential.user!.uid)
+            .doc(cred.user!.uid)
             .set({
               'universityType': 'other',
               'universityName': widget.selectedUniversity,
               'profileCompleted': false,
             }, SetOptions(merge: true));
-      }
 
-      await userCredential.user!.sendEmailVerification();
-      if (mounted) {
-        showDialog(
+        await cred.user!.sendEmailVerification();
+        if (!mounted) return;
+        await showDialog(
           context: context,
           builder:
-              (context) => AlertDialog(
-                title: const Text(
-                  '仮登録完了',
-                  style: TextStyle(color: Colors.black),
-                ),
-                content: const Text(
-                  '認証メールを送信しました。メール内のリンクをクリックして本登録を完了してください。',
-                  style: TextStyle(color: Colors.black87),
-                ),
+              (_) => AlertDialog(
+                title: const Text('仮登録完了'),
+                content: const Text('認証メールを送信しました。リンクをクリックして本登録を完了してください。'),
                 actions: [
                   TextButton(
                     onPressed:
-                        () async =>
-                            await userCredential.user!.sendEmailVerification(),
-                    child: const Text(
-                      '再送信',
-                      style: TextStyle(color: Color(0xFF3498DB)),
-                    ),
+                        () async => await cred.user!.sendEmailVerification(),
+                    child: const Text('再送信', style: TextStyle(color: accent)),
                   ),
                   TextButton(
                     onPressed: () async {
-                      await userCredential.user!.reload();
+                      await cred.user!.reload();
                       final user = FirebaseAuth.instance.currentUser;
                       if (user != null && user.emailVerified) {
                         if (mounted) Navigator.of(context).pop();
@@ -86,123 +78,155 @@ class _OtherUnivRegisterPageState extends State<OtherUnivRegisterPage> {
                         }
                       }
                     },
-                    child: const Text(
-                      '次へ',
-                      style: TextStyle(color: Color(0xFF3498DB)),
-                    ),
+                    child: const Text('次へ', style: TextStyle(color: accent)),
                   ),
                 ],
               ),
         );
       }
-    } catch (e) {
-      String msg = e.toString();
-      if (e is FirebaseAuthException && e.code == 'email-already-in-use') {
+    } on FirebaseAuthException catch (e) {
+      var msg = e.message ?? e.code;
+      if (e.code == 'email-already-in-use') {
         msg = 'このメールアドレスは既に登録されています';
       }
-      setState(() {
-        _error = msg;
-      });
+      if (mounted) setState(() => _error = msg);
+    } catch (e) {
+      if (mounted) setState(() => _error = e.toString());
+    } finally {
+      if (mounted) setState(() => _loading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF2C3E50),
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        title: Text(
-          'アカウント作成（${widget.selectedUniversity}）',
-          style: const TextStyle(color: Colors.white),
-        ),
-        backgroundColor: const Color(0xFF2C3E50),
-        iconTheme: const IconThemeData(color: Colors.white),
+        backgroundColor: accent,
+        centerTitle: true,
         elevation: 0,
+        title: Text('アカウント作成（${widget.selectedUniversity}）'),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
           children: [
-            const SizedBox(height: 20),
-            TextField(
-              controller: _emailController,
-              decoration: InputDecoration(
-                labelText: 'メールアドレスを入力',
-                labelStyle: const TextStyle(color: Colors.white70),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: const BorderSide(color: Colors.white54),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderSide: const BorderSide(color: Colors.blueAccent),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                fillColor: Colors.white.withOpacity(0.1),
-                filled: true,
-              ),
-              style: const TextStyle(color: Colors.white),
-              keyboardType: TextInputType.emailAddress,
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _passwordController,
-              decoration: InputDecoration(
-                labelText: 'パスワードを作成',
-                labelStyle: const TextStyle(color: Colors.white70),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: const BorderSide(color: Colors.white54),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderSide: const BorderSide(color: Colors.blueAccent),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                fillColor: Colors.white.withOpacity(0.1),
-                filled: true,
-              ),
-              style: const TextStyle(color: Colors.white),
-              obscureText: true,
+            const SizedBox(height: 8),
+            Text(
+              'メール認証後に本登録が完了します',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey[700]),
             ),
             const SizedBox(height: 24),
+
+            TextField(
+              controller: _email,
+              keyboardType: TextInputType.emailAddress,
+              decoration: _input('メールアドレス', Icons.alternate_email),
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: _pw,
+              obscureText: _obscure,
+              decoration: _input(
+                'パスワード',
+                Icons.lock_outline,
+                suffix: IconButton(
+                  icon: Icon(
+                    _obscure ? Icons.visibility : Icons.visibility_off,
+                  ),
+                  onPressed: () => setState(() => _obscure = !_obscure),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 16),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Checkbox(
-                  value: _agreedToTerms,
-                  onChanged: (value) {
-                    setState(() {
-                      _agreedToTerms = value ?? false;
-                    });
-                  },
-                  activeColor: Colors.blueAccent,
+                  value: _agree,
+                  activeColor: accent,
+                  onChanged: (v) => setState(() => _agree = v ?? false),
                 ),
-                const Text('利用規約に同意する', style: TextStyle(color: Colors.white)),
+                const Text('利用規約に同意する'),
               ],
             ),
+
             if (_error != null) ...[
-              const SizedBox(height: 16),
-              Text(_error!, style: const TextStyle(color: Colors.red)),
-            ],
-            const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: _agreedToTerms ? _register : null,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.orange,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 32,
-                  vertical: 16,
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.red.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.red.withOpacity(0.3)),
                 ),
+                child: Text(_error!, style: const TextStyle(color: Colors.red)),
               ),
-              child: const Text(
-                '登録',
-                style: TextStyle(color: Colors.white, fontSize: 18),
+            ],
+
+            const SizedBox(height: 20),
+            SizedBox(
+              height: 52,
+              child: ElevatedButton(
+                onPressed: _agree && !_loading ? _register : null,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: accent,
+                  disabledBackgroundColor: accent.withOpacity(0.4),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+                child:
+                    _loading
+                        ? const SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                        : const Text(
+                          '登録',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
               ),
             ),
           ],
         ),
       ),
     );
+  }
+
+  InputDecoration _input(String label, IconData icon, {Widget? suffix}) {
+    return InputDecoration(
+      labelText: label,
+      prefixIcon: Icon(icon),
+      suffixIcon: suffix,
+      filled: true,
+      fillColor: Colors.grey[50],
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: Colors.grey[300]!),
+      ),
+      focusedBorder: const OutlineInputBorder(
+        borderRadius: BorderRadius.all(Radius.circular(12)),
+        borderSide: BorderSide(color: accent, width: 2),
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _email.dispose();
+    _pw.dispose();
+    super.dispose();
   }
 }

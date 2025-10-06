@@ -13,228 +13,160 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
-  String? _error;
+  final _email = TextEditingController();
+  final _pw = TextEditingController();
+  bool _obscure = true;
+  bool _loading = false;
+
+  static const mainBlue = Color(0xFF2E6DB6);
+  static const altRed = Color(0xFFDC143C);
 
   Future<void> _login() async {
-    setState(() {
-      _error = null;
-    });
-
+    setState(() => _loading = true);
     try {
-      final userCredential = await FirebaseAuth.instance
-          .signInWithEmailAndPassword(
-            email: _emailController.text.trim(),
-            password: _passwordController.text.trim(),
-          );
+      final cred = await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: _email.text.trim(),
+        password: _pw.text.trim(),
+      );
 
-      // メール認証の確認
-      if (!userCredential.user!.emailVerified) {
-        await userCredential.user!.sendEmailVerification();
-        if (mounted) {
-          showDialog(
-            context: context,
-            builder:
-                (context) => AlertDialog(
-                  title: const Text('メール認証が必要です'),
-                  content: const Text(
-                    '認証メールを送信しました。メール内のリンクをクリックして認証を完了してください。',
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () async {
-                        await userCredential.user!.sendEmailVerification();
-                        if (mounted) Navigator.of(context).pop();
-                      },
-                      child: const Text('再送信'),
-                    ),
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: const Text('OK'),
-                    ),
-                  ],
-                ),
-          );
-        }
+      if (!cred.user!.emailVerified) {
+        await cred.user!.sendEmailVerification();
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('認証メールを送信しました。メール内のリンクで認証してください。')),
+        );
+        setState(() => _loading = false);
         return;
       }
 
-      // 大学タイプに応じて遷移先を分岐
+      if (!mounted) return;
+      if (widget.universityType == 'other') {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const MainPage(universityType: 'other'),
+          ),
+        );
+      } else {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => CharacterQuestionPage()),
+        );
+      }
+    } on FirebaseAuthException catch (e) {
+      final msg = switch (e.code) {
+        'user-not-found' => 'ユーザーが見つかりません',
+        'wrong-password' => 'パスワードが間違っています',
+        _ => e.message ?? 'サインインに失敗しました',
+      };
       if (mounted) {
-        if (widget.universityType == 'other') {
-          // 他大学の場合は直接メインページへ（キャラクター診断はスキップ）
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) => MainPage(universityType: 'other'),
-            ),
-          );
-        } else {
-          // 大阪大学の場合はキャラクター診断ページへ
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => CharacterQuestionPage()),
-          );
-        }
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(msg)));
       }
     } catch (e) {
-      String msg = e.toString();
-      if (e is FirebaseAuthException) {
-        if (e.code == 'user-not-found') {
-          msg = 'ユーザーが見つかりません';
-        } else if (e.code == 'wrong-password') {
-          msg = 'パスワードが間違っています';
-        }
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('$e')));
       }
-      setState(() {
-        _error = msg;
-      });
+    } finally {
+      if (mounted) setState(() => _loading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final accent = widget.universityType == 'other' ? altRed : mainBlue;
+
     return Scaffold(
-      backgroundColor:
-          widget.universityType == 'other'
-              ? const Color(0xFF8B0000) // 他大学の場合は暗い赤色
-              : const Color(0xFF2C3E50), // 大阪大学の場合は暗い青色色調の背景
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.stretch, // 子要素を水平方向に伸ばす
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        backgroundColor: accent,
+        centerTitle: true,
+        elevation: 0,
+        title: Text(widget.universityType == 'other' ? '履修伝説（他大学版）' : '履修伝説'),
+      ),
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
           children: [
-            const SizedBox(height: 100), // 上部の余白
-            // 他大学の場合は「開発中」ラベルを表示
-            if (widget.universityType == 'other')
-              Container(
-                margin: const EdgeInsets.only(bottom: 20),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.red.withOpacity(0.8),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.white, width: 2),
-                ),
-                child: const Text(
-                  '開発中',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    fontFamily: 'NotoSansJP',
-                  ),
-                ),
-              ),
-            // アプリ名
-            Text(
-              widget.universityType == 'other' ? '履修伝説（他大学版）' : '履修伝説',
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 48,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 8),
-            // サブタイトル/キャッチフレーズ
+            // キャッチ最小表示
             Text(
               widget.universityType == 'other'
                   ? '他大学向けバージョン（開発中）'
                   : 'さあ、冒険を始めよう。',
               textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.white70, fontSize: 18),
+              style: TextStyle(color: Colors.grey[700]),
             ),
-            const SizedBox(height: 64),
-            // Email入力フィールド
-            TextField(
-              controller: _emailController,
-              decoration: InputDecoration(
-                labelText: 'メールアドレス',
-                labelStyle: const TextStyle(color: Colors.white70),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: const BorderSide(color: Colors.white54),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderSide: const BorderSide(color: Colors.blueAccent),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                fillColor: Colors.white.withOpacity(0.1),
-                filled: true,
-              ),
-              style: const TextStyle(color: Colors.white),
-              keyboardType: TextInputType.emailAddress,
-            ),
-            const SizedBox(height: 16),
-            // Password入力フィールド
-            TextField(
-              controller: _passwordController,
-              decoration: InputDecoration(
-                labelText: 'パスワード',
-                labelStyle: const TextStyle(color: Colors.white70),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: const BorderSide(color: Colors.white54),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderSide: const BorderSide(color: Colors.blueAccent),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                fillColor: Colors.white.withOpacity(0.1),
-                filled: true,
-              ),
-              style: const TextStyle(color: Colors.white),
-              obscureText: true,
-            ),
-            if (_error != null) ...[
-              const SizedBox(height: 16),
-              Text(
-                _error!,
-                style: const TextStyle(color: Colors.redAccent),
-                textAlign: TextAlign.center,
-              ),
-            ],
             const SizedBox(height: 24),
-            // SIGN IN ボタン
-            ElevatedButton(
-              onPressed: _login,
-              style: ElevatedButton.styleFrom(
-                backgroundColor:
-                    widget.universityType == 'other'
-                        ? const Color(0xFFDC143C) // 他大学の場合は赤色
-                        : const Color(0xFF3498DB), // 大阪大学の場合は青色基調
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              child: const Text(
-                'サインイン',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
+
+            // 入力（カードなど使わず最小）
+            TextField(
+              controller: _email,
+              keyboardType: TextInputType.emailAddress,
+              decoration: _input('メールアドレス', Icons.alternate_email),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _pw,
+              obscureText: _obscure,
+              decoration: _input(
+                'パスワード',
+                Icons.lock_outline,
+                suffix: IconButton(
+                  icon: Icon(
+                    _obscure ? Icons.visibility : Icons.visibility_off,
+                  ),
+                  onPressed: () => setState(() => _obscure = !_obscure),
                 ),
               ),
             ),
+            const SizedBox(height: 20),
+
+            // サインインボタン（大きめ角丸1つ）
+            SizedBox(
+              height: 52,
+              child: ElevatedButton(
+                onPressed: _loading ? null : _login,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: accent,
+                  disabledBackgroundColor: accent.withOpacity(0.5),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+                child:
+                    _loading
+                        ? const SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                        : const Text(
+                          'サインイン',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+              ),
+            ),
+
             const SizedBox(height: 16),
-            // アカウントを作成するリンク
+
+            // 新規作成リンク
             TextButton(
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => RegisterPage()),
+                  MaterialPageRoute(builder: (_) => const RegisterPage()),
                 );
               },
-              child: const Text(
-                'アカウントを作成する',
-                style: TextStyle(color: Colors.white70),
-              ),
+              child: const Text('アカウントを作成する'),
             ),
           ],
         ),
@@ -242,10 +174,30 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
+  InputDecoration _input(String label, IconData icon, {Widget? suffix}) {
+    return InputDecoration(
+      labelText: label,
+      prefixIcon: Icon(icon),
+      suffixIcon: suffix,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: Colors.grey[300]!),
+      ),
+      focusedBorder: const OutlineInputBorder(
+        borderRadius: BorderRadius.all(Radius.circular(12)),
+        borderSide: BorderSide(color: mainBlue, width: 2),
+      ),
+      fillColor: Colors.grey[50],
+      filled: true,
+    );
+  }
+
   @override
   void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
+    _email.dispose();
+    _pw.dispose();
     super.dispose();
   }
 }
