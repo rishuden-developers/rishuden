@@ -78,7 +78,8 @@ flutter:
     - assets/night_view.png
     - assets/floating.png
     - assets/calender.png
-    - assets/animation.json
+    - assets/animations/animation.json
+    - assets/animations/loading.json
 
   fonts:
     - family: Noto Sans JP

@@ -10,6 +10,7 @@ import 'main_page.dart';
 import 'services/notification_service.dart';
 import 'services/background_message_handler.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'package:lottie/lottie.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -110,7 +111,13 @@ class _CourseListPageState extends State<CourseListPage> {
         future: _coursesFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(child: CircularProgressIndicator());
+            return Center(
+              child: SizedBox(
+                width: 120,
+                height: 120,
+                child: Lottie.asset('assets/animations/loading.json'),
+              ),
+            );
           }
           if (!snapshot.hasData || snapshot.data!.isEmpty) {
             return Center(child: Text('データがありません'));
@@ -130,6 +137,29 @@ class _CourseListPageState extends State<CourseListPage> {
                     .toList(),
           );
         },
+      ),
+    );
+  }
+}
+
+class LottieLoadingScreen extends StatelessWidget {
+  const LottieLoadingScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Center(
+        child: RepaintBoundary(
+          // 無駄な再描画を抑える
+          child: Lottie.asset(
+            'assets/animations/loading.json',
+            width: 160,
+            height: 160,
+            repeat: true,
+            animate: true,
+          ),
+        ),
       ),
     );
   }
