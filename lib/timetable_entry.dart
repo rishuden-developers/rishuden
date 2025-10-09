@@ -17,7 +17,7 @@ class TimetableEntry {
   final int dayOfWeek;
   final int period;
   final DateTime startTime; // from HEAD
-  final DateTime endTime;   // from HEAD
+  final DateTime endTime; // from HEAD
   final Color color;
   final bool isCancelled;
   final AttendancePolicy initialPolicy;
@@ -49,7 +49,7 @@ class TimetableEntry {
     required this.period,
     required this.date,
     required this.startTime, // from HEAD
-    required this.endTime,   // from HEAD
+    required this.endTime, // from HEAD
     this.isCancelled = false,
     this.color = Colors.white,
     this.initialPolicy = AttendancePolicy.flexible,
@@ -69,7 +69,7 @@ class TimetableEntry {
       'dayOfWeek': dayOfWeek,
       'period': period,
       'startTime': startTime.toIso8601String(), // from HEAD
-      'endTime': endTime.toIso8601String(),   // from HEAD
+      'endTime': endTime.toIso8601String(), // from HEAD
       'date': date,
       'isCancelled': isCancelled,
       'color': color.value,
@@ -181,7 +181,7 @@ class TimetableEntry {
         print('日時変換エラー: $e, 値: ${map['lastUpdated']}');
         lastUpdated = DateTime.now();
       }
-      
+
       // startTime and endTime from HEAD, with safety from main
       DateTime startTime;
       try {
@@ -209,7 +209,6 @@ class TimetableEntry {
         endTime = DateTime.now(); // Fallback
       }
 
-
       final entry = TimetableEntry(
         id: id,
         subjectName: subjectName,
@@ -219,7 +218,7 @@ class TimetableEntry {
         period: period,
         date: date,
         startTime: startTime, // from HEAD
-        endTime: endTime,     // from HEAD
+        endTime: endTime, // from HEAD
         isCancelled: isCancelled,
         color: color,
         initialPolicy: initialPolicy,
@@ -253,7 +252,7 @@ class TimetableEntry {
         period: 1,
         date: '',
         startTime: DateTime.now(), // Fallback
-        endTime: DateTime.now(),   // Fallback
+        endTime: DateTime.now(), // Fallback
       );
     }
   }

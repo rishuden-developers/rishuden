@@ -63,12 +63,24 @@ final List<List<String>> _periodTimes = const [
 // 時限番号から開始時刻と終了時刻をDateTimeオブジェクトとして取得するヘルパー関数
 DateTime _getPeriodStartTime(DateTime date, int period) {
   final timeParts = _periodTimes[period - 1][0].split(':');
-  return DateTime(date.year, date.month, date.day, int.parse(timeParts[0]), int.parse(timeParts[1]));
+  return DateTime(
+    date.year,
+    date.month,
+    date.day,
+    int.parse(timeParts[0]),
+    int.parse(timeParts[1]),
+  );
 }
 
 DateTime _getPeriodEndTime(DateTime date, int period) {
   final timeParts = _periodTimes[period - 1][1].split(':');
-  return DateTime(date.year, date.month, date.day, int.parse(timeParts[0]), int.parse(timeParts[1]));
+  return DateTime(
+    date.year,
+    date.month,
+    date.day,
+    int.parse(timeParts[0]),
+    int.parse(timeParts[1]),
+  );
 }
 
 // 時限から開始・終了時刻を取得する公開関数

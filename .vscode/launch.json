@@ -1,0 +1,13 @@
+{
+  // VS Code から F5/Run したときに、必ず lib/main.dart をエントリポイントとして起動する
+  // （デモ用ファイルの main() を誤って走らせないようにする）
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Flutter",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main.dart"
+    }
+  ]
+}

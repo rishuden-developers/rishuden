@@ -6,9 +6,8 @@ import 'firebase_options.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/services.dart';
-import 'main_page.dart';
+import 'auth_wrapper.dart';
 import 'services/notification_service.dart';
-import 'constants/app_theme.dart';
 import 'services/background_message_handler.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
@@ -52,7 +51,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Rishuden',
-      theme: AppTheme.lightTheme(),
+      theme: ThemeData(primarySwatch: Colors.blue),
       debugShowCheckedModeBanner: false,
       navigatorKey: navigatorKey,
       home: AuthWrapper(),

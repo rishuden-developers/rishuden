@@ -3,7 +3,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'login_page.dart';
 import 'character_question_page.dart';
-import 'user_profile_page.dart';
 import 'main_page.dart';
 
 class AuthWrapper extends StatelessWidget {
@@ -37,10 +36,12 @@ class AuthWrapper extends StatelessWidget {
             if (userData == null || !userData.containsKey('character')) {
               return CharacterQuestionPage();
             }
-            if (!userData.containsKey('profileCompleted') ||
-                userData['profileCompleted'] != true) {
-              return const UserProfilePage();
-            }
+            // プロフィール未完了でも先にアプリ本体へ遷移させる（初回起動でToDoを見せるため）
+            // 旧仕様: 未完了なら UserProfilePage へ
+            // if (!userData.containsKey('profileCompleted') ||
+            //     userData['profileCompleted'] != true) {
+            //   return const UserProfilePage();
+            // }
             // 大学タイプを取得（main or other）
             final universityType = userData['universityType'] ?? 'main';
             // MainPageに渡す（今後Provider化も検討）

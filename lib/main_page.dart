@@ -1,4 +1,5 @@
 import "package:flutter/material.dart";
+import 'dart:ui';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -44,6 +45,13 @@ class _MainPageState extends ConsumerState<MainPage> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   bool _hasShownLoginBonus = false;
 
+  // ブランドカラー（ToDoページと揃える）
+  static const Color _cPrimary = Color(0xff2e6db6);
+  static const Color _cAccent = Color(0xff62b5e5);
+  static const Color _cMint = Color(0xff58c3a9);
+  static const Color _cWhite = Color(0xFFFFFFFF);
+  static const Color _cBlack = Color(0xFF000000);
+
   @override
   void initState() {
     super.initState();
@@ -53,24 +61,37 @@ class _MainPageState extends ConsumerState<MainPage> {
     });
   }
 
-  // park_page.dart から Drawer内のタイルを作成するメソッドを移植
+  // ToDo風のカードタイル
   Widget _buildDrawerTile(IconData icon, String title, VoidCallback onTap) {
-    return ListTile(
-      leading: Icon(icon, color: Colors.amber[200]),
-      title: Text(
-        title,
-        style: const TextStyle(
-          fontFamily: 'NotoSansJP',
-          fontSize: 16,
-          color: Colors.white,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      child: Container(
+        decoration: BoxDecoration(
+          color: _cWhite,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.black.withOpacity(0.06), width: 0.5),
+        ),
+        child: ListTile(
+          leading: Icon(icon, color: _cPrimary),
+          title: Text(
+            title,
+            style: const TextStyle(
+              fontFamily: 'NotoSansJP',
+              fontSize: 16,
+              color: _cBlack,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          trailing: Icon(
+            Icons.chevron_right,
+            color: Colors.black.withOpacity(0.3),
+          ),
+          onTap: onTap,
         ),
       ),
-      onTap: onTap,
-      hoverColor: Colors.amber.withOpacity(0.1),
     );
   }
 
-  // park_page.dart から URLを起動するメソッドを移植
   Future<void> _launchURL(String url) async {
     final Uri uri = Uri.parse(url);
     if (!await launchUrl(uri)) {
@@ -78,7 +99,6 @@ class _MainPageState extends ConsumerState<MainPage> {
     }
   }
 
-  // park_page.dart から お知らせダイアログを表示するメソッドを移植 (内容は一部簡略化)
   void _showNoticeDialog(BuildContext context) {
     showDialog(
       context: context,
@@ -96,7 +116,6 @@ class _MainPageState extends ConsumerState<MainPage> {
     );
   }
 
-  // 他大学版についてのダイアログ
   void _showOtherUnivInfoDialog(BuildContext context) {
     showDialog(
       context: context,
@@ -118,7 +137,6 @@ class _MainPageState extends ConsumerState<MainPage> {
     );
   }
 
-  // 開発状況のダイアログ
   void _showDevelopmentStatusDialog(BuildContext context) {
     showDialog(
       context: context,
@@ -150,7 +168,6 @@ class _MainPageState extends ConsumerState<MainPage> {
 
   @override
   Widget build(BuildContext context) {
-    print('大学タイプ:  [33m [1m' + widget.universityType + '\u001b[0m');
     // ログインボーナス通知を表示（一度だけ）
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (widget.showLoginBonus && !_hasShownLoginBonus) {
@@ -170,9 +187,7 @@ class _MainPageState extends ConsumerState<MainPage> {
     final user = FirebaseAuth.instance.currentUser;
     final userName = user?.displayName ?? 'ゲスト';
 
-    // final pageTitles = ['ランキング', '単位検索', 'クエスト', '時間割', 'アイテム'];
-
-    // 各ページのウィジェットをリストとして定義
+    // 各ページ
     final List<Widget> pages = [
       const RankingPage(),
       const CreditExplorePage(),
@@ -188,11 +203,12 @@ class _MainPageState extends ConsumerState<MainPage> {
 
     return Scaffold(
       key: _scaffoldKey,
+      endDrawerEnableOpenDragGesture: currentPage.index != 3,
       extendBody: true,
       extendBodyBehindAppBar: true,
       body: Stack(
         children: [
-          // 背景画像を最下層に追加
+          // 背景画像
           Positioned.fill(
             child: Image.asset(
               ref.watch(backgroundImagePathProvider),
@@ -200,31 +216,10 @@ class _MainPageState extends ConsumerState<MainPage> {
             ),
           ),
           // ページ本体
-          IndexedStack(index: currentPage.index, children: pages),
-          // parkページ用のアイコンボタン
-          if (currentPage == AppPage.park)
-            Positioned(
-              top: MediaQuery.of(context).padding.top,
-              right: 5,
-              child: IconButton(
-                icon: const Icon(
-                  Icons.menu,
-                  color: Colors.white,
-                  size: 32,
-                  shadows: [
-                    Shadow(
-                      color: Colors.black54,
-                      blurRadius: 4.0,
-                      offset: Offset(1.0, 1.0),
-                    ),
-                  ],
-                ),
-                onPressed: () => _scaffoldKey.currentState?.openEndDrawer(),
-              ),
-            ),
-          // 他大学用の時間割ページでもメニューボタンを表示
-          if (currentPage == AppPage.timetable &&
-              widget.universityType == 'other')
+          Positioned.fill(child: pages[currentPage.index]),
+
+          // メニューボタン（右上） - 時間割ページ（index==3）では非表示
+          if (currentPage.index != 3)
             Positioned(
               top: MediaQuery.of(context).padding.top,
               right: 5,
@@ -248,174 +243,227 @@ class _MainPageState extends ConsumerState<MainPage> {
       ),
       bottomNavigationBar: Column(
         mainAxisSize: MainAxisSize.min,
-        children: [
-          const SizedBox(height: 4),
-          // テスト用バナー（実機で表示確認可）。本番IDは後で差し替え。
-          // 本番ユニットID（AdMob管理画面の「バナー」広告ユニットID）
-          const Center(
+        children: const [
+          SizedBox(height: 4),
+          Center(
             child: AdBanner(
               testUnitId: 'ca-app-pub-7200045710813069/7211289802',
             ),
           ),
-          const SizedBox(height: 4),
-          const CommonBottomNavigation(),
+          SizedBox(height: 4),
+          CommonBottomNavigation(),
         ],
       ),
 
-      // park_page.dart から Drawer のコードを移植
+      // 冒険のメニュー（白背景）
       endDrawer: Drawer(
         child: Container(
-          decoration: const BoxDecoration(
-            image: DecorationImage(
-              image: AssetImage('assets/ranking_guild_background.png'),
-              fit: BoxFit.cover,
-            ),
-          ),
-          child: Column(
-            children: [
-              DrawerHeader(
-                decoration: BoxDecoration(
-                  border: Border(
-                    bottom: BorderSide(color: Colors.amber[300]!, width: 2),
-                  ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(Icons.menu_book, color: Colors.white, size: 36),
-                    SizedBox(height: 10),
-                    Text(
-                      widget.universityType == 'other' ? '他大学メニュー' : '冒険のメニュー',
-                      style: const TextStyle(
-                        fontFamily: 'NotoSansJP',
-                        color: Colors.white,
-                        fontSize: 22,
-                        shadows: [Shadow(color: Colors.black, blurRadius: 2)],
+          color: _cWhite,
+          child: SafeArea(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // ヘッダー（半透明ブラー＋ブランドバー）
+                ClipRect(
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+                    child: Container(
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                      decoration: BoxDecoration(
+                        color: _cPrimary.withOpacity(0.85),
+                        border: Border(
+                          bottom: BorderSide(
+                            color: Colors.white.withOpacity(0.2),
+                            width: 0.5,
+                          ),
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-              ),
-              // 大阪大学専用のメニュー項目
-              if (widget.universityType != 'other') ...[
-                _buildDrawerTile(Icons.school_outlined, 'KOAN', () {
-                  _launchURL(
-                    'https://koan.osaka-u.ac.jp/campusweb/campusportal.do?page=main',
-                  );
-                }),
-                _buildDrawerTile(Icons.book_outlined, 'CLE', () {
-                  _launchURL('https://www.cle.osaka-u.ac.jp/ultra/course');
-                }),
-                _buildDrawerTile(Icons.person_outline, 'マイハンダイ', () {
-                  _launchURL('https://my.osaka-u.ac.jp/');
-                }),
-                _buildDrawerTile(Icons.mail_outline, 'OU-Mail', () {
-                  _launchURL('https://outlook.office.com/mail/');
-                }),
-              ],
-              // 他大学用のメニュー項目
-              if (widget.universityType == 'other') ...[
-                _buildDrawerTile(Icons.info_outline, '他大学版について', () {
-                  Navigator.pop(context);
-                  _showOtherUnivInfoDialog(context);
-                }),
-                _buildDrawerTile(Icons.bug_report, '開発状況', () {
-                  Navigator.pop(context);
-                  _showDevelopmentStatusDialog(context);
-                }),
-                _buildDrawerTile(Icons.school, '講義登録', () {
-                  Navigator.pop(context);
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const CourseRegistrationPage(),
-                    ),
-                  );
-                }),
-              ],
-              Divider(color: Colors.amber[200]),
-              _buildDrawerTile(Icons.mail, 'お問い合わせ', () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const MailPage()),
-                );
-              }),
-              _buildDrawerTile(Icons.info_outline, 'お知らせを見る', () {
-                Navigator.pop(context);
-                _showNoticeDialog(context);
-              }),
-              Divider(color: Colors.amber[200]),
-              _buildDrawerTile(Icons.settings, '設定', () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder:
-                        (context) =>
-                            SettingPage(universityType: widget.universityType),
-                  ),
-                );
-              }),
-              _buildDrawerTile(Icons.image, '背景画像を変更', () async {
-                showModalBottomSheet(
-                  context: context,
-                  shape: const RoundedRectangleBorder(
-                    borderRadius: BorderRadius.vertical(
-                      top: Radius.circular(16),
-                    ),
-                  ),
-                  builder: (context) {
-                    return SafeArea(
                       child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          ListTile(
-                            leading: const Icon(
-                              Icons.refresh,
-                              color: Colors.amber,
+                          const Icon(Icons.menu_book, color: _cWhite, size: 28),
+                          const SizedBox(height: 6),
+                          Text(
+                            widget.universityType == 'other'
+                                ? '他大学メニュー'
+                                : '冒険のメニュー',
+                            style: const TextStyle(
+                              fontFamily: 'NotoSansJP',
+                              color: _cWhite,
+                              fontSize: 20,
+                              fontWeight: FontWeight.w800,
                             ),
-                            title: const Text('デフォルト背景に戻す'),
-                            onTap: () async {
-                              Navigator.pop(context);
-                              await ref
-                                  .read(backgroundImagePathProvider.notifier)
-                                  .resetBackgroundImage();
-                            },
                           ),
-                          ListTile(
-                            leading: const Icon(
-                              Icons.photo_album,
-                              color: Colors.amber,
+                          const SizedBox(height: 8),
+                          SizedBox(
+                            height: 8,
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  begin: Alignment.centerLeft,
+                                  end: Alignment.centerRight,
+                                  colors: [
+                                    _cPrimary,
+                                    _cAccent,
+                                    _cMint,
+                                    Colors.transparent,
+                                  ],
+                                ),
+                                borderRadius: BorderRadius.circular(999),
+                              ),
                             ),
-                            title: const Text('アルバムから選ぶ'),
-                            onTap: () async {
-                              Navigator.pop(context);
-                              final picker = ImagePicker();
-                              final picked = await picker.pickImage(
-                                source: ImageSource.gallery,
-                              );
-                              if (picked != null) {
-                                final appDir =
-                                    await getApplicationDocumentsDirectory();
-                                final fileName =
-                                    'background_${DateTime.now().millisecondsSinceEpoch}${picked.name.substring(picked.name.lastIndexOf('.'))}';
-                                final saved = await File(
-                                  picked.path,
-                                ).copy('${appDir.path}/$fileName');
-                                await ref
-                                    .read(backgroundImagePathProvider.notifier)
-                                    .setBackgroundImagePath(saved.path);
-                              }
-                            },
                           ),
                         ],
                       ),
-                    );
-                  },
-                );
-              }),
-            ],
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 8),
+                Expanded(
+                  child: ListView(
+                    padding: EdgeInsets.zero,
+                    children: [
+                      // 大阪大学専用のメニュー項目
+                      if (widget.universityType != 'other') ...[
+                        _buildDrawerTile(Icons.school_outlined, 'KOAN', () {
+                          _launchURL(
+                            'https://koan.osaka-u.ac.jp/campusweb/campusportal.do?page=main',
+                          );
+                        }),
+                        _buildDrawerTile(Icons.book_outlined, 'CLE', () {
+                          _launchURL(
+                            'https://www.cle.osaka-u.ac.jp/ultra/course',
+                          );
+                        }),
+                        _buildDrawerTile(Icons.person_outline, 'マイハンダイ', () {
+                          _launchURL('https://my.osaka-u.ac.jp/');
+                        }),
+                        _buildDrawerTile(Icons.mail_outline, 'OU-Mail', () {
+                          _launchURL('https://outlook.office.com/mail/');
+                        }),
+                        const SizedBox(height: 8),
+                      ],
+
+                      // 他大学用のメニュー項目
+                      if (widget.universityType == 'other') ...[
+                        _buildDrawerTile(Icons.info_outline, '他大学版について', () {
+                          Navigator.pop(context);
+                          _showOtherUnivInfoDialog(context);
+                        }),
+                        _buildDrawerTile(Icons.bug_report, '開発状況', () {
+                          Navigator.pop(context);
+                          _showDevelopmentStatusDialog(context);
+                        }),
+                        _buildDrawerTile(Icons.school, '講義登録', () {
+                          Navigator.pop(context);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder:
+                                  (context) => const CourseRegistrationPage(),
+                            ),
+                          );
+                        }),
+                        const SizedBox(height: 8),
+                      ],
+
+                      _buildDrawerTile(Icons.mail, 'お問い合わせ', () {
+                        Navigator.pop(context);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const MailPage()),
+                        );
+                      }),
+                      _buildDrawerTile(Icons.info_outline, 'お知らせを見る', () {
+                        Navigator.pop(context);
+                        _showNoticeDialog(context);
+                      }),
+                      const SizedBox(height: 8),
+
+                      _buildDrawerTile(Icons.settings, '設定', () {
+                        Navigator.pop(context);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder:
+                                (context) => SettingPage(
+                                  universityType: widget.universityType,
+                                ),
+                          ),
+                        );
+                      }),
+                      _buildDrawerTile(Icons.image, '背景画像を変更', () async {
+                        showModalBottomSheet(
+                          context: context,
+                          shape: const RoundedRectangleBorder(
+                            borderRadius: BorderRadius.vertical(
+                              top: Radius.circular(16),
+                            ),
+                          ),
+                          builder: (context) {
+                            return SafeArea(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  ListTile(
+                                    leading: const Icon(
+                                      Icons.refresh,
+                                      color: _cAccent,
+                                    ),
+                                    title: const Text('デフォルト背景に戻す'),
+                                    onTap: () async {
+                                      Navigator.pop(context);
+                                      await ref
+                                          .read(
+                                            backgroundImagePathProvider
+                                                .notifier,
+                                          )
+                                          .resetBackgroundImage();
+                                    },
+                                  ),
+                                  ListTile(
+                                    leading: const Icon(
+                                      Icons.photo_album,
+                                      color: _cAccent,
+                                    ),
+                                    title: const Text('アルバムから選ぶ'),
+                                    onTap: () async {
+                                      Navigator.pop(context);
+                                      final picker = ImagePicker();
+                                      final picked = await picker.pickImage(
+                                        source: ImageSource.gallery,
+                                      );
+                                      if (picked != null) {
+                                        final appDir =
+                                            await getApplicationDocumentsDirectory();
+                                        final fileName =
+                                            'background_${DateTime.now().millisecondsSinceEpoch}${picked.name.substring(picked.name.lastIndexOf('.'))}';
+                                        final saved = await File(
+                                          picked.path,
+                                        ).copy('${appDir.path}/$fileName');
+                                        await ref
+                                            .read(
+                                              backgroundImagePathProvider
+                                                  .notifier,
+                                            )
+                                            .setBackgroundImagePath(saved.path);
+                                      }
+                                    },
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        );
+                      }),
+                      const SizedBox(height: 12),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

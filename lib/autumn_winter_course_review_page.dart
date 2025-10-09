@@ -593,7 +593,11 @@ class _TakoyakiButtonState extends State<_TakoyakiButton> {
         .update({'takoyakiCount': FieldValue.increment(1)});
 
     // レビュー作成者のユーザー名を取得
-    final reviewCreatorDoc = await FirebaseFirestore.instance.collection('users').doc(widget.userId).get();
+    final reviewCreatorDoc =
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(widget.userId)
+            .get();
     final reviewCreatorName = reviewCreatorDoc.data()?['userName'] ?? '名無し';
 
     // 通知をFirestoreに直接追加

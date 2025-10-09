@@ -82,10 +82,11 @@ class _RegisterPageState extends State<RegisterPage> {
                           // Androidの場合のみ正確なアラーム権限を要求
                           if (Platform.isAndroid) {
                             final AndroidFlutterLocalNotificationsPlugin?
-                                androidImplementation =
+                            androidImplementation =
                                 FlutterLocalNotificationsPlugin()
                                     .resolvePlatformSpecificImplementation<
-                                        AndroidFlutterLocalNotificationsPlugin>();
+                                      AndroidFlutterLocalNotificationsPlugin
+                                    >();
                             await androidImplementation
                                 ?.requestExactAlarmsPermission();
                           }

@@ -15,9 +15,7 @@ class AttendanceRecordPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('出席記録'),
-      ),
+      appBar: AppBar(title: const Text('出席記録')),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -29,9 +27,9 @@ class AttendanceRecordPage extends StatelessWidget {
             ElevatedButton(
               onPressed: () {
                 // 出席を記録するロジック
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('出席を記録しました！')),
-                );
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(const SnackBar(content: Text('出席を記録しました！')));
                 Navigator.pop(context);
               },
               child: const Text('出席'),
@@ -40,9 +38,9 @@ class AttendanceRecordPage extends StatelessWidget {
             ElevatedButton(
               onPressed: () {
                 // 欠席を記録するロジック
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('欠席を記録しました。')),
-                );
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(const SnackBar(content: Text('欠席を記録しました。')));
                 Navigator.pop(context);
               },
               child: const Text('欠席'),

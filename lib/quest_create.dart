@@ -3,9 +3,6 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'timetable_entry.dart';
 import 'timetable.dart';
-import 'utils/course_pattern_detector.dart';
-import 'utils/course_color_generator.dart';
-import 'course_pattern.dart';
 import 'providers/timetable_provider.dart';
 import 'providers/global_course_mapping_provider.dart';
 import 'package:intl/intl.dart';
@@ -35,14 +32,9 @@ class QuestCreationWidget extends ConsumerStatefulWidget {
 
 class _QuestCreationWidgetState extends ConsumerState<QuestCreationWidget> {
   List<TimetableEntry> _weeklyClasses = [];
-  TimetableEntry? _selectedClass;
-  String? _selectedTaskType;
   DateTime? _selectedDeadline;
-  String _description = '';
   bool _isLoading = true;
-  Map<String, Color> _courseColors = {};
   bool _hasShownDialog = false; // ダイアログ表示フラグ
-  bool _isDataLoaded = false; // データ読み込みフラグ
   bool _firestoreLoaded = false;
 
   final List<String> taskTypes = ['レポート', '発表', 'その他'];
@@ -124,19 +116,8 @@ class _QuestCreationWidgetState extends ConsumerState<QuestCreationWidget> {
         entry.courseId = courseId;
       }
 
-      // 授業判別と色分け
-      List<CoursePattern> patterns = await CoursePatternDetector.detectPatterns(
-        timeTableEntries,
-      );
-      Map<String, Color> courseColors = {};
-      for (var pattern in patterns) {
-        courseColors[pattern.courseId] =
-            CourseColorGenerator.generateColorFromPattern(pattern.courseId);
-      }
-
       setState(() {
         _weeklyClasses = timeTableEntries;
-        _courseColors = courseColors;
         _isLoading = false;
       });
     } catch (e) {
@@ -147,6 +128,7 @@ class _QuestCreationWidgetState extends ConsumerState<QuestCreationWidget> {
     }
   }
 
+  // ignore: unused_element
   Color _getCourseColor(TimetableEntry entry) {
     // time_schedule_page.dartと同じロジックで色を決定
     final List<Color> neonColors = [
@@ -166,6 +148,7 @@ class _QuestCreationWidgetState extends ConsumerState<QuestCreationWidget> {
     return neonColors[colorIndex];
   }
 
+  // ignore: unused_element
   Future<void> _pickDateTime() async {
     DateTime selectedDateTime = _selectedDeadline ?? DateTime.now();
 
@@ -376,14 +359,14 @@ class _QuestCreationWidgetState extends ConsumerState<QuestCreationWidget> {
 
                               print('DEBUG: クエスト作成を開始します');
 
-                              // ★★★ 直接stateを更新するように修正 ★★★
-                              final currentState = ref.read(timetableProvider);
-                              ref.read(timetableProvider.notifier).state = {
-                                ...currentState,
-                                'questTaskType': tempTaskType,
-                                'questDeadline': tempDeadline,
-                                'questDescription': tempDescription,
-                              };
+                              // 入力途中のデータをProviderに保存
+                              ref
+                                  .read(timetableProvider.notifier)
+                                  .setQuestData(
+                                    taskType: tempTaskType,
+                                    deadline: tempDeadline,
+                                    description: tempDescription,
+                                  );
 
                               print('DEBUG: widget.onCreateを呼び出します');
                               widget.onCreate(
@@ -486,7 +469,7 @@ class _QuestCreationWidgetState extends ConsumerState<QuestCreationWidget> {
                       style: const TextStyle(fontSize: 12),
                     ),
                     Text(
-                      'タスク: $selectedTaskType',  
+                      'タスク: $selectedTaskType',
                       style: const TextStyle(fontSize: 12),
                     ),
                     Text(
@@ -595,36 +578,32 @@ class _QuestCreationWidgetState extends ConsumerState<QuestCreationWidget> {
                               );
                             }
 
-                            final courseColor = _getCourseColor(entry);
-                            final isSelected =
-                                selectedClass?['id'] == entry.id ||
-                                (selectedClass != null &&
-                                    selectedTaskType != null &&
-                                    selectedDeadline != null);
+                            // 選択状態/色は現在のUIでは未使用
 
                             return Expanded(
                               child: InkWell(
                                 onTap: () async {
                                   // 授業情報を更新
                                   // ★★★ 直接stateを更新するように修正 ★★★
-                                  final currentState = ref.read(
-                                    timetableProvider,
-                                  );
-                                  ref.read(timetableProvider.notifier).state = {
-                                    ...currentState,
-                                    'questSelectedClass': selectedClass,
-                                  };
+                                  // 選択した授業（エントリ）から必要な情報を保存する
+                                  ref
+                                      .read(timetableProvider.notifier)
+                                      .setQuestSelectedClass({
+                                        'id': entry!.id,
+                                        'subjectName': entry.subjectName,
+                                        'courseId': entry.courseId,
+                                      });
 
                                   print(
-                                    'DEBUG: 授業タップ - ${entry?.subjectName}, courseId: ${entry?.courseId}',
+                                    'DEBUG: 授業タップ - ${entry.subjectName}, courseId: ${entry.courseId}',
                                   );
 
                                   // 最新クエストを検索（courseIdがnullの場合は従来の手動入力）
-                                  if (entry?.courseId != null) {
+                                  if (entry.courseId != null) {
                                     print('DEBUG: courseIdがあるため、過去のクエストを検索します');
                                     final latestQuests =
                                         await _getLatestQuestsForCourse(
-                                          entry!.courseId!,
+                                          entry.courseId!,
                                         );
 
                                     print(
@@ -652,11 +631,11 @@ class _QuestCreationWidgetState extends ConsumerState<QuestCreationWidget> {
                                       if (selectedTaskType != null &&
                                           selectedDeadline != null) {
                                         print(
-                                          'Quest Create - Showing dialog with existing data for ${entry?.subjectName}',
+                                          'Quest Create - Showing dialog with existing data for ${entry.subjectName}',
                                         );
                                       } else {
                                         print(
-                                          'Quest Create - Showing dialog for new quest for ${entry?.subjectName}',
+                                          'Quest Create - Showing dialog for new quest for ${entry.subjectName}',
                                         );
                                       }
                                       _showTaskDetailsDialog();
@@ -669,11 +648,11 @@ class _QuestCreationWidgetState extends ConsumerState<QuestCreationWidget> {
                                     if (selectedTaskType != null &&
                                         selectedDeadline != null) {
                                       print(
-                                        'Quest Create - Showing dialog with existing data for ${entry?.subjectName}',
+                                        'Quest Create - Showing dialog with existing data for ${entry.subjectName}',
                                       );
                                     } else {
                                       print(
-                                        'Quest Create - Showing dialog for new quest for ${entry?.subjectName}',
+                                        'Quest Create - Showing dialog for new quest for ${entry.subjectName}',
                                       );
                                     }
                                     _showTaskDetailsDialog();
@@ -750,6 +729,7 @@ class _QuestCreationWidgetState extends ConsumerState<QuestCreationWidget> {
   }
 
   // クエストの保存
+  // ignore: unused_element
   Future<void> _addGlobalQuest(
     String courseId,
     Map<String, dynamic> questData,
@@ -762,6 +742,7 @@ class _QuestCreationWidgetState extends ConsumerState<QuestCreationWidget> {
   }
 
   // クエストの取得
+  // ignore: unused_element
   Future<List<Map<String, dynamic>>> _getGlobalQuests(String courseId) async {
     final snapshot =
         await FirebaseFirestore.instance
@@ -908,11 +889,18 @@ class _QuestCreationWidgetState extends ConsumerState<QuestCreationWidget> {
             actions: [
               TextButton(
                 onPressed: () {
+                  // ダイアログを閉じて手入力へ
                   Navigator.of(context).pop();
-                  // キャンセル時は従来の手動入力画面を表示
                   _showTaskDetailsDialog();
                 },
-                child: const Text('キャンセル'),
+                child: const Text('手入力で作成'),
+              ),
+              TextButton(
+                onPressed: () {
+                  // 何もせず閉じる
+                  Navigator.of(context).pop();
+                },
+                child: const Text('閉じる'),
               ),
             ],
           ),
@@ -961,11 +949,11 @@ class _QuestCreationWidgetState extends ConsumerState<QuestCreationWidget> {
             actions: [
               TextButton(
                 onPressed: () {
+                  // 手入力に切り替え
                   Navigator.of(context).pop();
-                  // キャンセル時は従来の手動入力画面を表示
                   _showTaskDetailsDialog();
                 },
-                child: const Text('キャンセル'),
+                child: const Text('手入力に切り替え'),
               ),
               ElevatedButton(
                 onPressed: () {

@@ -45,9 +45,13 @@ class AppTheme {
           backgroundColor: MaterialStatePropertyAll(primaryBlue),
           foregroundColor: MaterialStatePropertyAll(white),
           shape: MaterialStatePropertyAll(
-            RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+            RoundedRectangleBorder(
+              borderRadius: BorderRadius.all(Radius.circular(12)),
+            ),
           ),
-          padding: MaterialStatePropertyAll(EdgeInsets.symmetric(horizontal: 16, vertical: 14)),
+          padding: MaterialStatePropertyAll(
+            EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          ),
         ),
       ),
       dividerTheme: const DividerThemeData(

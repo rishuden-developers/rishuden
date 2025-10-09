@@ -47,16 +47,18 @@ class _HomeSimpleScreenState extends ConsumerState<HomeSimpleScreen> {
       }
 
       // ユーザーが履修しているcourseIdの集合を取得
-      final userDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .collection('timetable')
-          .doc('notes')
-          .get();
+      final userDoc =
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .collection('timetable')
+              .doc('notes')
+              .get();
 
-      final userCourseIds = userDoc.exists
-          ? Map<String, String>.from(userDoc.data()!['courseIds'] ?? {})
-          : <String, String>{};
+      final userCourseIds =
+          userDoc.exists
+              ? Map<String, String>.from(userDoc.data()!['courseIds'] ?? {})
+              : <String, String>{};
 
       if (userCourseIds.isEmpty) {
         setState(() {
@@ -67,27 +69,27 @@ class _HomeSimpleScreenState extends ConsumerState<HomeSimpleScreen> {
       }
 
       final ids = userCourseIds.values.toSet().toList();
-      final snap = await FirebaseFirestore.instance
-          .collection('quests')
-          .where('courseId', whereIn: ids)
-          .get();
+      final snap =
+          await FirebaseFirestore.instance
+              .collection('quests')
+              .where('courseId', whereIn: ids)
+              .get();
 
       final me = user.uid;
-      final items = snap.docs
-          .map((d) => {'id': d.id, ...d.data()})
-          .where((q) {
-            final completed = (q['completedUserIds'] as List?)?.cast<String>() ?? [];
-            return !completed.contains(me);
-          })
-          .toList()
-        ..sort((a, b) {
-          final ad = a['deadline'] as Timestamp?;
-          final bd = b['deadline'] as Timestamp?;
-          if (ad == null && bd == null) return 0;
-          if (ad == null) return 1;
-          if (bd == null) return -1;
-          return ad.compareTo(bd);
-        });
+      final items =
+          snap.docs.map((d) => {'id': d.id, ...d.data()}).where((q) {
+              final completed =
+                  (q['completedUserIds'] as List?)?.cast<String>() ?? [];
+              return !completed.contains(me);
+            }).toList()
+            ..sort((a, b) {
+              final ad = a['deadline'] as Timestamp?;
+              final bd = b['deadline'] as Timestamp?;
+              if (ad == null && bd == null) return 0;
+              if (ad == null) return 1;
+              if (bd == null) return -1;
+              return ad.compareTo(bd);
+            });
 
       setState(() {
         _quests = items;
@@ -110,7 +112,10 @@ class _HomeSimpleScreenState extends ConsumerState<HomeSimpleScreen> {
         backgroundColor: AppTheme.white,
         title: Text(
           widget.userName,
-          style: const TextStyle(color: AppTheme.black, fontWeight: FontWeight.w600),
+          style: const TextStyle(
+            color: AppTheme.black,
+            fontWeight: FontWeight.w600,
+          ),
         ),
         actions: [
           // OZTECHロゴ（既存の挙動を上位から受け取り、そのまま呼ぶ）
@@ -127,46 +132,57 @@ class _HomeSimpleScreenState extends ConsumerState<HomeSimpleScreen> {
           ),
         ],
       ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator(color: AppTheme.primaryBlue))
-          : _quests.isEmpty
+      body:
+          _loading
               ? const Center(
-                  child: Text(
-                    '現在、討伐対象のクエストはありません。',
-                    style: TextStyle(color: AppTheme.black),
-                  ),
-                )
+                child: CircularProgressIndicator(color: AppTheme.primaryBlue),
+              )
+              : _quests.isEmpty
+              ? const Center(
+                child: Text(
+                  '現在、討伐対象のクエストはありません。',
+                  style: TextStyle(color: AppTheme.black),
+                ),
+              )
               : ListView.separated(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  itemCount: _quests.length,
-                  separatorBuilder: (_, __) => const Divider(height: 1),
-                  itemBuilder: (context, index) {
-                    final q = _quests[index];
-                    final String title = (q['name'] ?? '') as String;
-                    final Timestamp? deadline = q['deadline'] as Timestamp?;
-                    final bool expired = _isExpired(deadline);
-                    final String deadlineText = deadline == null
-                        ? '期限未設定'
-                        : _formatDeadline(deadline.toDate());
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                itemCount: _quests.length,
+                separatorBuilder: (_, __) => const Divider(height: 1),
+                itemBuilder: (context, index) {
+                  final q = _quests[index];
+                  final String title = (q['name'] ?? '') as String;
+                  final Timestamp? deadline = q['deadline'] as Timestamp?;
+                  final bool expired = _isExpired(deadline);
+                  final String deadlineText =
+                      deadline == null
+                          ? '期限未設定'
+                          : _formatDeadline(deadline.toDate());
 
-                    return Card(
-                      child: ListTile(
-                        leading: Icon(
-                          expired ? Icons.check_circle : Icons.radio_button_unchecked,
+                  return Card(
+                    child: ListTile(
+                      leading: Icon(
+                        expired
+                            ? Icons.check_circle
+                            : Icons.radio_button_unchecked,
+                        color: expired ? Colors.red : AppTheme.black,
+                      ),
+                      title: Text(
+                        title,
+                        style: const TextStyle(color: AppTheme.black),
+                      ),
+                      subtitle: Text(
+                        deadlineText,
+                        style: TextStyle(
                           color: expired ? Colors.red : AppTheme.black,
                         ),
-                        title: Text(title, style: const TextStyle(color: AppTheme.black)),
-                        subtitle: Text(
-                          deadlineText,
-                          style: TextStyle(color: expired ? Colors.red : AppTheme.black),
-                        ),
-                        onTap: () {
-                          // 既存の詳細や提出処理がある場合は、ここから既存遷移を呼ぶよう拡張可能
-                        },
                       ),
-                    );
-                  },
-                ),
+                      onTap: () {
+                        // 既存の詳細や提出処理がある場合は、ここから既存遷移を呼ぶよう拡張可能
+                      },
+                    ),
+                  );
+                },
+              ),
       bottomNavigationBar: const SizedBox(
         height: 0, // 実際のボトムナビはMainPage側で配置されるためここは空にしておく
       ),

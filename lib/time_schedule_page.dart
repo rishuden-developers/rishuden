@@ -1,12 +1,13 @@
+// ignore_for_file: unused_field, unused_element, unused_local_variable, avoid_print
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'dart:math';
-import 'dart:ui';
+// import 'dart:ui'; // Unused; removed to satisfy analyzer
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart' show kDebugMode, debugPrint;
 import 'package:intl/intl.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:io';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 
@@ -18,7 +19,14 @@ import 'timetable_entry.dart';
 import 'timetable.dart';
 import 'providers/timetable_provider.dart';
 import 'providers/global_course_mapping_provider.dart';
-import 'providers/background_image_provider.dart';
+// import 'providers/background_image_provider.dart';
+
+// 本ファイル内のprint呼び出しをデバッグビルドのみに限定するためのラッパー
+void print(Object? object) {
+  if (kDebugMode) {
+    debugPrint(object?.toString());
+  }
+}
 
 enum AttendanceStatus { present, absent, late, none }
 
@@ -35,107 +43,81 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
 
   final List<String> _days = const ['月', '火', '水', '木', '金', '土', '日'];
   final int _academicPeriods = 6;
-  String _mainCharacterName = 'キャラクター';
-  String _mainCharacterImagePath = 'assets/character_unknown.png';
-  List<List<TimetableEntry?>> _timetableGrid = [];
-  Set<String> _cancellations = {};
-  List<Map<String, String>> _displayedCharacters = [];
-  final List<String> _otherCharacterImagePaths = [
-    'assets/character_wizard.png',
-    'assets/character_merchant.png',
-    'assets/character_gorilla.png',
-    'assets/character_swordman.png',
-    'assets/character_takuji.png',
-    'assets/character_god.png',
-    'assets/character_adventurer.png',
-  ];
-  final double _periodRowHeight = 70.0;
-  final double _lunchRowHeight = 70.0;
-  final List<List<String>> _periodTimes = const [
-    ["8:50", "10:20"],
-    ["10:30", "12:00"],
-    ["13:30", "15:00"],
-    ["15:10", "16:40"],
-    ["16:50", "18:20"],
-    ["18:30", "20:00"],
-  ];
-  Timer? _highlightTimer;
-  Map<String, int> _absenceCount = {};
-  Map<String, int> _lateCount = {};
-  late DateTime _displayedMonday;
+  // --- 画面表示用の状態 ---
+  DateTime _displayedMonday = DateTime.now();
+  String _weekDateRange = '';
   List<String> _dayDates = [];
-  String _weekDateRange = "";
-  List<Map<String, dynamic>> _sundayEvents = [];
-  Map<int, List<Map<String, dynamic>>> _weekdayEvents = {};
-  double _timeGaugeProgress = 0.0;
-  Map<String, Color> _courseColors = {};
 
-  final List<Color> _neonColors = [
-    const Color(0xFF00E5FF), // cyanAccent
-    const Color(0xFF69F0AE), // greenAccent[400]
-    const Color(0xFFFFFF00), // yellowAccent
-    const Color(0xFFE1BEE7), // purpleAccent[100]
-    const Color(0xFFFFFFFF), // white
-    const Color(0xFF40C4FF), // lightBlueAccent
-    const Color(0xFF76FF03), // limeAccent[400]
+  // グリッド・色・時間
+  List<List<TimetableEntry?>> _timetableGrid = [];
+  final Map<String, Color> _courseColors = {};
+  // 白基調UI向けの落ち着いたカラーパレット
+  final List<Color> _palette = const <Color>[
+    Color(0xFF6C8EBF), // steel blue
+    Color(0xFF81C784), // soft green
+    Color(0xFFFFD54F), // amber
+    Color(0xFFE57373), // soft red
+    Color(0xFF9575CD), // soft purple
+    Color(0xFF4FC3F7), // light blue
+    Color(0xFFA1887F), // brown grey
   ];
+  final List<List<String>> _periodTimes = const [
+    ['08:50', '10:20'],
+    ['10:30', '12:00'],
+    ['13:30', '15:00'],
+    ['15:10', '16:40'],
+    ['16:50', '18:20'],
+    ['18:30', '20:00'],
+  ];
+  double _periodRowHeight = 60.0; // レイアウト計算時に更新
+  double _timeGaugeProgress = 0.0;
+  Timer? _highlightTimer;
 
-  // ★★★ グローバルなcourseId管理 ★★★
-  static Map<String, String> _globalSubjectToCourseId = {};
-  static int _globalCourseIdCounter = 0;
+  // 予定（平日/日曜）
+  final Map<int, List<Map<String, dynamic>>> _weekdayEvents = {};
+  final List<Map<String, dynamic>> _sundayEvents = [];
 
-  // ★★★ courseIdをTimetableProviderから取得するメソッドを追加 ★★★
-  Map<String, String> get courseIds =>
-      ref.watch(timetableProvider)['courseIds'] ?? {};
+  // 装飾用（将来の表示用に保持）
+  String _mainCharacterName = '剣士';
+  String _mainCharacterImagePath = 'assets/character_swordman.png';
 
-  // ★★★ courseIdをTimetableProviderに保存するメソッドを追加 ★★★
-  void _updateCourseIds(Map<String, String> courseIds) {
-    ref.read(timetableProvider.notifier).updateCourseIds(courseIds);
-  }
+  // Provider連携のゲッター
+  Map<String, String> get cellNotes => Map<String, String>.from(
+    ref.watch(timetableProvider)['cellNotes'] ?? <String, String>{},
+  );
+  Map<String, String> get weeklyNotes => Map<String, String>.from(
+    ref.watch(timetableProvider)['weeklyNotes'] ?? <String, String>{},
+  );
+  Map<String, String> get attendancePolicies => Map<String, String>.from(
+    ref.watch(timetableProvider)['attendancePolicies'] ?? <String, String>{},
+  );
+  Map<String, int> get absenceCount => Map<String, int>.from(
+    ref.watch(timetableProvider)['absenceCount'] ?? <String, int>{},
+  );
+  Map<String, int> get lateCount => Map<String, int>.from(
+    ref.watch(timetableProvider)['lateCount'] ?? <String, int>{},
+  );
+  Map<String, String> get teacherNames => Map<String, String>.from(
+    ref.watch(timetableProvider)['teacherNames'] ?? <String, String>{},
+  );
+  Map<String, String> get courseIds => Map<String, String>.from(
+    ref.watch(timetableProvider)['courseIds'] ?? <String, String>{},
+  );
+  bool get isLoading =>
+      (ref.watch(timetableProvider)['isLoading'] as bool?) ?? false;
+  String? get saveError => ref.watch(timetableProvider)['saveError'] as String?;
 
-  // データの取得メソッド（UIは変更しない）
-  Map<String, String> get cellNotes =>
-      ref.watch(timetableProvider)['cellNotes'] ?? {};
-  Map<String, String> get weeklyNotes =>
-      ref.watch(timetableProvider)['weeklyNotes'] ?? {};
-  Map<String, String> get attendancePolicies =>
-      ref.watch(timetableProvider)['attendancePolicies'] ?? {};
-  Map<String, Map<String, String>> get attendanceStatus =>
-      ref.watch(timetableProvider)['attendanceStatus'] ?? {};
-  Map<String, int> get absenceCount =>
-      ref.watch(timetableProvider)['absenceCount'] ?? {};
-  Map<String, int> get lateCount =>
-      ref.watch(timetableProvider)['lateCount'] ?? {};
-
-  // ★★★ ローディング状態を取得 ★★★
-  bool get isLoading => ref.watch(timetableProvider)['isLoading'] ?? false;
-
-  // ★★★ 保存エラーを取得 ★★★
-  String? get saveError => ref.watch(timetableProvider)['saveError'];
-
-  // データの更新メソッド（UIは変更しない）
+  // Provider更新用のラッパー
   void _updateCellNotes(Map<String, String> notes) {
-    print(
-      'TimeSchedulePage - _updateCellNotes called with ${notes.length} items',
-    );
-    print('TimeSchedulePage - Cell notes content: $notes');
     ref.read(timetableProvider.notifier).updateCellNotes(notes);
   }
 
   void _updateWeeklyNotes(Map<String, String> notes) {
-    print(
-      'TimeSchedulePage - _updateWeeklyNotes called with ${notes.length} items',
-    );
-    print('TimeSchedulePage - Weekly notes content: $notes');
     ref.read(timetableProvider.notifier).updateWeeklyNotes(notes);
   }
 
   void _updateAttendancePolicies(Map<String, String> policies) {
     ref.read(timetableProvider.notifier).updateAttendancePolicies(policies);
-  }
-
-  void _updateAttendanceStatus(Map<String, Map<String, String>> status) {
-    ref.read(timetableProvider.notifier).updateAttendanceStatus(status);
   }
 
   void _updateAbsenceCount(Map<String, int> count) {
@@ -146,108 +128,47 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
     ref.read(timetableProvider.notifier).updateLateCount(count);
   }
 
-  // 教員名を更新
-  void _updateTeacherNames(Map<String, String> teacherNames) {
-    ref.read(timetableProvider.notifier).updateTeacherNames(teacherNames);
+  void _updateCourseIds(Map<String, String> ids) {
+    ref.read(timetableProvider.notifier).updateCourseIds(ids);
   }
 
-  // 教員名を取得
-  Map<String, String> get teacherNames =>
-      ref.watch(timetableProvider)['teacherNames'] ?? {};
-
-  // 時間割データを読み込み
-  Future<void> _loadTimetableData() async {
-    print('TimeSchedulePage - Loading timetable data from Firebase...');
-    if (widget.universityType == 'other') {
-      print('他大学モード: Firestoreのuniversities/other/coursesからデータ取得（今はユーザー入力のみ）');
-      // TODO: 他大学用のデータ取得・保存ロジックをここに実装
-      return;
-    }
-    try {
-      await ref.read(timetableProvider.notifier).loadFromFirestore();
-      print('TimeSchedulePage - Timetable data loaded successfully');
-
-      // ★★★ 保存されたcourseIdを読み込んで復元 ★★★
-      if (mounted) {
-        final savedCourseIds = courseIds;
-        if (savedCourseIds.isNotEmpty) {
-          // _globalSubjectToCourseIdに復元
-          _globalSubjectToCourseId.clear();
-          _globalSubjectToCourseId.addAll(savedCourseIds);
-
-          // globalCourseMappingProviderにも復元（正規化された授業名で）
-          final globalMappingNotifier = ref.read(
-            globalCourseMappingProvider.notifier,
-          );
-          for (var entry in savedCourseIds.entries) {
-            // 古い形式のデータの場合は、後方互換性のために古いAPIを使用
-            final normalizedName = globalMappingNotifier.normalizeSubjectName(
-              entry.key,
-            );
-            // 古い形式のaddCourseMappingを使用（後方互換性のため）
-            // 新しい形式では、授業名・教室・曜日・時限が必要だが、
-            // 保存されたデータには教室・曜日・時限の情報がないため、
-            // 古いAPIを使用して復元する
-            globalMappingNotifier.addCourseMappingBySubjectName(
-              normalizedName,
-              entry.value,
-            );
-          }
-
-          print('DEBUG: 保存されたcourseIdを復元しました: $_globalSubjectToCourseId');
-        }
-      }
-    } catch (e) {
-      print('TimeSchedulePage - Error loading timetable data: $e');
-      // ★★★ エラー時はUIに通知 ★★★
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('時間割データの読み込みに失敗しました: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
+  // イベントのローディング管理
+  bool _isEventsLoading = true;
 
   @override
   void initState() {
     super.initState();
-    print('時間割ページ: 大学タイプ = ' + widget.universityType);
+    _pageController = PageController(initialPage: _initialPage);
+    // 今週の月曜日を計算
     final today = DateTime.now();
     _displayedMonday = today.subtract(Duration(days: today.weekday - 1));
-    _pageController = PageController(initialPage: _initialPage);
-    // ★★★ 初期化時はローディング状態を待つ ★★★
-    _loadTimetableData();
-    // ★★★ キャッシュから即座に予定を読み込み、バックグラウンドでFirestoreから最新データを取得 ★★★
-    _loadEventsFromCache();
-    _loadEventsFromFirestore(); // バックグラウンドで実行
-    _updateHighlight();
-    _highlightTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
-      if (mounted) {
-        _updateHighlight();
-      }
-    });
-    // ★★★ 初期化時に必ず今週の時間割をセット ★★★
+    _updateWeekDates();
+
+    // 初回の週をセット
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _changeWeek(_initialPage);
     });
+
+    // 予定のロード
+    _loadEventsFromFirestore();
+
+    // 他大学モードのデータロード
     if (widget.universityType == 'other') {
       _loadOtherUnivCourses().then((_) {
-        // 他大学のコースデータを読み込んだ後に時間割グリッドを初期化
         _initializeTimetableGrid(_displayedMonday);
-        // 他大学用の場合は予定データの読み込みを完了としてマーク
-        setState(() {
-          _isEventsLoading = false;
-        });
+        if (mounted) {
+          setState(() => _isEventsLoading = false);
+        }
       });
-      // 分散協力型データベースのデータも読み込み
       _loadGlobalCourseData();
     }
-  }
 
-  bool _isEventsLoading = true;
+    // 時間ゲージ更新タイマー
+    _highlightTimer = Timer.periodic(
+      const Duration(seconds: 30),
+      (_) => _updateHighlight(),
+    );
+  }
 
   bool _isInitialWeekLoaded = false;
   @override
@@ -461,7 +382,7 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
     if (mounted) setState(() {});
   }
 
-  final double _timeColumnWidth = 60.0;
+  final double _timeColumnWidth = 45.0;
   void _goToPreviousWeek() {
     setState(() {
       _displayedMonday = _displayedMonday.subtract(const Duration(days: 7));
@@ -842,61 +763,41 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
         orElse: () => AttendancePolicy.flexible,
       );
 
-      Color textColor = Colors.white;
+      Color textColor = Colors.black87;
       BoxDecoration decoration = BoxDecoration();
+
+      // ToDo三色（深青/明青/ティール）＋白黒のシンプル配色に統一
+      const deepBlue = Color(0xFF2E6DB6); // 主要・強調
+      const lightBlue = Color(0xFF62B5E5); // 補助（スキップなど）
+      const teal = Color(0xFF58C3A9); // 柔軟
 
       switch (policy) {
         case AttendancePolicy.mandatory:
-          // ★★★ courseIdベースで色を決定 ★★★
-          Color baseColor;
-          if (entry.courseId != null &&
-              _courseColors.containsKey(entry.courseId)) {
-            baseColor = _courseColors[entry.courseId]!;
-            print(
-              'DEBUG: ${entry.subjectName} (${entry.dayOfWeek}曜${entry.period}限) -> courseId: ${entry.courseId} -> 使用色: $baseColor',
-            );
-          } else {
-            // フォールバック：subjectNameで色生成
-            final int colorIndex =
-                entry.subjectName.hashCode % _neonColors.length;
-            baseColor = _neonColors[colorIndex];
-            print(
-              'DEBUG: ${entry.subjectName} (${entry.dayOfWeek}曜${entry.period}限) -> フォールバック色: $baseColor',
-            );
-          }
-          final neonColor = _getNeonWarningColor(baseColor, entry.courseId);
-          textColor = neonColor;
+          textColor = Colors.black87;
           decoration = BoxDecoration(
-            color: neonColor.withOpacity(0.1),
-            border: Border.all(color: neonColor, width: 1.5),
+            color: deepBlue.withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(6),
-            boxShadow: [
-              BoxShadow(color: neonColor.withOpacity(0.6), blurRadius: 10.0),
-            ],
           );
           break;
         case AttendancePolicy.flexible:
-          textColor = Colors.grey[400]!;
+          textColor = Colors.black87;
           decoration = BoxDecoration(
-            color: Colors.grey[850]!.withOpacity(0.6),
-            border: Border.all(color: Colors.grey[700]!),
+            color: teal.withValues(alpha: 0.10),
             borderRadius: BorderRadius.circular(6),
           );
           break;
         case AttendancePolicy.skip:
-          textColor = Colors.grey[600]!;
+          textColor = Colors.black54;
           decoration = BoxDecoration(
-            color: Colors.black.withOpacity(0.7),
-            border: Border.all(color: Colors.grey[850]!),
+            color: lightBlue.withValues(alpha: 0.08),
             borderRadius: BorderRadius.circular(6),
           );
           break;
       }
       if (entry.isCancelled) {
-        textColor = Colors.red[300]!;
+        textColor = Colors.black87;
         decoration = BoxDecoration(
-          color: entry.color.withOpacity(0.1),
-          border: Border.all(color: entry.color.withOpacity(0.5)),
+          color: Colors.redAccent.withValues(alpha: 0.06),
           borderRadius: BorderRadius.circular(6),
         );
       }
@@ -913,15 +814,17 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
       final bool isNowClass =
           displayedDateOnly.isAtSameMomentAs(today) &&
           entry.period == currentPeriod;
-      final BoxDecoration finalDecoration =
-          isNowClass
-              ? decoration.copyWith(
-                border: Border.all(color: Colors.amber, width: 3),
-              )
-              : decoration;
+      // すべての授業カードに薄い枠線を付与し、現在の授業のみ濃い青・太枠にする
+      final BoxDecoration finalDecoration = isNowClass
+          ? decoration.copyWith(
+              border: Border.all(color: const Color(0xFF2E6DB6), width: 2),
+            )
+          : decoration.copyWith(
+              border: Border.all(color: Colors.grey[400]!, width: 1),
+            );
 
       final classWidget = Container(
-        margin: const EdgeInsets.all(0.5),
+        margin: const EdgeInsets.all(1.5),
         padding: const EdgeInsets.fromLTRB(6, 5, 4, 3),
         decoration: finalDecoration,
         child: Stack(
@@ -933,14 +836,10 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                 Text(
                   entry.subjectName,
                   style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 11,
                     height: 1.2,
-                    color: textColor,
-                    shadows:
-                        policy == AttendancePolicy.mandatory
-                            ? [Shadow(color: textColor, blurRadius: 8.0)]
-                            : [],
+                    color: Colors.black87,
                   ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
@@ -980,9 +879,9 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                   const SizedBox(height: 1),
                   Text(
                     teacherNames[entry.courseId]!,
-                    style: TextStyle(
-                      fontSize: 8,
-                      color: Colors.white.withOpacity(0.6),
+                    style: const TextStyle(
+                      fontSize: 9,
+                      color: Colors.black54,
                       fontStyle: FontStyle.italic,
                     ),
                     maxLines: 1,
@@ -1001,9 +900,9 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                           if (noteText.isNotEmpty)
                             Text(
                               noteText,
-                              style: TextStyle(
+                              style: const TextStyle(
                                 fontSize: 9,
-                                color: Colors.tealAccent.withOpacity(0.8),
+                                color: Colors.black87,
                                 fontStyle: FontStyle.italic,
                               ),
                               maxLines: 1,
@@ -1012,9 +911,9 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                           else if (entry.classroom.isNotEmpty)
                             Text(
                               entry.classroom,
-                              style: TextStyle(
+                              style: const TextStyle(
                                 fontSize: 9,
-                                color: Colors.white.withOpacity(0.7),
+                                color: Colors.black54,
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -1079,9 +978,9 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
     const int classEndMinutes = 20 * 60 + 0; // 20:00
     const int dayEndMinutes = 24 * 60 + 0; // 24:00
 
-    // 授業時間と放課後時間の高さ配分
-    final double classTimeHeight = totalHeight * 0.85; // 授業時間は85%
-    final double afterSchoolHeight = totalHeight * 0.15; // 放課後は15%
+    // 授業時間と放課後時間の高さ配分（7:1 で 8 行に一致させる）
+    final double classTimeHeight = totalHeight * (7.0 / 8.0);
+    final double afterSchoolHeight = totalHeight * (1.0 / 8.0);
 
     if (!_weekdayEvents.containsKey(dayIndex)) {
       return positionedWidgets;
@@ -1108,86 +1007,106 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
       final TimeOfDay endTime = event['end'];
       final String title = event['title'];
 
-      final int startMinutes = startTime.hour * 60 + startTime.minute;
-      final int endMinutes = endTime.hour * 60 + endTime.minute;
+      int rawStart = startTime.hour * 60 + startTime.minute;
+      int rawEnd = endTime.hour * 60 + endTime.minute;
 
-      double top, height;
+      // 全体を [classStartMinutes, dayEndMinutes] にクランプ
+      final int clampedStart = rawStart.clamp(classStartMinutes, dayEndMinutes);
+      final int clampedEnd = rawEnd.clamp(classStartMinutes, dayEndMinutes);
+      if (clampedEnd <= clampedStart) continue;
 
-      if (startMinutes < classEndMinutes) {
-        // 授業時間内の予定
-        final double classStartMinutesFromBase =
-            (startMinutes - classStartMinutes).toDouble();
-        final double classEndMinutesFromBase =
-            (endMinutes - classStartMinutes).toDouble();
+      // ToDo三色に合わせ、イベントは青系中心に
+      const eventColor = Color(0xFF62B5E5); // 明るい青
+      Widget buildEventWidget() => Container(
+            margin: const EdgeInsets.all(1.5),
+            padding: const EdgeInsets.all(4.0),
+            decoration: BoxDecoration(
+              color: eventColor.withValues(alpha: 0.18),
+              borderRadius: BorderRadius.circular(4),
+              border:
+                  Border.all(color: eventColor.withValues(alpha: 0.6), width: 1),
+            ),
+            child: Center(
+              child: Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 10,
+                  color: Colors.black87,
+                  fontWeight: FontWeight.w600,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          );
 
-        top =
-            (classStartMinutesFromBase /
+      void addClassTimeSegment(int s, int e) {
+        final double sFromBase = (s - classStartMinutes).toDouble();
+        final double eFromBase = (e - classStartMinutes).toDouble();
+        final double top =
+            (sFromBase / (classEndMinutes - classStartMinutes)) *
+                classTimeHeight;
+        final double height =
+            ((eFromBase - sFromBase) /
                 (classEndMinutes - classStartMinutes)) *
             classTimeHeight;
-        height =
-            ((classEndMinutesFromBase - classStartMinutesFromBase) /
-                (classEndMinutes - classStartMinutes)) *
-            classTimeHeight;
-      } else {
-        // 放課後の予定
-        final double afterSchoolStartMinutesFromBase =
-            (startMinutes - classEndMinutes).toDouble();
-        final double afterSchoolEndMinutesFromBase =
-            (endMinutes - classEndMinutes).toDouble();
-
-        top =
-            classTimeHeight +
-            (afterSchoolStartMinutesFromBase /
-                    (dayEndMinutes - classEndMinutes)) *
-                afterSchoolHeight;
-        height =
-            ((afterSchoolEndMinutesFromBase - afterSchoolStartMinutesFromBase) /
-                (dayEndMinutes - classEndMinutes)) *
-            afterSchoolHeight;
+        if (height <= 0) return;
+        positionedWidgets.add(
+          Positioned(
+            top: top,
+            left: 0,
+            right: 0,
+            height: height,
+            child: InkWell(
+              onTap: () {
+                _showEventDialog(
+                  dayIndex: dayIndex,
+                  eventIndex: eventsToShow.indexOf(event),
+                );
+              },
+              child: buildEventWidget(),
+            ),
+          ),
+        );
       }
 
-      if (height <= 0) continue;
-
-      const eventColor = Colors.amberAccent;
-      final eventWidget = Container(
-        margin: const EdgeInsets.symmetric(horizontal: 1.0, vertical: 0.5),
-        padding: const EdgeInsets.all(4.0),
-        decoration: BoxDecoration(
-          color: eventColor.withOpacity(0.6),
-          borderRadius: BorderRadius.circular(4),
-          border: Border.all(color: eventColor.withOpacity(0.9)),
-        ),
-        child: Center(
-          child: Text(
-            title,
-            style: const TextStyle(
-              fontSize: 10,
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              shadows: [Shadow(color: Colors.black, blurRadius: 4.0)],
+      void addAfterSchoolSegment(int s, int e) {
+        final double sFromBase = (s - classEndMinutes).toDouble();
+        final double eFromBase = (e - classEndMinutes).toDouble();
+        final double top = classTimeHeight +
+            (sFromBase / (dayEndMinutes - classEndMinutes)) * afterSchoolHeight;
+        final double height =
+            ((eFromBase - sFromBase) / (dayEndMinutes - classEndMinutes)) *
+                afterSchoolHeight;
+        if (height <= 0) return;
+        positionedWidgets.add(
+          Positioned(
+            top: top,
+            left: 0,
+            right: 0,
+            height: height,
+            child: InkWell(
+              onTap: () {
+                _showEventDialog(
+                  dayIndex: dayIndex,
+                  eventIndex: eventsToShow.indexOf(event),
+                );
+              },
+              child: buildEventWidget(),
             ),
-            overflow: TextOverflow.ellipsis,
           ),
-        ),
-      );
+        );
+      }
 
-      positionedWidgets.add(
-        Positioned(
-          top: top,
-          left: 0,
-          right: 0,
-          height: height,
-          child: InkWell(
-            onTap: () {
-              _showEventDialog(
-                dayIndex: dayIndex,
-                eventIndex: eventsToShow.indexOf(event),
-              );
-            },
-            child: eventWidget,
-          ),
-        ),
-      );
+      // 20:00 を跨ぐ場合は分割、そうでなければそれぞれの領域に配置
+      if (clampedEnd <= classEndMinutes) {
+        addClassTimeSegment(clampedStart, clampedEnd);
+      } else if (clampedStart >= classEndMinutes) {
+        addAfterSchoolSegment(clampedStart, clampedEnd);
+      } else {
+        // 分割
+        addClassTimeSegment(clampedStart, classEndMinutes);
+        addAfterSchoolSegment(classEndMinutes, clampedEnd);
+      }
     }
     return positionedWidgets;
   }
@@ -1398,18 +1317,11 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
   Widget _buildTimetableBackgroundCells(int dayIndex) {
     return Column(
       children: List.generate(8, (index) {
-        // ★★★ 修正点：Expandedをやめ、全てのコマが同じ高さになるようにする ★★★
+        // 格子線は描かず、タップ領域のみ確保
         return Expanded(
-          flex: 1,
           child: InkWell(
             onTap: () => _showWeekdayEventDialog(dayIndex),
-            child: Container(
-              margin: const EdgeInsets.all(0.5),
-              decoration: BoxDecoration(
-                color: Colors.transparent,
-                borderRadius: BorderRadius.circular(6),
-              ),
-            ),
+            child: const SizedBox.expand(),
           ),
         );
       }),
@@ -1434,9 +1346,9 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
             const double classEndMinutes = 20 * 60 + 0; // 20:00
             const double dayEndMinutes = 24 * 60 + 0; // 24:00
 
-            // 授業時間と放課後時間の高さ配分
-            final double classTimeHeight = totalHeight * 0.85; // 授業時間は85%
-            final double afterSchoolHeight = totalHeight * 0.15; // 放課後は15%
+            // 授業時間と放課後時間の高さ配分（7:1で8行に一致）
+            final double classTimeHeight = totalHeight * (7.0 / 8.0);
+            final double afterSchoolHeight = totalHeight * (1.0 / 8.0);
 
             double totalMinutesFromMidnight;
 
@@ -1530,9 +1442,9 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
               const double classEndMinutes = 20 * 60 + 0; // 20:00
               const double dayEndMinutes = 24 * 60 + 0; // 24:00
 
-              // 授業時間と放課後時間の高さ配分
-              final double classTimeHeight = totalHeight * 0.85; // 授業時間は85%
-              final double afterSchoolHeight = totalHeight * 0.15; // 放課後は15%
+              // 授業時間と放課後時間の高さ配分（7:1で8行と一致）
+              final double classTimeHeight = totalHeight * (7.0 / 8.0);
+              final double afterSchoolHeight = totalHeight * (1.0 / 8.0);
 
               double totalMinutesFromMidnight;
 
@@ -1569,7 +1481,18 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
             },
             child: Stack(
               children: [
+                // 背景の格子（タップ可能）
+                _buildTimetableBackgroundCells(dayIndex),
+                // 昼(2行目)と3限(3行目)の間に薄い区切り線（全曜日共通）
+                Positioned(
+                  top: totalHeight * (3.0 / 8.0),
+                  left: 0,
+                  right: 0,
+                  child: Container(height: 1, color: Colors.grey[400]),
+                ),
+                // 授業セル
                 ..._buildClassEntriesAsPositioned(dayIndex, totalHeight),
+                // 予定セル
                 ..._buildWeekdayEventsAsPositioned(dayIndex, totalHeight),
               ],
             ),
@@ -1606,7 +1529,7 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
               backgroundColor: Colors.grey[900],
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(15.0),
-                side: BorderSide(color: Colors.tealAccent.withOpacity(0.5)),
+                side: BorderSide(color: Colors.tealAccent.withValues(alpha: 0.5)),
               ),
               title: Text(
                 '${_days[dayIndex]}曜日の予定を追加',
@@ -1826,7 +1749,7 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                 side: const BorderSide(color: Colors.redAccent, width: 2),
               ),
               elevation: 8,
-              shadowColor: Colors.redAccent.withOpacity(0.5),
+              shadowColor: Colors.redAccent.withValues(alpha: 0.5),
             );
 
             final activeLateStyle = ElevatedButton.styleFrom(
@@ -1838,7 +1761,7 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                 side: const BorderSide(color: Colors.orangeAccent, width: 2),
               ),
               elevation: 8,
-              shadowColor: Colors.orangeAccent.withOpacity(0.5),
+              shadowColor: Colors.orangeAccent.withValues(alpha: 0.5),
             );
 
             final inactiveStyle = ElevatedButton.styleFrom(
@@ -2098,7 +2021,7 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                                   ),
                                 ),
                                 Text(
-                                  '${absenceCount[entry!.courseId] ?? 0}回',
+                                  '${absenceCount[entry.courseId] ?? 0}回',
                                   style: TextStyle(
                                     color: Colors.grey[400],
                                     fontSize: 10,
@@ -2123,7 +2046,7 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                                   ),
                                 ),
                                 Text(
-                                  '${lateCount[entry!.courseId] ?? 0}回',
+                                  '${lateCount[entry.courseId] ?? 0}回',
                                   style: TextStyle(
                                     color: Colors.grey[400],
                                     fontSize: 10,
@@ -2194,7 +2117,7 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                     final teacherName = teacherNameController.text.trim();
                     ref
                         .read(timetableProvider.notifier)
-                        .setTeacherName(entry!.courseId!, teacherName);
+                        .setTeacherName(entry.courseId!, teacherName);
                     Navigator.of(dialogContext).pop();
                   },
                 ),
@@ -2215,94 +2138,13 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
       case AttendanceStatus.late:
         return Icon(Icons.watch_later, color: Colors.orange[700], size: 18);
       case AttendanceStatus.none:
-      default:
         return Icon(
           Icons.fact_check_outlined,
           color: Colors.grey[600],
           size: 18,
         );
     }
-  }
-
-  Widget _buildAttendancePopupMenu(String uniqueKey, TimetableEntry entry) {
-    // ★★★ 後方互換性のためのロジック変更 ★★★
-    String? policyString = attendancePolicies[entry.courseId];
-    if (policyString == null) {
-      policyString = attendancePolicies[entry.id];
-    }
-
-    if (policyString != AttendancePolicy.mandatory.toString()) {
-      return const SizedBox.shrink();
-    }
-
-    // ★★★ 新しい構造で出席状態を取得 ★★★
-    final date = DateFormat('yyyyMMdd').format(
-      _displayedMonday.add(
-        Duration(days: _getDayIndexFromUniqueKey(uniqueKey)),
-      ),
-    );
-    // ★★★ getAttendanceStatusメソッドを削除したため、直接stateから取得 ★★★
-    final attendanceStatus =
-        ref.read(timetableProvider)['attendanceStatus']
-            as Map<String, Map<String, String>>? ??
-        {};
-    final courseStatus = attendanceStatus[entry.courseId ?? ''] ?? {};
-    final currentStatusString = courseStatus[date];
-    final currentStatus =
-        currentStatusString != null
-            ? AttendanceStatus.values.firstWhere(
-              (status) => status.toString() == currentStatusString,
-              orElse: () => AttendanceStatus.none,
-            )
-            : AttendanceStatus.none;
-
-    return Theme(
-      data: Theme.of(
-        context,
-      ).copyWith(materialTapTargetSize: MaterialTapTargetSize.shrinkWrap),
-      child: PopupMenuButton<AttendanceStatus>(
-        child: _buildAttendanceStatusIcon(currentStatus),
-        tooltip: '出欠を記録',
-        onSelected: (AttendanceStatus newStatus) {
-          if (entry.courseId != null) {
-            _setAttendanceStatus(uniqueKey, entry.courseId!, newStatus);
-          }
-        },
-        itemBuilder:
-            (BuildContext context) => <PopupMenuEntry<AttendanceStatus>>[
-              const PopupMenuItem<AttendanceStatus>(
-                value: AttendanceStatus.present,
-                child: Row(
-                  children: [
-                    Icon(Icons.check_circle_outline, color: Colors.green),
-                    SizedBox(width: 8),
-                    Text('出席'),
-                  ],
-                ),
-              ),
-              const PopupMenuItem<AttendanceStatus>(
-                value: AttendanceStatus.absent,
-                child: Row(
-                  children: [
-                    Icon(Icons.cancel_outlined, color: Colors.red),
-                    SizedBox(width: 8),
-                    Text('欠席'),
-                  ],
-                ),
-              ),
-              const PopupMenuItem<AttendanceStatus>(
-                value: AttendanceStatus.late,
-                child: Row(
-                  children: [
-                    Icon(Icons.watch_later_outlined, color: Colors.orange),
-                    SizedBox(width: 8),
-                    Text('遅刻'),
-                  ],
-                ),
-              ),
-            ],
-      ),
-    );
+    // ここに到達しない想定
   }
 
   List<Widget> _buildSundayEventCells(double totalHeight) {
@@ -2313,9 +2155,9 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
     const int classEndMinutes = 20 * 60 + 0; // 20:00
     const int dayEndMinutes = 24 * 60 + 0; // 24:00
 
-    // 授業時間と放課後時間の高さ配分
-    final double classTimeHeight = totalHeight * 0.85; // 授業時間は85%
-    final double afterSchoolHeight = totalHeight * 0.15; // 放課後は15%
+    // 授業時間と放課後時間の高さ配分（7:1で8行に一致）
+    final double classTimeHeight = totalHeight * (7.0 / 8.0);
+    final double afterSchoolHeight = totalHeight * (1.0 / 8.0);
 
     final DateTime currentSunday = _displayedMonday.add(
       const Duration(days: 6),
@@ -2334,63 +2176,23 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
       final TimeOfDay endTime = event['end'];
       final String title = event['title'];
 
-      final int startMinutes = startTime.hour * 60 + startTime.minute;
-      final int endMinutes = endTime.hour * 60 + endTime.minute;
+      int rawStart = startTime.hour * 60 + startTime.minute;
+      int rawEnd = endTime.hour * 60 + endTime.minute;
 
-      double top, height;
+      // 全体を [classStartMinutes, dayEndMinutes] にクランプ
+      final int clampedStart = rawStart.clamp(classStartMinutes, dayEndMinutes);
+      final int clampedEnd = rawEnd.clamp(classStartMinutes, dayEndMinutes);
+      if (clampedEnd <= clampedStart) continue;
 
-      if (startMinutes < classEndMinutes) {
-        // 授業時間内の予定
-        final double classStartMinutesFromBase =
-            (startMinutes - classStartMinutes).toDouble();
-        final double classEndMinutesFromBase =
-            (endMinutes - classStartMinutes).toDouble();
-
-        top =
-            (classStartMinutesFromBase /
-                (classEndMinutes - classStartMinutes)) *
-            classTimeHeight;
-        height =
-            ((classEndMinutesFromBase - classStartMinutesFromBase) /
-                (classEndMinutes - classStartMinutes)) *
-            classTimeHeight;
-      } else {
-        // 放課後の予定
-        final double afterSchoolStartMinutesFromBase =
-            (startMinutes - classEndMinutes).toDouble();
-        final double afterSchoolEndMinutesFromBase =
-            (endMinutes - classEndMinutes).toDouble();
-
-        top =
-            classTimeHeight +
-            (afterSchoolStartMinutesFromBase /
-                    (dayEndMinutes - classEndMinutes)) *
-                afterSchoolHeight;
-        height =
-            ((afterSchoolEndMinutesFromBase - afterSchoolStartMinutesFromBase) /
-                (dayEndMinutes - classEndMinutes)) *
-            afterSchoolHeight;
-      }
-
-      if (height <= 0) continue;
-
-      const eventColor = Colors.pinkAccent;
-      eventCells.add(
-        Positioned(
-          top: top,
-          left: 0,
-          right: 0,
-          height: height,
-          child: Container(
-            margin: const EdgeInsets.symmetric(vertical: 1.0, horizontal: 2.0),
+      const eventColor = Color(0xFF62B5E5);
+      Widget buildEventWidget() => Container(
+            margin: const EdgeInsets.all(1.5),
             padding: const EdgeInsets.all(4.0),
             decoration: BoxDecoration(
-              color: eventColor.withOpacity(0.15),
+              color: eventColor.withValues(alpha: 0.18),
               borderRadius: BorderRadius.circular(4),
-              border: Border.all(color: eventColor),
-              boxShadow: [
-                BoxShadow(color: eventColor.withOpacity(0.6), blurRadius: 8.0),
-              ],
+              border:
+                  Border.all(color: eventColor.withValues(alpha: 0.6), width: 1),
             ),
             child: Center(
               child: Text(
@@ -2398,16 +2200,64 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                 style: const TextStyle(
                   fontFamily: 'NotoSansJP',
                   fontSize: 10,
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  shadows: [Shadow(color: eventColor, blurRadius: 10.0)],
+                  color: Colors.black87,
+                  fontWeight: FontWeight.w600,
                 ),
                 overflow: TextOverflow.ellipsis,
               ),
             ),
+          );
+
+      void addClassTimeSegment(int s, int e) {
+        final double sFromBase = (s - classStartMinutes).toDouble();
+        final double eFromBase = (e - classStartMinutes).toDouble();
+        final double top =
+            (sFromBase / (classEndMinutes - classStartMinutes)) *
+                classTimeHeight;
+        final double height =
+            ((eFromBase - sFromBase) /
+                (classEndMinutes - classStartMinutes)) *
+            classTimeHeight;
+        if (height <= 0) return;
+        eventCells.add(
+          Positioned(
+            top: top,
+            left: 0,
+            right: 0,
+            height: height,
+            child: buildEventWidget(),
           ),
-        ),
-      );
+        );
+      }
+
+      void addAfterSchoolSegment(int s, int e) {
+        final double sFromBase = (s - classEndMinutes).toDouble();
+        final double eFromBase = (e - classEndMinutes).toDouble();
+        final double top = classTimeHeight +
+            (sFromBase / (dayEndMinutes - classEndMinutes)) * afterSchoolHeight;
+        final double height =
+            ((eFromBase - sFromBase) / (dayEndMinutes - classEndMinutes)) *
+                afterSchoolHeight;
+        if (height <= 0) return;
+        eventCells.add(
+          Positioned(
+            top: top,
+            left: 0,
+            right: 0,
+            height: height,
+            child: buildEventWidget(),
+          ),
+        );
+      }
+
+      if (clampedEnd <= classEndMinutes) {
+        addClassTimeSegment(clampedStart, clampedEnd);
+      } else if (clampedStart >= classEndMinutes) {
+        addAfterSchoolSegment(clampedStart, clampedEnd);
+      } else {
+        addClassTimeSegment(clampedStart, classEndMinutes);
+        addAfterSchoolSegment(classEndMinutes, clampedEnd);
+      }
     }
     return eventCells;
   }
@@ -2445,50 +2295,17 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
 
     return Container(
       width: 45,
-      height: totalColumnHeight, // 中身の合計高さと一致させる
+      height: totalColumnHeight,
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.4), // 少し背景色を濃く
-        // ★★★ オーバーフローの原因となっていた外側の枠線を削除 ★★★
-        // border: Border.all(color: Colors.grey[700]!, width: 2),
+        color: Colors.white,
         borderRadius: const BorderRadius.all(Radius.circular(12)),
+        border: Border.all(color: Colors.grey[400]!, width: 1.0),
       ),
       child: ClipRRect(
         borderRadius: const BorderRadius.all(Radius.circular(10)),
         child: Stack(
           children: [
-            // --- ゲージの進捗バー ---
-            Align(
-              alignment: Alignment.topCenter,
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 500),
-                curve: Curves.easeOut,
-                height: totalColumnHeight * _timeGaugeProgress,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(10),
-                  gradient: LinearGradient(
-                    colors: [
-                      const Color.fromARGB(255, 20, 182, 226).withOpacity(0.7),
-                      const Color.fromARGB(255, 134, 19, 159).withOpacity(0.95),
-                    ],
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color.fromARGB(
-                        255,
-                        20,
-                        182,
-                        226,
-                      ).withOpacity(0.4),
-                      blurRadius: 15.0,
-                      spreadRadius: 5.0,
-                    ),
-                  ],
-                ),
-              ),
-            ),
+            // 進捗ゲージは非表示（ToDo風のフラットな見た目を優先）
             // --- 時限ラベルと時間、そして罫線 ---
             Column(
               children: List.generate(rowHeights.length, (index) {
@@ -2510,9 +2327,7 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                                     1 // 最後の行以外
                             ? Border(
                               bottom: BorderSide(
-                                color: Colors.white.withOpacity(
-                                  0.25,
-                                ), // ★ 少し色を調整
+                                color: Colors.grey[400]!,
                                 width: 1.0,
                               ),
                             )
@@ -2531,10 +2346,7 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                               style: const TextStyle(
                                 fontSize: 10,
                                 fontFamily: 'NotoSansJP',
-                                color: Colors.white,
-                                shadows: [
-                                  Shadow(color: Colors.black54, blurRadius: 2),
-                                ],
+                                color: Colors.black87,
                               ),
                             ),
                           ),
@@ -2548,10 +2360,7 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                               style: const TextStyle(
                                 fontSize: 10,
                                 fontFamily: 'NotoSansJP',
-                                color: Colors.white,
-                                shadows: [
-                                  Shadow(color: Colors.black54, blurRadius: 2),
-                                ],
+                                color: Colors.black87,
                               ),
                             ),
                           ),
@@ -2565,14 +2374,7 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                           fontFamily: 'NotoSansJP',
                           fontSize: periodLabels[index].length > 1 ? 12 : 18,
                           fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                          shadows: const [
-                            Shadow(
-                              color: Colors.black54,
-                              blurRadius: 2,
-                              offset: Offset(1, 1),
-                            ),
-                          ],
+                          color: Colors.black87,
                         ),
                         textAlign:
                             periodLabels[index] == '放課後'
@@ -2592,97 +2394,125 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
 
   // 新しいデザインの時間割ヘッダー（日付と曜日）
   Widget _buildNewTimetableHeader() {
-    return Row(
-      children: [
-        SizedBox(width: _timeColumnWidth), // ★ 変数を使用
-        Expanded(
-          child: Row(
-            children: List.generate(7, (dayIndex) {
-              final isSunday = dayIndex == 6;
-              return Expanded(
-                flex: 1,
-                child: Container(
-                  margin: const EdgeInsets.all(1.5),
-                  height: 40,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 4.0,
-                  ), // ★ 左右にパディングを追加
-                  child: Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          _days[dayIndex],
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12,
-                            fontFamily: 'NotoSansJP',
-                            color: isSunday ? Colors.red[300] : Colors.white,
-                            shadows: const [
-                              Shadow(color: Colors.black45, blurRadius: 2),
-                            ],
+    const Color deepBlue = Color(0xFF2E6DB6);
+    return Container(
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: BorderSide(color: Colors.grey.shade300, width: 1),
+        ),
+      ),
+      child: Row(
+        children: [
+          SizedBox(width: _timeColumnWidth), // ★ 変数を使用
+          Expanded(
+            child: Row(
+              children: List.generate(7, (dayIndex) {
+                final isSunday = dayIndex == 6;
+                return Expanded(
+                  flex: 1,
+                  child: Container(
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: deepBlue.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: deepBlue.withValues(alpha: 0.4)),
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 4.0,
+                    ), // ★ 左右にパディングを追加
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            _days[dayIndex],
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                              fontFamily: 'NotoSansJP',
+                              color:
+                                  isSunday ? Colors.red[600] : Colors.black87,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          _dayDates.isNotEmpty ? _dayDates[dayIndex] : "",
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontFamily: 'NotoSansJP',
-                            color: isSunday ? Colors.red[200] : Colors.white70,
+                          const SizedBox(height: 2),
+                          Text(
+                            _dayDates.isNotEmpty ? _dayDates[dayIndex] : "",
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontFamily: 'NotoSansJP',
+                              color:
+                                  isSunday ? Colors.red[400] : Colors.black54,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
-                ),
-              );
-            }),
+                );
+              }),
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
   // ★週選択UI
   Widget _buildWeekSelector() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4.0),
+    const Color deepBlue = Color(0xFF2E6DB6);
+    return Container(
+      margin: const EdgeInsets.fromLTRB(0, 8, 0, 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12.0),
+      height: 64,
+      decoration: BoxDecoration(
+        color: deepBlue,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 2,
+            offset: const Offset(0, 1),
+          ),
+        ],
+      ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          IconButton(
-            icon: const Icon(
-              Icons.arrow_back_ios,
-              color: Colors.white,
-              size: 18,
-            ),
-            onPressed:
-                () => _pageController.previousPage(
+            Padding(
+              padding: const EdgeInsets.only(top: 6.0),
+              child: IconButton(
+                icon: const Icon(
+                  Icons.arrow_back_ios,
+                  color: Colors.white,
+                  size: 22,
+                ),
+                onPressed: () => _pageController.previousPage(
                   duration: const Duration(milliseconds: 300),
                   curve: Curves.easeOut,
                 ),
-          ),
+              ),
+            ),
           Text(
             _weekDateRange,
             style: const TextStyle(
-              fontSize: 18.0,
-              fontWeight: FontWeight.bold,
+              fontSize: 20.0,
+              fontWeight: FontWeight.w700,
               color: Colors.white,
-              shadows: [Shadow(color: Colors.black45, blurRadius: 2)],
             ),
           ),
-          IconButton(
-            icon: const Icon(
-              Icons.arrow_forward_ios,
-              color: Colors.white,
-              size: 18,
+          Padding(
+            padding: const EdgeInsets.only(top: 6.0),
+            child: IconButton(
+              icon: const Icon(
+                Icons.arrow_forward_ios,
+                color: Colors.white,
+                size: 22,
+              ),
+              onPressed: () => _pageController.nextPage(
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeOut,
+              ),
             ),
-            onPressed:
-                () => _pageController.nextPage(
-                  duration: const Duration(milliseconds: 300),
-                  curve: Curves.easeOut,
-                ),
           ),
         ],
       ),
@@ -2718,87 +2548,63 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
       return Container(
         width: double.infinity,
         height: double.infinity,
-        child: Stack(
-          children: [
-            Positioned.fill(
-              child: Image.asset(
-                ref.watch(backgroundImagePathProvider),
-                fit: BoxFit.cover,
-              ),
-            ),
-            Positioned.fill(
-              child: Container(color: Colors.black.withOpacity(0.4)),
-            ),
-            SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                child: Column(
-                  children: [
-                    _buildWeekSelector(),
-                    _buildNewTimetableHeader(),
-                    Expanded(
-                      child: PageView.builder(
-                        controller: _pageController,
-                        onPageChanged: _changeWeek,
-                        itemBuilder: (context, page) {
-                          return Padding(
-                            padding: const EdgeInsets.only(
-                              top: 4.0,
-                              bottom: 8.0,
-                            ),
-                            child: LayoutBuilder(
-                              builder: (context, constraints) {
-                                final availableHeight = constraints.maxHeight;
-                                final dynamicRowHeight = availableHeight / 8.0;
+        color: Colors.white,
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+            child: Column(
+              children: [
+                _buildWeekSelector(),
+                _buildNewTimetableHeader(),
+                Expanded(
+                  child: PageView.builder(
+                    controller: _pageController,
+                    onPageChanged: _changeWeek,
+                    itemBuilder: (context, page) {
+                      return Padding(
+                        padding: const EdgeInsets.only(top: 4.0, bottom: 8.0),
+                        child: LayoutBuilder(
+                          builder: (context, constraints) {
+                            final availableHeight = constraints.maxHeight;
+                            final dynamicRowHeight = availableHeight / 8.0;
 
-                                return Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    _buildNewContinuousTimeColumn(
-                                      periodRowHeight: dynamicRowHeight,
-                                      lunchRowHeight: dynamicRowHeight,
-                                    ),
-                                    Expanded(
-                                      child: ClipRRect(
+                            return Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _buildNewContinuousTimeColumn(
+                                  periodRowHeight: dynamicRowHeight,
+                                  lunchRowHeight: dynamicRowHeight,
+                                ),
+                                Expanded(
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(12),
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
                                         borderRadius: BorderRadius.circular(12),
-                                        child: BackdropFilter(
-                                          filter: ImageFilter.blur(
-                                            sigmaX: 4.0,
-                                            sigmaY: 4.0,
-                                          ),
-                                          child: Container(
-                                            decoration: BoxDecoration(
-                                              color: Colors.black.withOpacity(
-                                                0.3,
-                                              ),
-                                              borderRadius:
-                                                  BorderRadius.circular(12),
-                                              border: Border.all(
-                                                color: Colors.grey[800]!,
-                                                width: 1.0,
-                                              ),
-                                            ),
-                                            child: _buildNewTimetableGrid(
-                                              periodRowHeight: dynamicRowHeight,
-                                              lunchRowHeight: dynamicRowHeight,
-                                            ),
-                                          ),
+                                        border: Border.all(
+                                          color: Colors.grey[400]!,
+                                          width: 1.0,
                                         ),
                                       ),
+                                      child: _buildNewTimetableGrid(
+                                        periodRowHeight: dynamicRowHeight,
+                                        lunchRowHeight: dynamicRowHeight,
+                                      ),
                                     ),
-                                  ],
-                                );
-                              },
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  ],
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
+                        ),
+                      );
+                    },
+                  ),
                 ),
-              ),
+              ],
             ),
-          ],
+          ),
         ),
       );
     }
@@ -2851,85 +2657,63 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
     return Container(
       width: double.infinity,
       height: double.infinity,
-      child: Stack(
-        children: [
-          Positioned.fill(
-            child: Image.asset(
-              ref.watch(backgroundImagePathProvider),
-              fit: BoxFit.cover,
-            ),
-          ),
-          Positioned.fill(
-            child: Container(color: Colors.black.withOpacity(0.4)),
-          ),
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8.0),
-              child: Column(
-                children: [
-                  _buildWeekSelector(),
-                  _buildNewTimetableHeader(),
-                  Expanded(
-                    child: PageView.builder(
-                      controller: _pageController,
-                      onPageChanged: _changeWeek,
-                      itemBuilder: (context, page) {
-                        return Padding(
-                          padding: const EdgeInsets.only(top: 4.0, bottom: 8.0),
-                          child: LayoutBuilder(
-                            builder: (context, constraints) {
-                              final availableHeight = constraints.maxHeight;
-                              final dynamicRowHeight = availableHeight / 8.0;
+      color: Colors.white,
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8.0),
+          child: Column(
+            children: [
+              _buildWeekSelector(),
+              _buildNewTimetableHeader(),
+              Expanded(
+                child: PageView.builder(
+                  controller: _pageController,
+                  onPageChanged: _changeWeek,
+                  itemBuilder: (context, page) {
+                    return Padding(
+                      padding: const EdgeInsets.only(top: 4.0, bottom: 8.0),
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          final availableHeight = constraints.maxHeight;
+                          final dynamicRowHeight = availableHeight / 8.0;
 
-                              return Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  _buildNewContinuousTimeColumn(
-                                    periodRowHeight: dynamicRowHeight,
-                                    lunchRowHeight: dynamicRowHeight,
-                                  ),
-                                  Expanded(
-                                    child: ClipRRect(
+                          return Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildNewContinuousTimeColumn(
+                                periodRowHeight: dynamicRowHeight,
+                                lunchRowHeight: dynamicRowHeight,
+                              ),
+                              Expanded(
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
                                       borderRadius: BorderRadius.circular(12),
-                                      child: BackdropFilter(
-                                        filter: ImageFilter.blur(
-                                          sigmaX: 4.0,
-                                          sigmaY: 4.0,
-                                        ),
-                                        child: Container(
-                                          decoration: BoxDecoration(
-                                            color: Colors.black.withOpacity(
-                                              0.3,
-                                            ),
-                                            borderRadius: BorderRadius.circular(
-                                              12,
-                                            ),
-                                            border: Border.all(
-                                              color: Colors.grey[800]!,
-                                              width: 1.0,
-                                            ),
-                                          ),
-                                          child: _buildNewTimetableGrid(
-                                            periodRowHeight: dynamicRowHeight,
-                                            lunchRowHeight: dynamicRowHeight,
-                                          ),
-                                        ),
+                                      border: Border.all(
+                                        color: Colors.grey[400]!,
+                                        width: 1.0,
                                       ),
                                     ),
+                                    child: _buildNewTimetableGrid(
+                                      periodRowHeight: dynamicRowHeight,
+                                      lunchRowHeight: dynamicRowHeight,
+                                    ),
                                   ),
-                                ],
-                              );
-                            },
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ],
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+                    );
+                  },
+                ),
               ),
-            ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -2943,7 +2727,6 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
       case AttendanceStatus.late:
         return '遅刻';
       case AttendanceStatus.none:
-      default:
         return '未設定';
     }
   }
@@ -3164,7 +2947,7 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                 width: MediaQuery.of(context).size.width * 0.9,
                 height: MediaQuery.of(context).size.height * 0.8,
                 decoration: BoxDecoration(
-                  color: Colors.grey[900]!.withOpacity(0.95),
+                  color: Colors.grey[900]!.withValues(alpha: 0.95),
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(color: Colors.grey[700]!, width: 2),
                 ),
@@ -3175,7 +2958,7 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                       width: double.infinity,
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
-                        color: Colors.blue[600]!.withOpacity(0.8),
+                        color: Colors.blue[600]!.withValues(alpha: 0.8),
                         borderRadius: const BorderRadius.only(
                           topLeft: Radius.circular(18),
                           topRight: Radius.circular(18),
@@ -3239,7 +3022,7 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                                         ),
                                       ),
                                       filled: true,
-                                      fillColor: Colors.grey[800]!.withOpacity(
+                                      fillColor: Colors.grey[800]!.withValues(alpha: 
                                         0.5,
                                       ),
                                       suffixIcon: Icon(
@@ -3276,7 +3059,7 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                                     ),
                                   ),
                                   filled: true,
-                                  fillColor: Colors.grey[800]!.withOpacity(0.5),
+                                  fillColor: Colors.grey[800]!.withValues(alpha: 0.5),
                                 ),
                               ),
                             ),
@@ -3304,7 +3087,7 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                                     ),
                                   ),
                                   filled: true,
-                                  fillColor: Colors.grey[800]!.withOpacity(0.5),
+                                  fillColor: Colors.grey[800]!.withValues(alpha: 0.5),
                                 ),
                               ),
                             ),
@@ -3332,7 +3115,7 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                                     ),
                                   ),
                                   filled: true,
-                                  fillColor: Colors.grey[800]!.withOpacity(0.5),
+                                  fillColor: Colors.grey[800]!.withValues(alpha: 0.5),
                                 ),
                               ),
                             ),
@@ -3472,7 +3255,10 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
         // ローカルの時間割グリッドを更新
         if (mounted) {
           // timetable.dartの関数を使って開始・終了時刻を取得
-          final times = getPeriodStartAndEndTimes(DateTime.now(), periodIndex + 1);
+          final times = getPeriodStartAndEndTimes(
+            DateTime.now(),
+            periodIndex + 1,
+          );
           final startTime = times['start']!;
           final endTime = times['end']!;
 
@@ -3754,7 +3540,15 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
             _isEventsLoading = false;
           });
         } else {
-          print('DEBUG: Firestoreに予定データが存在しません');
+          print(
+            'DEBUG: Firestoreに予定データが存在しません (users/${user.uid}/timetable/events)',
+          );
+          // ドキュメントが存在しない場合でもローディングは終了させる
+          if (mounted) {
+            setState(() {
+              _isEventsLoading = false;
+            });
+          }
         }
       }
     } catch (e) {
@@ -3988,7 +3782,10 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                 if (_subjectController.text.trim().isEmpty) return;
 
                 // timetable.dartの関数を使って開始・終了時刻を取得
-                final times = getPeriodStartAndEndTimes(DateTime.now(), _selectedPeriod);
+                final times = getPeriodStartAndEndTimes(
+                  DateTime.now(),
+                  _selectedPeriod,
+                );
                 final startTime = times['start']!;
                 final endTime = times['end']!;
 
@@ -4127,7 +3924,7 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
           child: Container(
             width: MediaQuery.of(context).size.width * 0.9,
             decoration: BoxDecoration(
-              color: Colors.grey[900]!.withOpacity(0.95),
+              color: Colors.grey[900]!.withValues(alpha: 0.95),
               borderRadius: BorderRadius.circular(20),
               border: Border.all(color: Colors.grey[700]!, width: 2),
             ),
@@ -4139,7 +3936,7 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: Colors.blue[600]!.withOpacity(0.8),
+                    color: Colors.blue[600]!.withValues(alpha: 0.8),
                     borderRadius: const BorderRadius.only(
                       topLeft: Radius.circular(18),
                       topRight: Radius.circular(18),
@@ -4202,7 +3999,7 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                                   ),
                                 ),
                                 filled: true,
-                                fillColor: Colors.grey[800]!.withOpacity(0.5),
+                                fillColor: Colors.grey[800]!.withValues(alpha: 0.5),
                                 suffixIcon: Icon(
                                   Icons.people,
                                   color: Colors.blue[400],
@@ -4260,7 +4057,7 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                                   ),
                                 ),
                                 filled: true,
-                                fillColor: Colors.grey[800]!.withOpacity(0.5),
+                                fillColor: Colors.grey[800]!.withValues(alpha: 0.5),
                                 suffixIcon: Icon(
                                   Icons.people,
                                   color: Colors.blue[400],
@@ -4305,7 +4102,7 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                               borderSide: BorderSide(color: Colors.blue[400]!),
                             ),
                             filled: true,
-                            fillColor: Colors.grey[800]!.withOpacity(0.5),
+                            fillColor: Colors.grey[800]!.withValues(alpha: 0.5),
                           ),
                           dropdownColor: Colors.grey[900],
                         ),
@@ -4328,7 +4125,7 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                               borderSide: BorderSide(color: Colors.blue[400]!),
                             ),
                             filled: true,
-                            fillColor: Colors.grey[800]!.withOpacity(0.5),
+                            fillColor: Colors.grey[800]!.withValues(alpha: 0.5),
                           ),
                         ),
                       ),
@@ -4417,17 +4214,21 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                               'period': period,
                               'date': '',
                               'color':
-                                  _neonColors[_subjectController.text
+                                  _palette[_subjectController.text
                                               .trim()
-                                              .hashCode %
-                                          _neonColors.length]
+                                              .hashCode
+                                              .abs() %
+                                          _palette.length]
                                       .value,
                               'createdAt': DateTime.now().toIso8601String(),
                               'updatedAt': DateTime.now().toIso8601String(),
                             };
 
                             // timetable.dartの関数を使って開始・終了時刻を取得
-                            final times = getPeriodStartAndEndTimes(DateTime.now(), period);
+                            final times = getPeriodStartAndEndTimes(
+                              DateTime.now(),
+                              period,
+                            );
                             final startTime = times['start']!;
                             final endTime = times['end']!;
 
@@ -4440,10 +4241,11 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                               period: period,
                               date: '',
                               color:
-                                  _neonColors[_subjectController.text
+                                  _palette[_subjectController.text
                                           .trim()
-                                          .hashCode %
-                                      _neonColors.length],
+                                          .hashCode
+                                          .abs() %
+                                      _palette.length],
                               startTime: startTime,
                               endTime: endTime,
                             );

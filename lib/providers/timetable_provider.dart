@@ -392,6 +392,27 @@ class TimetableNotifier extends StateNotifier<Map<String, dynamic>> {
     return courseIds?[cellKey];
   }
 
+  // ★★★ クエスト作成用: 選択中の授業を設定 ★★★
+  void setQuestSelectedClass(Map<String, dynamic>? classData) {
+    state = {...state, 'questSelectedClass': classData};
+    _saveToFirestore();
+  }
+
+  // ★★★ クエスト作成用: 入力中のタスク種別/締切/説明を設定 ★★★
+  void setQuestData({
+    String? taskType,
+    DateTime? deadline,
+    String? description,
+  }) {
+    state = {
+      ...state,
+      if (taskType != null) 'questTaskType': taskType,
+      if (deadline != null) 'questDeadline': deadline.toIso8601String(),
+      if (description != null) 'questDescription': description,
+    };
+    _saveToFirestore();
+  }
+
   // ★★★ ローディング状態を取得 ★★★
   bool get isLoading => state['isLoading'] ?? false;
 

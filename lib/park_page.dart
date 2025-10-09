@@ -83,7 +83,12 @@ class _ParkPageState extends ConsumerState<ParkPage> {
   // タブは廃止。Myタスクのみを表示。
   static const Color _cWhite = Color(0xFFFFFFFF);
   static const Color _cBlack = Color(0xFF000000);
-  static const Color _cBlue = Color(0xFF0B5FFF);
+  // ToDoタイトルバーのブランドカラー（指定色）
+  static const Color _cTitleBar = Color(0xff2e6db6);
+  // ブランドパレット
+  static const Color _cPrimary = _cTitleBar; // 0xff2e6db6
+  static const Color _cAccent = Color(0xff62b5e5); // 明るめブルー
+  static const Color _cMint = Color(0xff58c3a9); // ミント系
   // UI 切替フラグをグローバル設定から取得
   int _segmentIndex = 0; // 0: 未完了, 1: 完了（iOS風セグメント）
   // 未完了→完了時にチェック円の上でパルスを出すためのIDセット
@@ -506,12 +511,14 @@ class _ParkPageState extends ConsumerState<ParkPage> {
 
       // 自分が既に完了したクエストを分離
       final List<Map<String, dynamic>> completedQuests = [];
-      final filteredQuests = quests.where((quest) {
-        final completedBy = quest['completedUserIds'] as List<dynamic>?;
-        final bool isCompleted = completedBy != null && completedBy.contains(user.uid);
-        if (isCompleted) completedQuests.add(quest);
-        return !isCompleted;
-      }).toList();
+      final filteredQuests =
+          quests.where((quest) {
+            final completedBy = quest['completedUserIds'] as List<dynamic>?;
+            final bool isCompleted =
+                completedBy != null && completedBy.contains(user.uid);
+            if (isCompleted) completedQuests.add(quest);
+            return !isCompleted;
+          }).toList();
 
       print(
         'DEBUG: After filtering completed quests: ${filteredQuests.length} quests',
@@ -791,8 +798,8 @@ class _ParkPageState extends ConsumerState<ParkPage> {
   @override
   Widget build(BuildContext context) {
     // Riverpodから時間割データを取得（新UIでは未使用だが既存依存を維持）
-  // ignore: unused_local_variable
-  final timetableAsyncValue = ref.watch(timetableProvider);
+    // ignore: unused_local_variable
+    final timetableAsyncValue = ref.watch(timetableProvider);
     final screenHeight = MediaQuery.of(context).size.height;
     final screenWidth = MediaQuery.of(context).size.width;
     final double topBarHeight = screenHeight * 0.08;
@@ -1139,9 +1146,10 @@ class _ParkPageState extends ConsumerState<ParkPage> {
       if (bd == null) return -1; // bが期限なし → aが前
       return ad.compareTo(bd);
     }
+
     mergedActive.sort(_deadlineCompare);
     mergedCompleted.sort(_deadlineCompare);
-  // 2分割表示にするため、ここではリストの選択は行わない
+    // 2分割表示にするため、ここではリストの選択は行わない
 
     return Stack(
       children: [
@@ -1156,11 +1164,17 @@ class _ParkPageState extends ConsumerState<ParkPage> {
                 child: BackdropFilter(
                   filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.8),
-                      border: const Border(
-                        bottom: BorderSide(color: Color(0x1A000000), width: 0.5), // hairline
+                      color: _cTitleBar.withOpacity(0.85),
+                      border: Border(
+                        bottom: BorderSide(
+                          color: Colors.white.withOpacity(0.20),
+                          width: 0.5,
+                        ), // hairline
                       ),
                     ),
                     child: Row(
@@ -1171,9 +1185,11 @@ class _ParkPageState extends ConsumerState<ParkPage> {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Text(
-                                _userName.isNotEmpty ? _userName : widget.userName,
+                                _userName.isNotEmpty
+                                    ? _userName
+                                    : widget.userName,
                                 style: const TextStyle(
-                                  color: _cBlack,
+                                  color: Colors.white,
                                   fontSize: 14,
                                   fontWeight: FontWeight.w600,
                                   fontFamily: 'NotoSansJP',
@@ -1185,7 +1201,7 @@ class _ParkPageState extends ConsumerState<ParkPage> {
                               const Text(
                                 'ToDo リスト',
                                 style: TextStyle(
-                                  color: _cBlack,
+                                  color: Colors.white,
                                   fontSize: 22,
                                   fontWeight: FontWeight.w800,
                                   fontFamily: 'NotoSansJP',
@@ -1203,9 +1219,9 @@ class _ParkPageState extends ConsumerState<ParkPage> {
                                       begin: Alignment.centerLeft,
                                       end: Alignment.centerRight,
                                       colors: [
-                                        _cBlue,
-                                        _cBlue.withOpacity(0.6),
-                                        _cBlue.withOpacity(0.2),
+                                        _cTitleBar,
+                                        _cTitleBar.withOpacity(0.6),
+                                        _cTitleBar.withOpacity(0.2),
                                         Colors.transparent,
                                       ],
                                     ),
@@ -1222,7 +1238,12 @@ class _ParkPageState extends ConsumerState<ParkPage> {
                               onTap: () => _showOztechDialog(context),
                               child: ClipRRect(
                                 borderRadius: BorderRadius.circular(8),
-                                child: Image.asset('assets/oztech.png', width: 26, height: 26, fit: BoxFit.cover),
+                                child: Image.asset(
+                                  'assets/oztech.png',
+                                  width: 26,
+                                  height: 26,
+                                  fit: BoxFit.cover,
+                                ),
                               ),
                             ),
                             const SizedBox(width: 12),
@@ -1230,7 +1251,12 @@ class _ParkPageState extends ConsumerState<ParkPage> {
                               onTap: () => _showPotiPotiDialog(context),
                               child: ClipRRect(
                                 borderRadius: BorderRadius.circular(8),
-                                child: Image.asset('assets/potipoti.png', width: 26, height: 26, fit: BoxFit.cover),
+                                child: Image.asset(
+                                  'assets/potipoti.png',
+                                  width: 26,
+                                  height: 26,
+                                  fit: BoxFit.cover,
+                                ),
                               ),
                             ),
                             const SizedBox(width: 40),
@@ -1251,12 +1277,24 @@ class _ParkPageState extends ConsumerState<ParkPage> {
                   thumbColor: Colors.white,
                   children: const {
                     0: Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      child: Text('未完了', style: TextStyle(fontWeight: FontWeight.w600)),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      child: Text(
+                        '未完了',
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
                     ),
                     1: Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      child: Text('完了', style: TextStyle(fontWeight: FontWeight.w600)),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      child: Text(
+                        '完了',
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
                     ),
                   },
                   onValueChanged: (val) {
@@ -1269,33 +1307,60 @@ class _ParkPageState extends ConsumerState<ParkPage> {
 
               // 上半分: 未完了 / 下半分: 完了
               Expanded(
-                child: _isLoadingQuests
-                    ? const Center(child: CircularProgressIndicator())
-                    : (_segmentIndex == 0
-                        ? ((mergedActive.isEmpty)
-                            ? Center(
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: const [
-                                    Icon(CupertinoIcons.tray, color: _cBlue, size: 40),
-                                    SizedBox(height: 8),
-                                    Text('未完了のタスクはありません', style: TextStyle(color: _cBlack, fontFamily: 'NotoSansJP')),
-                                  ],
-                                ),
-                              )
-                            : _buildTodoListView(mergedActive, completedView: false))
-                        : ((mergedCompleted.isEmpty)
-                            ? Center(
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: const [
-                                    Icon(CupertinoIcons.checkmark_seal, color: _cBlue, size: 40),
-                                    SizedBox(height: 8),
-                                    Text('完了したタスクはありません', style: TextStyle(color: _cBlack, fontFamily: 'NotoSansJP')),
-                                  ],
-                                ),
-                              )
-                            : _buildTodoListView(mergedCompleted, completedView: true))),
+                child:
+                    _isLoadingQuests
+                        ? const Center(child: CircularProgressIndicator())
+                        : (_segmentIndex == 0
+                            ? ((mergedActive.isEmpty)
+                                ? Center(
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: const [
+                                      Icon(
+                                        CupertinoIcons.tray,
+                                        color: _cPrimary,
+                                        size: 40,
+                                      ),
+                                      SizedBox(height: 8),
+                                      Text(
+                                        '未完了のタスクはありません',
+                                        style: TextStyle(
+                                          color: _cBlack,
+                                          fontFamily: 'NotoSansJP',
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                )
+                                : _buildTodoListView(
+                                  mergedActive,
+                                  completedView: false,
+                                ))
+                            : ((mergedCompleted.isEmpty)
+                                ? Center(
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: const [
+                                      Icon(
+                                        CupertinoIcons.checkmark_seal,
+                                        color: _cPrimary,
+                                        size: 40,
+                                      ),
+                                      SizedBox(height: 8),
+                                      Text(
+                                        '完了したタスクはありません',
+                                        style: TextStyle(
+                                          color: _cBlack,
+                                          fontFamily: 'NotoSansJP',
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                )
+                                : _buildTodoListView(
+                                  mergedCompleted,
+                                  completedView: true,
+                                ))),
               ),
               const SizedBox(height: 76), // ボトムナビ分の余白
             ],
@@ -1310,19 +1375,30 @@ class _ParkPageState extends ConsumerState<ParkPage> {
           bottom: (MediaQuery.of(context).size.height <= 720) ? 160 : 210,
           child: Center(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(minWidth: 160, maxWidth: 240, minHeight: 48),
+              constraints: const BoxConstraints(
+                minWidth: 160,
+                maxWidth: 240,
+                minHeight: 48,
+              ),
               child: ElevatedButton(
                 onPressed: () {
                   HapticFeedback.lightImpact();
                   _showAddPicker(context);
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: _cBlue,
+                  backgroundColor: _cPrimary,
                   elevation: 0,
                   shape: const StadiumBorder(),
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                 ),
-                child: const Text('＋ 追加', style: TextStyle(color: _cWhite, fontWeight: FontWeight.w700, letterSpacing: 0.2)),
+                child: const Text(
+                  '＋ 追加',
+                  style: TextStyle(
+                    color: _cWhite,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.2,
+                  ),
+                ),
               ),
             ),
           ),
@@ -1364,7 +1440,7 @@ class _ParkPageState extends ConsumerState<ParkPage> {
             mainAxisSize: MainAxisSize.min,
             children: [
               ListTile(
-                leading: const Icon(Icons.school, color: _cBlue),
+                leading: const Icon(Icons.school, color: _cAccent),
                 title: const Text('授業に紐づくクエストを作成'),
                 onTap: () {
                   Navigator.pop(ctx);
@@ -1372,7 +1448,7 @@ class _ParkPageState extends ConsumerState<ParkPage> {
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.note_add, color: _cBlue),
+                leading: const Icon(Icons.note_add, color: _cAccent),
                 title: const Text('メモ（授業外）を作成'),
                 onTap: () {
                   Navigator.pop(ctx);
@@ -1393,100 +1469,98 @@ class _ParkPageState extends ConsumerState<ParkPage> {
     showDialog(
       context: context,
       builder: (ctx) {
-        return StatefulBuilder(builder: (ctx, setLocalState) {
-          return AlertDialog(
-            title: const Text('新規メモ（授業外）'),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    controller: titleController,
-                    keyboardType: TextInputType.text,
-                    textInputAction: TextInputAction.done,
-                    enableSuggestions: true,
-                    autocorrect: true,
-                    textCapitalization: TextCapitalization.none,
-                    style: const TextStyle(
-                      fontFamily: 'NotoSansJP',
+        return StatefulBuilder(
+          builder: (ctx, setLocalState) {
+            return AlertDialog(
+              title: const Text('新規メモ（授業外）'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: titleController,
+                      keyboardType: TextInputType.text,
+                      textInputAction: TextInputAction.done,
+                      enableSuggestions: true,
+                      autocorrect: true,
+                      textCapitalization: TextCapitalization.none,
+                      style: const TextStyle(fontFamily: 'NotoSansJP'),
+                      decoration: const InputDecoration(labelText: 'タイトル'),
                     ),
-                    decoration: const InputDecoration(
-                      labelText: 'タイトル',
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: descController,
+                      decoration: const InputDecoration(labelText: '説明（任意）'),
+                      maxLines: 3,
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  TextField(
-                    controller: descController,
-                    decoration: const InputDecoration(
-                      labelText: '説明（任意）',
-                    ),
-                    maxLines: 3,
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          pickedDeadline == null
-                              ? '期限: 指定なし'
-                              : '期限: ${DateFormat('MM/dd HH:mm').format(pickedDeadline!)}',
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            pickedDeadline == null
+                                ? '期限: 指定なし'
+                                : '期限: ${DateFormat('MM/dd HH:mm').format(pickedDeadline!)}',
+                          ),
                         ),
-                      ),
-                      TextButton(
-                        onPressed: () async {
-                          final now = DateTime.now();
-                          final date = await showDatePicker(
-                            context: ctx,
-                            initialDate: now,
-                            firstDate: now.subtract(const Duration(days: 365)),
-                            lastDate: now.add(const Duration(days: 365 * 5)),
-                          );
-                          if (date != null) {
-                            final time = await showTimePicker(
+                        TextButton(
+                          onPressed: () async {
+                            final now = DateTime.now();
+                            final date = await showDatePicker(
                               context: ctx,
-                              initialTime: TimeOfDay.now(),
+                              initialDate: now,
+                              firstDate: now.subtract(
+                                const Duration(days: 365),
+                              ),
+                              lastDate: now.add(const Duration(days: 365 * 5)),
                             );
-                            if (time != null) {
-                              setLocalState(() {
-                                pickedDeadline = DateTime(
-                                  date.year,
-                                  date.month,
-                                  date.day,
-                                  time.hour,
-                                  time.minute,
-                                );
-                              });
+                            if (date != null) {
+                              final time = await showTimePicker(
+                                context: ctx,
+                                initialTime: TimeOfDay.now(),
+                              );
+                              if (time != null) {
+                                setLocalState(() {
+                                  pickedDeadline = DateTime(
+                                    date.year,
+                                    date.month,
+                                    date.day,
+                                    time.hour,
+                                    time.minute,
+                                  );
+                                });
+                              }
                             }
-                          }
-                        },
-                        child: const Text('期限を選択'),
-                      ),
-                    ],
-                  ),
-                ],
+                          },
+                          child: const Text('期限を選択'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text('キャンセル'),
-              ),
-              TextButton(
-                onPressed: () {
-                  final title = titleController.text.trim();
-                  if (title.isEmpty) return;
-                  _addLocalTodo(
-                    title: title,
-                    description: descController.text.trim(),
-                    deadline: pickedDeadline,
-                  );
-                  Navigator.pop(ctx);
-                },
-                child: const Text('作成'),
-              ),
-            ],
-          );
-        });
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('キャンセル'),
+                ),
+                TextButton(
+                  onPressed: () {
+                    final title = titleController.text.trim();
+                    if (title.isEmpty) return;
+                    _addLocalTodo(
+                      title: title,
+                      description: descController.text.trim(),
+                      deadline: pickedDeadline,
+                    );
+                    Navigator.pop(ctx);
+                  },
+                  child: const Text('作成'),
+                ),
+              ],
+            );
+          },
+        );
       },
     );
   }
@@ -1539,9 +1613,14 @@ class _ParkPageState extends ConsumerState<ParkPage> {
 
   // タブUIは廃止
 
-  Widget _buildTodoListView(List<Map<String, dynamic>> items, {bool completedView = false}) {
+  Widget _buildTodoListView(
+    List<Map<String, dynamic>> items, {
+    bool completedView = false,
+  }) {
     return ListView.separated(
-      physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+      physics: const BouncingScrollPhysics(
+        parent: AlwaysScrollableScrollPhysics(),
+      ),
       padding: const EdgeInsets.symmetric(vertical: 8),
       itemCount: items.length,
       separatorBuilder: (_, __) => const SizedBox(height: 8),
@@ -1575,12 +1654,18 @@ class _ParkPageState extends ConsumerState<ParkPage> {
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Dismissible(
             key: ValueKey('task-$questId-${completedView ? 'done' : 'active'}'),
-            direction: completedView
-                ? (isLocal ? DismissDirection.startToEnd : DismissDirection.none)
-                : DismissDirection.startToEnd,
+            direction:
+                completedView
+                    ? (isLocal
+                        ? DismissDirection.startToEnd
+                        : DismissDirection.none)
+                    : DismissDirection.startToEnd,
             background: Container(
               decoration: BoxDecoration(
-                color: completedView ? Colors.orange.shade100 : Colors.green.shade100,
+                color:
+                    completedView
+                        ? Colors.orange.shade100
+                        : Colors.green.shade100,
                 borderRadius: BorderRadius.circular(12),
               ),
               padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -1597,16 +1682,24 @@ class _ParkPageState extends ConsumerState<ParkPage> {
               } else {
                 // 未完了一覧: Firestoreは確認、ローカルは即時
                 if (isLocal) return true;
-                final ok = await showDialog<bool>(
+                final ok =
+                    await showDialog<bool>(
                       context: context,
-                      builder: (_) => AlertDialog(
-                        title: const Text('討伐の確認'),
-                        content: const Text('このタスクを完了にしますか？'),
-                        actions: [
-                          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('キャンセル')),
-                          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('完了')), 
-                        ],
-                      ),
+                      builder:
+                          (_) => AlertDialog(
+                            title: const Text('討伐の確認'),
+                            content: const Text('このタスクを完了にしますか？'),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, false),
+                                child: const Text('キャンセル'),
+                              ),
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, true),
+                                child: const Text('完了'),
+                              ),
+                            ],
+                          ),
                     ) ??
                     false;
                 return ok;
@@ -1639,217 +1732,261 @@ class _ParkPageState extends ConsumerState<ParkPage> {
               }
             },
             child: AnimatedContainer(
-            decoration: BoxDecoration(
-                color: completedView ? _cBlue.withOpacity(0.04) : _cWhite,
+              decoration: BoxDecoration(
+                color: completedView ? _cAccent.withOpacity(0.06) : _cWhite,
                 borderRadius: BorderRadius.circular(12),
                 // iOS風: 影は基本0、極薄のヘアライン枠
                 boxShadow: const [],
-                border: Border.all(color: Colors.black.withOpacity(0.06), width: 0.5),
+                border: Border.all(
+                  color: Colors.black.withOpacity(0.06),
+                  width: 0.5,
+                ),
               ),
               duration: const Duration(milliseconds: 180),
               curve: Curves.easeOut,
-            child: ListTile(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              leading: InkWell(
-                customBorder: const CircleBorder(),
-                onTap: completedView
-                    ? null
-                    : () {
-                        HapticFeedback.lightImpact();
-                        if (isLocal) {
-                          // まず演出を出してから、短い遅延で完了へ移動（見えやすさ優先）
-                          _playCheckPulse(questId);
-                          Future.delayed(const Duration(milliseconds: 380), () {
-                            if (!mounted) return;
-                            setState(() {
-                              final idx = _localTodos.indexWhere((e) => e['id'] == questId);
-                              if (idx != -1) {
-                                _localTodos[idx]['completed'] = true;
-                              }
-                            });
-                            _saveLocalTodos();
-                          });
-                        } else {
-                          // Firestoreは確認の上で完了にする。演出は先に出す。
-                          _playCheckPulse(questId);
-                          _confirmAndSubmitTask(questId, taskData);
-                        }
-                      },
-                child: SizedBox(
-                  width: 22,
-                  height: 22,
-                  child: Stack(
-                    alignment: Alignment.center,
-                    clipBehavior: Clip.none,
-                    children: [
-                      TweenAnimationBuilder<double>(
-                        duration: const Duration(milliseconds: 180),
-                        curve: Curves.easeOut,
-                        tween: Tween(begin: 0, end: completedView ? 1 : 0),
-                        builder: (context, t, child) {
-                          final bool checked = completedView;
-                          return Icon(
-                            checked ? CupertinoIcons.check_mark_circled_solid : CupertinoIcons.circle,
-                            color: checked ? _cBlue : _cBlack,
-                            size: 22,
-                          );
-                        },
-                      ),
-                      // 完了演出: 小さな粒が四方に弾けるバースト
-                      if (_pulsingChecks.contains(questId))
-                        TweenAnimationBuilder<double>(
-                          key: ValueKey('burst-$questId'),
-                          tween: Tween(begin: 0.0, end: 1.0),
-                          duration: const Duration(milliseconds: 450),
-                          curve: Curves.easeOutCubic,
-                          builder: (context, t, _) {
-                            final int particleCount = 10;
-                            final double maxR = 14.0; // 半径
-                            final double r = maxR * t;
-                            final double opacity = (1 - t).clamp(0.0, 1.0);
-                            return Opacity(
-                              opacity: opacity,
-                              child: Stack(
-                                clipBehavior: Clip.none,
-                                children: List.generate(particleCount, (i) {
-                                  final double angle = (2 * math.pi / particleCount) * i;
-                                  final double dx = math.cos(angle) * r;
-                                  final double dy = math.sin(angle) * r;
-                                  return Transform.translate(
-                                    offset: Offset(dx, dy),
-                                    child: Container(
-                                      width: 3,
-                                      height: 3,
-                                      decoration: BoxDecoration(
-                                        color: _cBlue,
-                                        shape: BoxShape.circle,
-                                      ),
-                                    ),
-                                  );
-                                }),
-                              ),
-                            );
-                          },
-                        ),
-                      if (_pulsingChecks.contains(questId))
-                        TweenAnimationBuilder<double>(
-                          key: ValueKey('pulse-$questId'),
-                          tween: Tween(begin: 0.0, end: 1.0),
-                          duration: const Duration(milliseconds: 450),
-                          onEnd: () {
-                            if (mounted) {
-                              setState(() {
-                                _pulsingChecks.remove(questId);
-                              });
+              child: ListTile(
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                leading: InkWell(
+                  customBorder: const CircleBorder(),
+                  onTap:
+                      completedView
+                          ? null
+                          : () {
+                            HapticFeedback.lightImpact();
+                            if (isLocal) {
+                              // まず演出を出してから、短い遅延で完了へ移動（見えやすさ優先）
+                              _playCheckPulse(questId);
+                              Future.delayed(
+                                const Duration(milliseconds: 380),
+                                () {
+                                  if (!mounted) return;
+                                  setState(() {
+                                    final idx = _localTodos.indexWhere(
+                                      (e) => e['id'] == questId,
+                                    );
+                                    if (idx != -1) {
+                                      _localTodos[idx]['completed'] = true;
+                                    }
+                                  });
+                                  _saveLocalTodos();
+                                },
+                              );
+                            } else {
+                              // Firestoreは確認の上で完了にする。演出は先に出す。
+                              _playCheckPulse(questId);
+                              _confirmAndSubmitTask(questId, taskData);
                             }
                           },
-                          builder: (context, t, _) {
-                            final double size = 22 + 12 * t; // 22→34
-                            final double opacity = (1 - t).clamp(0.0, 1.0);
-                            return Opacity(
-                              opacity: opacity,
-                              child: Container(
-                                width: size,
-                                height: size,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: _cBlue.withOpacity(opacity),
-                                    width: 2 - 1.2 * t, // 2→0.8
-                                  ),
-                                ),
-                              ),
+                  child: SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      clipBehavior: Clip.none,
+                      children: [
+                        TweenAnimationBuilder<double>(
+                          duration: const Duration(milliseconds: 180),
+                          curve: Curves.easeOut,
+                          tween: Tween(begin: 0, end: completedView ? 1 : 0),
+                          builder: (context, t, child) {
+                            final bool checked = completedView;
+                            return Icon(
+                              checked
+                                  ? CupertinoIcons.check_mark_circled_solid
+                                  : CupertinoIcons.circle,
+                              color: checked ? _cPrimary : _cBlack,
+                              size: 22,
                             );
                           },
                         ),
-                    ],
-                  ),
-                ),
-              ),
-              title: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      questName,
-                      style: TextStyle(
-                        color: (isExpired && !completedView) ? Colors.red : _cBlack,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                      ),
-                      overflow: TextOverflow.ellipsis,
+                        // 完了演出: 小さな粒が四方に弾けるバースト
+                        if (_pulsingChecks.contains(questId))
+                          TweenAnimationBuilder<double>(
+                            key: ValueKey('burst-$questId'),
+                            tween: Tween(begin: 0.0, end: 1.0),
+                            duration: const Duration(milliseconds: 450),
+                            curve: Curves.easeOutCubic,
+                            builder: (context, t, _) {
+                              final int particleCount = 10;
+                              final double maxR = 14.0; // 半径
+                              final double r = maxR * t;
+                              final double opacity = (1 - t).clamp(0.0, 1.0);
+                              return Opacity(
+                                opacity: opacity,
+                                child: Stack(
+                                  clipBehavior: Clip.none,
+                                  children: List.generate(particleCount, (i) {
+                                    final double angle =
+                                        (2 * math.pi / particleCount) * i;
+                                    final double dx = math.cos(angle) * r;
+                                    final double dy = math.sin(angle) * r;
+                                    return Transform.translate(
+                                      offset: Offset(dx, dy),
+                                      child: Container(
+                                        width: 3,
+                                        height: 3,
+                                        decoration: BoxDecoration(
+                                          color: _cAccent,
+                                          shape: BoxShape.circle,
+                                        ),
+                                      ),
+                                    );
+                                  }),
+                                ),
+                              );
+                            },
+                          ),
+                        if (_pulsingChecks.contains(questId))
+                          TweenAnimationBuilder<double>(
+                            key: ValueKey('pulse-$questId'),
+                            tween: Tween(begin: 0.0, end: 1.0),
+                            duration: const Duration(milliseconds: 450),
+                            onEnd: () {
+                              if (mounted) {
+                                setState(() {
+                                  _pulsingChecks.remove(questId);
+                                });
+                              }
+                            },
+                            builder: (context, t, _) {
+                              final double size = 22 + 12 * t; // 22→34
+                              final double opacity = (1 - t).clamp(0.0, 1.0);
+                              return Opacity(
+                                opacity: opacity,
+                                child: Container(
+                                  width: size,
+                                  height: size,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: _cAccent.withOpacity(opacity),
+                                      width: 2 - 1.2 * t, // 2→0.8
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                      ],
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  // 期日バッジ
-                  if (deadline != null)
-                    Semantics(
-                      // アクセシビリティ読み上げ
-                      label: (isExpired
-                              ? '期日 $badgeText, 期限切れ'
-                              : (isDueToday ? '期日 $badgeText, 今日中'
-                                            : '期日 $badgeText')),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.black12,
-                          borderRadius: BorderRadius.circular(999),
+                ),
+                title: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        questName,
+                        style: TextStyle(
+                          color:
+                              (isExpired && !completedView)
+                                  ? Colors.red
+                                  : _cBlack,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
                         ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              isExpired
-                                  ? Icons.warning_amber_rounded
-                                  : Icons.schedule,
-                              size: 14,
-                              color: (isDueToday || isExpired) ? Colors.red : _cBlack,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              badgeText,
-                              style: TextStyle(
-                                  color: (isDueToday || isExpired) ? Colors.red : _cBlack,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    // 期日バッジ
+                    if (deadline != null)
+                      Semantics(
+                        // アクセシビリティ読み上げ
+                        label:
+                            (isExpired
+                                ? '期日 $badgeText, 期限切れ'
+                                : (isDueToday
+                                    ? '期日 $badgeText, 今日中'
+                                    : '期日 $badgeText')),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.black12,
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                isExpired
+                                    ? Icons.warning_amber_rounded
+                                    : Icons.schedule,
+                                size: 14,
+                                color:
+                                    (isDueToday || isExpired)
+                                        ? Colors.red
+                                        : _cBlack,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                badgeText,
+                                style: TextStyle(
+                                  color:
+                                      (isDueToday || isExpired)
+                                          ? Colors.red
+                                          : _cBlack,
                                   fontSize: 12,
-                                  fontWeight: FontWeight.w700),
-                            ),
-                          ],
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-                ],
-              ),
-              subtitle: Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: Text(
-                  description.isNotEmpty ? description : (taskData['taskType']?.toString() ?? ''),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: _cBlack, fontSize: 13),
+                  ],
                 ),
-              ),
-              trailing: (completedView && isLocal)
-                  // 完了一覧のローカル項目限定で「未完了へ戻す」
-                  ? IconButton(
-                      tooltip: '未完了へ戻す',
-                      icon: const Icon(CupertinoIcons.arrow_uturn_left, size: 20, color: _cBlue),
-                      onPressed: () {
-                        HapticFeedback.selectionClick();
-                        final idx = _localTodos.indexWhere((e) => e['id'] == questId);
-                        if (idx != -1) {
-                          setState(() {
-                            _localTodos[idx]['completed'] = false;
-                          });
-                          _saveLocalTodos();
-                        }
-                      },
-                    )
-                  : (!isLocal && !completedView)
-                      ? FutureBuilder<bool>(
+                subtitle: Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text(
+                    description.isNotEmpty
+                        ? description
+                        : (taskData['taskType']?.toString() ?? ''),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: _cBlack, fontSize: 13),
+                  ),
+                ),
+                trailing:
+                    (completedView && isLocal)
+                        // 完了一覧のローカル項目限定で「未完了へ戻す」
+                        ? IconButton(
+                          tooltip: '未完了へ戻す',
+                          icon: const Icon(
+                            CupertinoIcons.arrow_uturn_left,
+                            size: 20,
+                            color: _cPrimary,
+                          ),
+                          onPressed: () {
+                            HapticFeedback.selectionClick();
+                            final idx = _localTodos.indexWhere(
+                              (e) => e['id'] == questId,
+                            );
+                            if (idx != -1) {
+                              setState(() {
+                                _localTodos[idx]['completed'] = false;
+                              });
+                              _saveLocalTodos();
+                            }
+                          },
+                        )
+                        : (!isLocal && !completedView)
+                        ? FutureBuilder<bool>(
                           future: _isCurrentUserSupporting(questId),
                           builder: (context, snapshot) {
                             final bool isSupporting = snapshot.data ?? false;
                             return IconButton(
-                              icon: Icon(isSupporting ? CupertinoIcons.star_fill : CupertinoIcons.star, color: _cBlue),
+                              icon: Icon(
+                                isSupporting
+                                    ? CupertinoIcons.star_fill
+                                    : CupertinoIcons.star,
+                                color: _cMint,
+                              ),
                               onPressed: () async {
                                 HapticFeedback.selectionClick();
                                 await _toggleTakoyakiSupport(
@@ -1863,25 +2000,27 @@ class _ParkPageState extends ConsumerState<ParkPage> {
                             );
                           },
                         )
-                      : null,
-              onTap: () {
-                if (completedView) return;
-                if (isLocal) return; // ローカルは詳細画面なし
-                _confirmAndSubmitTask(questId, taskData);
-              },
-              onLongPress: () {
-                // 完了一覧のローカル項目は長押しでも未完了へ戻せる
-                if (completedView && isLocal) {
-                  final idx = _localTodos.indexWhere((e) => e['id'] == questId);
-                  if (idx != -1) {
-                    setState(() {
-                      _localTodos[idx]['completed'] = false;
-                    });
-                    _saveLocalTodos();
+                        : null,
+                onTap: () {
+                  if (completedView) return;
+                  if (isLocal) return; // ローカルは詳細画面なし
+                  _confirmAndSubmitTask(questId, taskData);
+                },
+                onLongPress: () {
+                  // 完了一覧のローカル項目は長押しでも未完了へ戻せる
+                  if (completedView && isLocal) {
+                    final idx = _localTodos.indexWhere(
+                      (e) => e['id'] == questId,
+                    );
+                    if (idx != -1) {
+                      setState(() {
+                        _localTodos[idx]['completed'] = false;
+                      });
+                      _saveLocalTodos();
+                    }
                   }
-                }
-              },
-            ),
+                },
+              ),
             ),
           ),
         );
@@ -1902,7 +2041,10 @@ class _ParkPageState extends ConsumerState<ParkPage> {
     }
   }
 
-  Future<void> _confirmAndSubmitTask(String questId, Map<String, dynamic> taskData) async {
+  Future<void> _confirmAndSubmitTask(
+    String questId,
+    Map<String, dynamic> taskData,
+  ) async {
     final result = await showDialog<bool>(
       context: context,
       builder: (context) {
@@ -1910,8 +2052,14 @@ class _ParkPageState extends ConsumerState<ParkPage> {
           title: const Text('討伐の確認'),
           content: const Text('本当に討伐しますか？\n（間違って押した場合は「いいえ」でキャンセルできます）'),
           actions: [
-            TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('いいえ')),
-            TextButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('はい')),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('いいえ'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('はい'),
+            ),
           ],
         );
       },
@@ -1930,8 +2078,8 @@ class _ParkPageState extends ConsumerState<ParkPage> {
     final isFadingOut = _fadingOutTaskIndex == questId;
 
     final deadline = taskData['deadline'] as Timestamp?;
-  // ignore: unused_local_variable
-  final bool isExpired =
+    // ignore: unused_local_variable
+    final bool isExpired =
         deadline != null && deadline.toDate().isBefore(DateTime.now());
     final textColor = const Color(0xFF00FFF7); // 蛍光水色
     final detailTextColor = const Color(0xFF00FFF7); // 蛍光水色

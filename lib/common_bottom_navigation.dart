@@ -110,7 +110,9 @@ class CommonBottomNavigation extends ConsumerWidget {
       child: Stack(
         children: [
           // 白背景（テーマ準拠）。既存の画像は廃し、シンプルな白ベースに。
-          Positioned.fill(child: DecoratedBox(decoration: BoxDecoration(color: Colors.white))),
+          Positioned.fill(
+            child: DecoratedBox(decoration: BoxDecoration(color: Colors.white)),
+          ),
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: <Widget>[
