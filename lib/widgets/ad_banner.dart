@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 class AdBanner extends StatefulWidget {
@@ -29,6 +30,11 @@ class _AdBannerState extends State<AdBanner> {
   }
 
   void _load() {
+    // モバイル(Android/iOS)以外では読み込まない
+    final bool isMobile = !kIsWeb &&
+        (defaultTargetPlatform == TargetPlatform.android ||
+            defaultTargetPlatform == TargetPlatform.iOS);
+    if (!isMobile) return;
     final unitId = widget.testUnitId ?? _testUnitId;
     if (unitId.isEmpty) return;
     final ad = BannerAd(
@@ -55,6 +61,11 @@ class _AdBannerState extends State<AdBanner> {
 
   @override
   Widget build(BuildContext context) {
+    // モバイル(Android/iOS)以外では表示しない
+    final bool isMobile = !kIsWeb &&
+        (defaultTargetPlatform == TargetPlatform.android ||
+            defaultTargetPlatform == TargetPlatform.iOS);
+    if (!isMobile) return const SizedBox.shrink();
     if (!_loaded || _banner == null) return const SizedBox.shrink();
     return SizedBox(
       width: _banner!.size.width.toDouble(),

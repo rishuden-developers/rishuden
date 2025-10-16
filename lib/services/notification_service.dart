@@ -6,7 +6,7 @@ import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:rishuden/attendance_record_page.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
+import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, TargetPlatform;
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
@@ -36,10 +36,19 @@ class NotificationService {
   // 初期化
   Future<void> initialize() async {
     try {
+      // モバイル(Android/iOS)以外では通知関連の初期化をスキップ
+      if (!_isAndroidOrIOS) {
+        debugPrint('[NotificationService] Skipped initialization on non-mobile platform: '
+            '${kIsWeb ? 'web' : defaultTargetPlatform}');
+        return;
+      }
+
       // タイムゾーンデータを初期化
       tz.initializeTimeZones();
-      // デバイスのローカルタイムゾーンを設定
-      tz.setLocalLocation(tz.getLocation(Intl.getCurrentLocale()));
+      // IANAタイムゾーン名でローカルタイムゾーンを設定（例: 日本）
+      // Intl.getCurrentLocale() は 'en_US' のようなロケール名を返すため、tz.getLocation には使用しない
+      tz.setLocalLocation(tz.getLocation('Asia/Tokyo'));
+
       // 通知権限を要求
       await _requestPermission();
 
@@ -60,6 +69,7 @@ class NotificationService {
 
   // 通知権限を要求
   Future<void> _requestPermission() async {
+    if (!_isAndroidOrIOS) return;
     NotificationSettings settings = await _firebaseMessaging.requestPermission(
       alert: true,
       announcement: false,
@@ -75,6 +85,7 @@ class NotificationService {
 
   // ローカル通知の初期化
   Future<void> _initializeLocalNotifications() async {
+    if (!_isAndroidOrIOS) return;
     const AndroidInitializationSettings initializationSettingsAndroid =
         AndroidInitializationSettings('@mipmap/ic_launcher');
 
@@ -107,6 +118,7 @@ class NotificationService {
   // FCMトークンの取得と保存
   Future<void> _getAndSaveFCMToken() async {
     try {
+      if (!_isAndroidOrIOS) return;
       print('Getting FCM token...');
       String? token = await _firebaseMessaging.getToken();
       if (token != null) {
@@ -144,6 +156,7 @@ class NotificationService {
 
   // 通知ハンドラーの設定
   void _setupNotificationHandlers() {
+    if (!_isAndroidOrIOS) return;
     // フォアグラウンド通知の処理
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       print('Got a message whilst in the foreground!');
@@ -174,6 +187,7 @@ class NotificationService {
 
   // ローカル通知を表示
   Future<void> _showLocalNotification(RemoteMessage message) async {
+    if (!_isAndroidOrIOS) return;
     const AndroidNotificationDetails androidPlatformChannelSpecifics =
         AndroidNotificationDetails(
           'high_importance_channel',
@@ -199,6 +213,7 @@ class NotificationService {
 
   // 通知タップ時の処理
   void _onNotificationTapped(NotificationResponse response) {
+    if (!_isAndroidOrIOS) return;
     print('Notification tapped: ${response.payload}');
     if (response.payload != null &&
         response.payload!.startsWith('attendance_record:')) {
@@ -236,6 +251,7 @@ class NotificationService {
     required String body,
     String? payload,
   }) async {
+    if (!_isAndroidOrIOS) return;
     const AndroidNotificationDetails androidPlatformChannelSpecifics =
         AndroidNotificationDetails(
           'high_importance_channel',
@@ -265,6 +281,7 @@ class NotificationService {
     required String questName,
     required String courseName,
   }) async {
+    if (!_isAndroidOrIOS) return;
     await showLocalNotification(
       title: '新しいクエストが作成されました！',
       body: '$creatorName が $courseName で「$questName」クエストを作成しました',
@@ -277,6 +294,7 @@ class NotificationService {
     required String senderName,
     required String reason,
   }) async {
+    if (!_isAndroidOrIOS) return;
     // ローカル通知は自分のデバイスにのみ表示
     await showLocalNotification(
       title: 'たこ焼きを貰いました！',
@@ -300,7 +318,9 @@ class NotificationService {
   // 手動でFCMトークンを再取得
   Future<void> refreshFCMToken() async {
     print('Manually refreshing FCM token...');
-    await _getAndSaveFCMToken();
+    if (_isAndroidOrIOS) {
+      await _getAndSaveFCMToken();
+    }
   }
 
   // 出席記録通知をスケジューリング
@@ -311,6 +331,7 @@ class NotificationService {
     required String date,
     required DateTime endTime,
   }) async {
+    if (!_isAndroidOrIOS) return;
     final now = tz.TZDateTime.now(tz.local);
     final scheduledTime = tz.TZDateTime.from(endTime, tz.local);
 
@@ -377,3 +398,8 @@ class NotificationService {
   }
   */
 }
+
+// プラットフォーム判定用の拡張: モバイル(Android/iOS)のみ true
+bool get _isAndroidOrIOS => !kIsWeb &&
+    (defaultTargetPlatform == TargetPlatform.android ||
+        defaultTargetPlatform == TargetPlatform.iOS);

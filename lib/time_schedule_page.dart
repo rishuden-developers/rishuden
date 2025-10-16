@@ -6,6 +6,7 @@ import 'dart:math';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart' show kDebugMode, debugPrint;
 import 'package:intl/intl.dart';
+import 'ui/schedule_apple_modern_page.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:io';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -72,6 +73,7 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
   double _periodRowHeight = 60.0; // レイアウト計算時に更新
   double _timeGaugeProgress = 0.0;
   Timer? _highlightTimer;
+  final bool _useAppleModernList = false; // グリッド構成を維持（デザインのみToDo風に）
 
   // 予定（平日/日曜）
   final Map<int, List<Map<String, dynamic>>> _weekdayEvents = {};
@@ -820,7 +822,7 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
               border: Border.all(color: const Color(0xFF2E6DB6), width: 2),
             )
           : decoration.copyWith(
-              border: Border.all(color: Colors.grey[400]!, width: 1),
+              border: Border.all(color: Colors.grey[300]!, width: 1),
             );
 
       final classWidget = Container(
@@ -1488,7 +1490,7 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                   top: totalHeight * (3.0 / 8.0),
                   left: 0,
                   right: 0,
-                  child: Container(height: 1, color: Colors.grey[400]),
+                  child: Container(height: 1, color: Colors.grey[300]),
                 ),
                 // 授業セル
                 ..._buildClassEntriesAsPositioned(dayIndex, totalHeight),
@@ -1798,7 +1800,7 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                     style: TextStyle(
                       fontFamily: 'NotoSansJP',
                       fontSize: 12,
-                      color: Colors.grey[400],
+                      color: Colors.grey[300],
                     ),
                   ),
                 ],
@@ -2023,7 +2025,7 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                                 Text(
                                   '${absenceCount[entry.courseId] ?? 0}回',
                                   style: TextStyle(
-                                    color: Colors.grey[400],
+                                    color: Colors.grey[300],
                                     fontSize: 10,
                                   ),
                                 ),
@@ -2048,7 +2050,7 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                                 Text(
                                   '${lateCount[entry.courseId] ?? 0}回',
                                   style: TextStyle(
-                                    color: Colors.grey[400],
+                                    color: Colors.grey[300],
                                     fontSize: 10,
                                   ),
                                 ),
@@ -2267,21 +2269,7 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
     required double periodRowHeight,
     required double lunchRowHeight,
   }) {
-    // 8つの行の高さリストを作成 (6つの授業コマ + 昼休み + 放課後)
-    final List<double> rowHeights = [
-      periodRowHeight, // 1限
-      periodRowHeight, // 2限
-      lunchRowHeight, // 昼休み
-      periodRowHeight, // 3限
-      periodRowHeight, // 4限
-      periodRowHeight, // 5限
-      periodRowHeight, // 6限
-      periodRowHeight, // 放課後
-    ];
-    final double totalColumnHeight = rowHeights.reduce(
-      (a, b) => a + b,
-    ); // 全ての高さの合計
-
+    // 表示ラベル（1〜6・昼・放課後）
     final List<String> periodLabels = [
       '1',
       '2',
@@ -2292,6 +2280,8 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
       '6',
       '放課後',
     ];
+    // 高さは親のレイアウトに合わせて8等分に割り当て（端数のズレを防ぐ）
+    final double totalColumnHeight = periodRowHeight * 8.0;
 
     return Container(
       width: 45,
@@ -2299,94 +2289,84 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: const BorderRadius.all(Radius.circular(12)),
-        border: Border.all(color: Colors.grey[400]!, width: 1.0),
+        border: Border.all(color: Colors.grey[300]!, width: 1.0),
       ),
       child: ClipRRect(
         borderRadius: const BorderRadius.all(Radius.circular(10)),
-        child: Stack(
-          children: [
-            // 進捗ゲージは非表示（ToDo風のフラットな見た目を優先）
-            // --- 時限ラベルと時間、そして罫線 ---
-            Column(
-              children: List.generate(rowHeights.length, (index) {
-                final bool isClassPeriod =
-                    (index < 2 || (index > 2 && index < 7));
-                int? timeIndex;
-                if (index < 2)
-                  timeIndex = index;
-                else if (index > 2 && index < 7)
-                  timeIndex = index - 1;
+        child: Column(
+          children: List.generate(8, (index) {
+            final bool isClassPeriod = (index < 2 || (index > 2 && index < 7));
+            int? timeIndex;
+            if (index < 2) {
+              timeIndex = index;
+            } else if (index > 2 && index < 7) {
+              timeIndex = index - 1;
+            }
 
-                return Container(
-                  height: rowHeights[index],
-                  // Containerのdecorationで罫線を引く
-                  decoration: BoxDecoration(
-                    border:
-                        index <
-                                rowHeights.length -
-                                    1 // 最後の行以外
-                            ? Border(
-                              bottom: BorderSide(
-                                color: Colors.grey[400]!,
-                                width: 1.0,
-                              ),
-                            )
-                            : null,
-                  ),
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      if (isClassPeriod && timeIndex != null) ...[
-                        Align(
-                          alignment: Alignment.topCenter,
-                          child: Padding(
-                            padding: const EdgeInsets.only(top: 4.0),
-                            child: Text(
-                              _periodTimes[timeIndex][0],
-                              style: const TextStyle(
-                                fontSize: 10,
-                                fontFamily: 'NotoSansJP',
-                                color: Colors.black87,
-                              ),
+            return Expanded(
+              child: Container(
+                decoration: BoxDecoration(
+                  border: index < 7
+                      ? Border(
+                          bottom: BorderSide(
+                            color: Colors.grey[300]!,
+                            width: 1.0,
+                          ),
+                        )
+                      : null,
+                ),
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    if (isClassPeriod && timeIndex != null) ...[
+                      Align(
+                        alignment: Alignment.topCenter,
+                        child: Padding(
+                          padding: const EdgeInsets.only(top: 4.0),
+                          child: Text(
+                            _periodTimes[timeIndex][0],
+                            style: const TextStyle(
+                              fontSize: 10,
+                              fontFamily: 'NotoSansJP',
+                              color: Colors.black87,
                             ),
                           ),
                         ),
-                        Align(
-                          alignment: Alignment.bottomCenter,
-                          child: Padding(
-                            padding: const EdgeInsets.only(bottom: 4.0),
-                            child: Text(
-                              _periodTimes[timeIndex][1],
-                              style: const TextStyle(
-                                fontSize: 10,
-                                fontFamily: 'NotoSansJP',
-                                color: Colors.black87,
-                              ),
+                      ),
+                      Align(
+                        alignment: Alignment.bottomCenter,
+                        child: Padding(
+                          padding: const EdgeInsets.only(bottom: 4.0),
+                          child: Text(
+                            _periodTimes[timeIndex][1],
+                            style: const TextStyle(
+                              fontSize: 10,
+                              fontFamily: 'NotoSansJP',
+                              color: Colors.black87,
                             ),
                           ),
                         ),
-                      ],
-                      Text(
-                        periodLabels[index] == '放課後'
-                            ? periodLabels[index].split('').join('\n')
-                            : periodLabels[index],
-                        style: TextStyle(
-                          fontFamily: 'NotoSansJP',
-                          fontSize: periodLabels[index].length > 1 ? 12 : 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
-                        ),
-                        textAlign:
-                            periodLabels[index] == '放課後'
-                                ? TextAlign.center
-                                : TextAlign.start,
                       ),
                     ],
-                  ),
-                );
-              }),
-            ),
-          ],
+                    Text(
+                      periodLabels[index] == '放課後'
+                          ? periodLabels[index].split('').join('\n')
+                          : periodLabels[index],
+                      style: TextStyle(
+                        fontFamily: 'NotoSansJP',
+                        fontSize: periodLabels[index].length > 1 ? 12 : 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                      textAlign: periodLabels[index] == '放課後'
+                          ? TextAlign.center
+                          : TextAlign.start,
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }),
         ),
       ),
     );
@@ -2583,7 +2563,7 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                                         color: Colors.white,
                                         borderRadius: BorderRadius.circular(12),
                                         border: Border.all(
-                                          color: Colors.grey[400]!,
+                                          color: Colors.grey[300]!,
                                           width: 1.0,
                                         ),
                                       ),
@@ -2654,6 +2634,46 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
     }
 
     const double bottomPaddingForNavBar = 100.0;
+    if (_useAppleModernList) {
+      // 現在表示中の週の授業と予定をToDo風カードへマッピング
+      final List<ScheduleItem> items = [];
+      if (_timetableGrid.isNotEmpty) {
+        for (int day = 0; day < _days.length; day++) {
+          if (day >= _timetableGrid.length) break;
+          final col = _timetableGrid[day];
+          for (int pIdx = 0; pIdx < col.length; pIdx++) {
+            final entry = col[pIdx];
+            if (entry == null) continue;
+            final times = _periodTimes[pIdx];
+            final timeLabel = '${_days[day]} ${times[0]} - ${times[1]}';
+            final subtitleParts = <String>[];
+      if (entry.classroom.isNotEmpty) subtitleParts.add(entry.classroom);
+      if (entry.originalLocation.isNotEmpty) subtitleParts.add(entry.originalLocation);
+      final subtitle = subtitleParts.join(' · ');
+      final String cId = (entry.courseId?.isNotEmpty ?? false)
+        ? entry.courseId!
+        : entry.id;
+            final Color? color = _courseColors[cId];
+            items.add(
+              ScheduleItem(
+                id: entry.id,
+                title: entry.subjectName,
+                timeLabel: timeLabel,
+                subtitle: subtitle.isEmpty ? null : subtitle,
+                color: color,
+              ),
+            );
+          }
+        }
+      }
+      return ScheduleAppleModernPage(
+        items: items,
+        onAdd: () {
+          // 週の中の月曜カラムに追加、など任意。ここでは月曜に追加ダイアログを開く例。
+          _showWeekdayEventDialog(0);
+        },
+      );
+    }
     return Container(
       width: double.infinity,
       height: double.infinity,
@@ -2692,7 +2712,7 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
                                       color: Colors.white,
                                       borderRadius: BorderRadius.circular(12),
                                       border: Border.all(
-                                        color: Colors.grey[400]!,
+                                        color: Colors.grey[300]!,
                                         width: 1.0,
                                       ),
                                     ),

@@ -3,6 +3,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import 'dart:async'; // Timer.periodic のために必要
 import 'package:intl/intl.dart';
+import 'ui/todo_apple_modern_page.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'task_progress_gauge.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -13,7 +14,7 @@ import 'level_gauge.dart';
 import 'quest_create.dart'; // QuestCreationWidgetのインポート
 import 'dart:ui';
 import 'dart:convert';
-import 'dart:math' as math;
+// import 'dart:math' as math; // not used after UI refactor
 // ignore: unused_import
 import 'setting_page/setting_page.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -22,13 +23,15 @@ import 'services/notification_service.dart';
 import 'providers/background_image_provider.dart';
 import 'constants/ui_flags.dart' as ui_flags;
 
+// ===== Apple風ToDo用で使用するカラー定数（軽量） =====
+const Color _cAccent = Color(0xFF34C759); // iOS Green (Accent)
+
 class ParkPage extends ConsumerStatefulWidget {
   final String diagnosedCharacterName;
   final List<int> answers;
   final String userName;
   final String? grade;
-  final String? department;
-  final String universityType;
+  final String? universityType; // 参照されているが未定義だったため追加（オプション）
 
   const ParkPage({
     super.key,
@@ -36,8 +39,7 @@ class ParkPage extends ConsumerStatefulWidget {
     required this.answers,
     required this.userName,
     this.grade,
-    this.department,
-    this.universityType = 'main',
+    this.universityType,
   });
 
   @override
@@ -45,81 +47,59 @@ class ParkPage extends ConsumerStatefulWidget {
 }
 
 class _ParkPageState extends ConsumerState<ParkPage> {
-  String _currentParkCharacterImage = '';
-  String _currentParkCharacterName = '';
+  // ====== State fields (再構築) ======
+  // UI/ユーザ関連
   String _userName = '';
+  String _currentParkCharacterName = '';
+  String _currentParkCharacterImage = '';
+  bool _isCharacterInfoInitialized = false;
 
+  // クエスト関連
+  List<Map<String, dynamic>> _quests = [];
+  List<Map<String, dynamic>> _completedQuests = [];
+  bool _isLoadingQuests = false;
+
+  // ローカルToDo
+  List<Map<String, dynamic>> _localTodos = [];
+
+  // たこ焼き・演出関連
+  int _takoyakiCount = 0;
+  bool _isTakoyakiClaimed = false;
   List<String> _dialogueMessages = [];
   int _currentMessageIndex = 0;
+  Timer? _rpgMessageTimer;
+  final Set<String> _crackingTasks = <String>{};
+  String? _fadingOutTaskIndex;
+  // final Set<String> _pulsingChecks = <String>{}; // not used in Cupertino UI path
 
-  // Firestoreから取得したクエストデータをローカルで管理
-  List<Map<String, dynamic>> _quests = [];
-  bool _isLoadingQuests = true;
+  // ゲージ
+  final GlobalKey<LiquidLevelGaugeState> _gaugeKey = GlobalKey();
 
-  final PageController _pageController = PageController(
-    viewportFraction: 1.0,
-    keepPage: true,
-  );
+  // ページング
+  final PageController _pageController = PageController();
   // ignore: unused_field
   int _currentPage = 0;
-  Timer? _timer;
 
-  String? _fadingOutTaskIndex;
-  final Set<String> _crackingTasks = {};
-
-  bool _isCharacterInfoInitialized = false;
+  // クエスト作成ダイアログ
   bool isQuestCreationVisible = false;
-  int _takoyakiCount = 0;
-  // ignore: unused_field
-  double _pageOffset = 0.0;
-
-  bool _isTakoyakiClaimed = false;
-  Timer? _rpgMessageTimer;
-
-  final GlobalKey<LiquidLevelGaugeState> _gaugeKey =
-      GlobalKey<LiquidLevelGaugeState>();
-
-  // --- Simple ToDo UI enhancement states ---
-  // タブは廃止。Myタスクのみを表示。
-  static const Color _cWhite = Color(0xFFFFFFFF);
-  static const Color _cBlack = Color(0xFF000000);
-  // ToDoタイトルバーのブランドカラー（指定色）
-  static const Color _cTitleBar = Color(0xff2e6db6);
-  // ブランドパレット
-  static const Color _cPrimary = _cTitleBar; // 0xff2e6db6
-  static const Color _cAccent = Color(0xff62b5e5); // 明るめブルー
-  static const Color _cMint = Color(0xff58c3a9); // ミント系
-  // UI 切替フラグをグローバル設定から取得
-  int _segmentIndex = 0; // 0: 未完了, 1: 完了（iOS風セグメント）
-  // 未完了→完了時にチェック円の上でパルスを出すためのIDセット
-  final Set<String> _pulsingChecks = <String>{};
-
-  void _playCheckPulse(String questId) {
-    setState(() {
-      _pulsingChecks.add(questId);
-    });
-  }
-
-  // 授業に関係ないローカルToDo（DBを触らない）
-  List<Map<String, dynamic>> _localTodos = [];
-  // Firestore由来の完了一覧（自分がcompletedUserIdsに含まれる）
-  List<Map<String, dynamic>> _completedQuests = [];
 
   @override
   void initState() {
     super.initState();
-    _loadTakoyakiStatus();
+    // 初期データ読込
+    _currentParkCharacterName = widget.diagnosedCharacterName;
+    _userName = widget.userName;
     _loadCharacterInfoFromFirebase();
-    _loadQuestsFromFirestore();
     _loadUserDataFromFirebase();
     _loadLocalTodos();
+    _loadQuestsFromFirestore();
+    _loadTakoyakiStatus();
   }
 
   @override
   void dispose() {
-    _pageController.dispose();
-    _timer?.cancel();
     _rpgMessageTimer?.cancel();
+    _pageController.dispose();
     super.dispose();
   }
 
@@ -388,16 +368,15 @@ class _ParkPageState extends ConsumerState<ParkPage> {
           final data = doc.data() as Map<String, dynamic>;
           if (!mounted) return;
           setState(() {
-            _currentParkCharacterName =
-                data['character'] ?? widget.diagnosedCharacterName;
             _userName = data['name'] ?? widget.userName;
             if (data['characterImage'] != null) {
               _currentParkCharacterImage = data['characterImage'];
-            } else if (characterFullDataGlobal.containsKey(
-              _currentParkCharacterName,
-            )) {
-              _currentParkCharacterImage =
-                  characterFullDataGlobal[_currentParkCharacterName]!['image'];
+            } else if (
+              characterFullDataGlobal.containsKey(_currentParkCharacterName)
+            ) {
+              _currentParkCharacterImage = characterFullDataGlobal[
+                _currentParkCharacterName
+              ]!['image'];
             }
             _isCharacterInfoInitialized = true;
           });
@@ -542,10 +521,7 @@ class _ParkPageState extends ConsumerState<ParkPage> {
     }
   }
 
-  // クエスト作成後にデータを再読み込み
-  Future<void> _refreshQuests() async {
-    await _loadQuestsFromFirestore();
-  }
+  // クエスト作成後にデータを再読み込み（必要時に直接 _loadQuestsFromFirestore を呼ぶ）
 
   void _showOztechDialog(BuildContext context) {
     showGeneralDialog(
@@ -1105,324 +1081,185 @@ class _ParkPageState extends ConsumerState<ParkPage> {
   }
 
   // ==========================
-  // Simple ToDo UI (white/black/blue)
+  // Simple ToDo UI → Apple風Cupertino版に差し替え
   // ==========================
   Widget _buildSimpleTodoUI(BuildContext context, double screenWidth) {
     final currentUserId = FirebaseAuth.instance.currentUser?.uid;
 
-    // Myタスクのみ（作成者が自分のもの）を表示
-    List<Map<String, dynamic>> filtered = _quests;
+    // Myタスクのみ（作成者が自分のもの）を表示（従来ロジック踏襲）
+    List<Map<String, dynamic>> remoteActive = _quests;
     if (currentUserId != null) {
-      filtered = _quests.where((q) => q['createdBy'] == currentUserId).toList();
+      remoteActive = _quests.where((q) => q['createdBy'] == currentUserId).toList();
     }
-    // 未完了（ローカルはcompleted!=true）
-    final List<Map<String, dynamic>> mergedActive = [
-      ...filtered,
-      ..._localTodos.where((e) => e['completed'] != true),
-    ];
-    // 完了（Firestoreの完了 + ローカルのcompleted==true）
-    final List<Map<String, dynamic>> mergedCompleted = [
-      ..._completedQuests,
-      ..._localTodos.where((e) => e['completed'] == true),
-    ];
-    // 期日のあるものを昇順、その後ろに期日なしを配置
+
+    final List<Map<String, dynamic>> localActive = _localTodos.where((e) => e['completed'] != true).toList();
+    final List<Map<String, dynamic>> localCompleted = _localTodos.where((e) => e['completed'] == true).toList();
+
+    // 期限ソート用ヘルパ
     int _deadlineCompare(Map<String, dynamic> a, Map<String, dynamic> b) {
-      DateTime? ad;
-      final av = a['deadline'];
-      if (av is Timestamp) {
-        ad = av.toDate();
-      } else if (av is String && av.isNotEmpty) {
-        ad = DateTime.tryParse(av);
+      DateTime? toDate(dynamic v) {
+        if (v is Timestamp) return v.toDate();
+        if (v is String && v.isNotEmpty) return DateTime.tryParse(v);
+        return null;
       }
-      DateTime? bd;
-      final bv = b['deadline'];
-      if (bv is Timestamp) {
-        bd = bv.toDate();
-      } else if (bv is String && bv.isNotEmpty) {
-        bd = DateTime.tryParse(bv);
-      }
+      final ad = toDate(a['deadline']);
+      final bd = toDate(b['deadline']);
       if (ad == null && bd == null) return 0;
-      if (ad == null) return 1; // aが期限なし → 後ろへ
-      if (bd == null) return -1; // bが期限なし → aが前
+      if (ad == null) return 1;
+      if (bd == null) return -1;
       return ad.compareTo(bd);
     }
 
-    mergedActive.sort(_deadlineCompare);
-    mergedCompleted.sort(_deadlineCompare);
-    // 2分割表示にするため、ここではリストの選択は行わない
+    remoteActive.sort(_deadlineCompare);
+    localActive.sort(_deadlineCompare);
+    localCompleted.sort(_deadlineCompare);
 
-    return Stack(
-      children: [
-        // 背景は白ベース
-        Positioned.fill(child: Container(color: _cWhite)),
-        SafeArea(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // iOS風: 半透明+ブラーのトップバーとヘアライン
-              ClipRect(
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
-                    ),
-                    decoration: BoxDecoration(
-                      color: _cTitleBar.withOpacity(0.85),
-                      border: Border(
-                        bottom: BorderSide(
-                          color: Colors.white.withOpacity(0.20),
-                          width: 0.5,
-                        ), // hairline
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                _userName.isNotEmpty
-                                    ? _userName
-                                    : widget.userName,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  fontFamily: 'NotoSansJP',
-                                  letterSpacing: -0.2,
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              const SizedBox(height: 2),
-                              const Text(
-                                'ToDo リスト',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.w800,
-                                  fontFamily: 'NotoSansJP',
-                                  letterSpacing: -0.2,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              // 左端青 -> 右端透明 の太めグラデーションライン（全幅）
-                              SizedBox(
-                                width: double.infinity,
-                                height: 10,
-                                child: DecoratedBox(
-                                  decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      begin: Alignment.centerLeft,
-                                      end: Alignment.centerRight,
-                                      colors: [
-                                        _cTitleBar,
-                                        _cTitleBar.withOpacity(0.6),
-                                        _cTitleBar.withOpacity(0.2),
-                                        Colors.transparent,
-                                      ],
-                                    ),
-                                    borderRadius: BorderRadius.circular(999),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Row(
-                          children: [
-                            GestureDetector(
-                              onTap: () => _showOztechDialog(context),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
-                                child: Image.asset(
-                                  'assets/oztech.png',
-                                  width: 26,
-                                  height: 26,
-                                  fit: BoxFit.cover,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            GestureDetector(
-                              onTap: () => _showPotiPotiDialog(context),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
-                                child: Image.asset(
-                                  'assets/potipoti.png',
-                                  width: 26,
-                                  height: 26,
-                                  fit: BoxFit.cover,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 40),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
+    // 完了リモート（従来: _completedQuests）
+    final List<Map<String, dynamic>> remoteCompleted = List<Map<String, dynamic>>.from(_completedQuests);
 
-              // セグメント（未完了/完了）
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-                child: CupertinoSlidingSegmentedControl<int>(
-                  groupValue: _segmentIndex,
-                  backgroundColor: Colors.black.withOpacity(0.06),
-                  thumbColor: Colors.white,
-                  children: const {
-                    0: Padding(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
-                      child: Text(
-                        '未完了',
-                        style: TextStyle(fontWeight: FontWeight.w600),
-                      ),
-                    ),
-                    1: Padding(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
-                      child: Text(
-                        '完了',
-                        style: TextStyle(fontWeight: FontWeight.w600),
-                      ),
-                    ),
-                  },
-                  onValueChanged: (val) {
-                    if (val == null) return;
-                    HapticFeedback.lightImpact();
-                    setState(() => _segmentIndex = val);
-                  },
-                ),
-              ),
+    // ID→元データのマップを用意（トグル/削除で参照）
+    final Map<String, Map<String, dynamic>> mapLocal = {
+      for (final m in _localTodos) (m['id'] as String): m,
+    };
+    final Map<String, Map<String, dynamic>> mapRemoteActive = {
+      for (final m in remoteActive) (m['id'] as String): m,
+    };
+    // final Map<String, Map<String, dynamic>> mapRemoteCompleted = {
+    //   for (final m in remoteCompleted) (m['id'] as String): m,
+    // };
 
-              // 上半分: 未完了 / 下半分: 完了
-              Expanded(
-                child:
-                    _isLoadingQuests
-                        ? const Center(child: CircularProgressIndicator())
-                        : (_segmentIndex == 0
-                            ? ((mergedActive.isEmpty)
-                                ? Center(
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: const [
-                                      Icon(
-                                        CupertinoIcons.tray,
-                                        color: _cPrimary,
-                                        size: 40,
-                                      ),
-                                      SizedBox(height: 8),
-                                      Text(
-                                        '未完了のタスクはありません',
-                                        style: TextStyle(
-                                          color: _cBlack,
-                                          fontFamily: 'NotoSansJP',
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                )
-                                : _buildTodoListView(
-                                  mergedActive,
-                                  completedView: false,
-                                ))
-                            : ((mergedCompleted.isEmpty)
-                                ? Center(
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: const [
-                                      Icon(
-                                        CupertinoIcons.checkmark_seal,
-                                        color: _cPrimary,
-                                        size: 40,
-                                      ),
-                                      SizedBox(height: 8),
-                                      Text(
-                                        '完了したタスクはありません',
-                                        style: TextStyle(
-                                          color: _cBlack,
-                                          fontFamily: 'NotoSansJP',
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                )
-                                : _buildTodoListView(
-                                  mergedCompleted,
-                                  completedView: true,
-                                ))),
-              ),
-              const SizedBox(height: 76), // ボトムナビ分の余白
-            ],
-          ),
-        ),
+    // 旧Cupertino UI用のitemsは未使用のため削除
 
-        // 中央下の＋ボタン（既存の追加処理を呼ぶ）
-        Positioned(
-          left: 0,
-          right: 0,
-          // 広告+ボトムナビに被らないように十分上に配置（画面高さで調整）
-          bottom: (MediaQuery.of(context).size.height <= 720) ? 160 : 210,
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(
-                minWidth: 160,
-                maxWidth: 240,
-                minHeight: 48,
-              ),
-              child: ElevatedButton(
-                onPressed: () {
-                  HapticFeedback.lightImpact();
-                  _showAddPicker(context);
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _cPrimary,
-                  elevation: 0,
-                  shape: const StadiumBorder(),
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                ),
-                child: const Text(
-                  '＋ 追加',
-                  style: TextStyle(
-                    color: _cWhite,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.2,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
+    // Apple風・モダンUIに差し替え
+    // カテゴリ色のマップ（例）
+    Color _categoryColorOf(String? category) {
+      switch (category) {
+        case '勉強':
+        case 'レポート':
+        case '試験':
+          return const Color(0xFF3B82F6); // 青
+        case '生活':
+        case '出席':
+          return const Color(0xFFF59E0B); // 黄
+        case '発表':
+          return const Color(0xFF10B981); // 緑
+        case 'メモ':
+          return const Color(0xFFA855F7); // 紫
+        default:
+          return const Color(0xFF94A3B8); // グレー
+      }
+    }
 
-        if (isQuestCreationVisible)
-          Positioned.fill(
-            child: Container(
-              color: Colors.black54,
-              alignment: Alignment.center,
-              child: QuestCreationWidget(
-                onCancel: () => setState(() => isQuestCreationVisible = false),
-                onCreate: (selectedClass, taskType, deadline, description) {
-                  _createQuest(selectedClass, taskType, deadline, description);
-                  Future.delayed(const Duration(milliseconds: 100), () {
-                    if (mounted) {
-                      setState(() => isQuestCreationVisible = false);
-                    }
-                  });
-                },
-              ),
-            ),
-          ),
-      ],
+    // 既存 items から AppleTodoItem へマップし直す（カテゴリは taskType/ローカルはメモ）
+    List<AppleTodoItem> appleItems = [
+      ...remoteActive.map((m) {
+        final String title = (m['name'] as String?) ?? (m['title'] as String?) ?? '名称未設定';
+        final String? taskType = m['taskType'] as String?;
+        DateTime? due;
+        final v = m['deadline'];
+        if (v is Timestamp) due = v.toDate();
+        if (v is String && v.isNotEmpty) due = DateTime.tryParse(v);
+        return AppleTodoItem(
+          id: m['id'] as String,
+          title: title,
+          due: due,
+          completed: false,
+          category: taskType ?? '勉強',
+          categoryColor: _categoryColorOf(taskType),
+        );
+      }),
+      ...localActive.map((m) {
+        final String title = (m['title'] as String?) ?? (m['name'] as String?) ?? '名称未設定';
+        DateTime? due;
+        final v = m['deadline'];
+        if (v is Timestamp) due = v.toDate();
+        if (v is String && v.isNotEmpty) due = DateTime.tryParse(v);
+        return AppleTodoItem(
+          id: m['id'] as String,
+          title: title,
+          due: due,
+          completed: false,
+          category: 'メモ',
+          categoryColor: _categoryColorOf('メモ'),
+        );
+      }),
+      ...remoteCompleted.map((m) {
+        final String title = (m['name'] as String?) ?? (m['title'] as String?) ?? '名称未設定';
+        final String? taskType = m['taskType'] as String?;
+        DateTime? due;
+        final v = m['deadline'];
+        if (v is Timestamp) due = v.toDate();
+        if (v is String && v.isNotEmpty) due = DateTime.tryParse(v);
+        return AppleTodoItem(
+          id: m['id'] as String,
+          title: title,
+          due: due,
+          completed: true,
+          category: taskType ?? '勉強',
+          categoryColor: _categoryColorOf(taskType),
+        );
+      }),
+      ...localCompleted.map((m) {
+        final String title = (m['title'] as String?) ?? (m['name'] as String?) ?? '名称未設定';
+        DateTime? due;
+        final v = m['deadline'];
+        if (v is Timestamp) due = v.toDate();
+        if (v is String && v.isNotEmpty) due = DateTime.tryParse(v);
+        return AppleTodoItem(
+          id: m['id'] as String,
+          title: title,
+          due: due,
+          completed: true,
+          category: 'メモ',
+          categoryColor: _categoryColorOf('メモ'),
+        );
+      }),
+    ];
+
+    return TodoAppleModernPage(
+      items: appleItems,
+      onAdd: () {
+        HapticFeedback.lightImpact();
+        _showAddPicker(context);
+      },
+      onToggleComplete: (item) async {
+        // ローカルならトグル保存、リモート未完了→完了は従来どおり
+        if (mapLocal.containsKey(item.id)) {
+          final idx = _localTodos.indexWhere((e) => e['id'] == item.id);
+          if (idx != -1) {
+            setState(() {
+              _localTodos[idx]['completed'] = !(_localTodos[idx]['completed'] == true);
+            });
+            await _saveLocalTodos();
+          }
+          return;
+        }
+        if (mapRemoteActive.containsKey(item.id)) {
+          final taskData = mapRemoteActive[item.id]!;
+          final questId = taskData['id'] as String;
+          _confirmAndSubmitTask(questId, taskData);
+          return;
+        }
+      },
+      onDelete: (item) async {
+        if (mapLocal.containsKey(item.id)) {
+          setState(() {
+            _localTodos.removeWhere((e) => e['id'] == item.id);
+          });
+          await _saveLocalTodos();
+        }
+      },
+      profileIcon: _buildProfileIcon(),
+    );
+  }
+
+  Widget _buildProfileIcon() {
+    // 既存のキャラ画像を流用（なければプレースホルダ）
+    final String img = _currentParkCharacterImage.isNotEmpty
+        ? _currentParkCharacterImage
+        : 'assets/character_gorilla.png';
+    return ClipOval(
+      child: Image.asset(img, width: 32, height: 32, fit: BoxFit.cover),
     );
   }
 
@@ -1613,433 +1450,9 @@ class _ParkPageState extends ConsumerState<ParkPage> {
 
   // タブUIは廃止
 
-  Widget _buildTodoListView(
-    List<Map<String, dynamic>> items, {
-    bool completedView = false,
-  }) {
-    return ListView.separated(
-      physics: const BouncingScrollPhysics(
-        parent: AlwaysScrollableScrollPhysics(),
-      ),
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      itemCount: items.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 8),
-      itemBuilder: (context, index) {
-        final taskData = items[index];
-        final questId = taskData['id'] as String;
-        final questName = taskData['name'] as String? ?? '名称未設定';
-        final description = taskData['description'] as String? ?? '';
-        // FirestoreはTimestamp、ローカルはISO文字列
-        DateTime? deadline;
-        final deadlineValue = taskData['deadline'];
-        if (deadlineValue is Timestamp) {
-          deadline = deadlineValue.toDate();
-        } else if (deadlineValue is String && deadlineValue.isNotEmpty) {
-          deadline = DateTime.tryParse(deadlineValue);
-        }
-        final bool isLocal = taskData['isLocal'] == true;
+  
 
-        final now = DateTime.now();
-        bool isExpired = false;
-        bool isDueToday = false;
-        if (deadline != null) {
-          isExpired = deadline.isBefore(now);
-          final d = DateTime(deadline.year, deadline.month, deadline.day);
-          final t = DateTime(now.year, now.month, now.day);
-          isDueToday = d == t; // その日中が期日
-        }
-        final String badgeText = _buildRelativeDueText(deadline);
-
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Dismissible(
-            key: ValueKey('task-$questId-${completedView ? 'done' : 'active'}'),
-            direction:
-                completedView
-                    ? (isLocal
-                        ? DismissDirection.startToEnd
-                        : DismissDirection.none)
-                    : DismissDirection.startToEnd,
-            background: Container(
-              decoration: BoxDecoration(
-                color:
-                    completedView
-                        ? Colors.orange.shade100
-                        : Colors.green.shade100,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              alignment: Alignment.centerLeft,
-              child: Icon(
-                completedView ? Icons.undo : Icons.check,
-                color: completedView ? Colors.orange : Colors.green,
-              ),
-            ),
-            confirmDismiss: (direction) async {
-              if (completedView) {
-                // 完了一覧: ローカルのみスワイプで未完了へ戻す
-                return isLocal;
-              } else {
-                // 未完了一覧: Firestoreは確認、ローカルは即時
-                if (isLocal) return true;
-                final ok =
-                    await showDialog<bool>(
-                      context: context,
-                      builder:
-                          (_) => AlertDialog(
-                            title: const Text('討伐の確認'),
-                            content: const Text('このタスクを完了にしますか？'),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.pop(context, false),
-                                child: const Text('キャンセル'),
-                              ),
-                              TextButton(
-                                onPressed: () => Navigator.pop(context, true),
-                                child: const Text('完了'),
-                              ),
-                            ],
-                          ),
-                    ) ??
-                    false;
-                return ok;
-              }
-            },
-            onDismissed: (direction) async {
-              if (completedView) {
-                // ローカル完了 → 未完了に戻す
-                if (isLocal) {
-                  final idx = _localTodos.indexWhere((e) => e['id'] == questId);
-                  if (idx != -1) {
-                    setState(() {
-                      _localTodos[idx]['completed'] = false;
-                    });
-                    await _saveLocalTodos();
-                  }
-                }
-              } else {
-                if (isLocal) {
-                  final idx = _localTodos.indexWhere((e) => e['id'] == questId);
-                  if (idx != -1) {
-                    setState(() {
-                      _localTodos[idx]['completed'] = true;
-                    });
-                    await _saveLocalTodos();
-                  }
-                } else {
-                  _confirmAndSubmitTask(questId, taskData);
-                }
-              }
-            },
-            child: AnimatedContainer(
-              decoration: BoxDecoration(
-                color: completedView ? _cAccent.withOpacity(0.06) : _cWhite,
-                borderRadius: BorderRadius.circular(12),
-                // iOS風: 影は基本0、極薄のヘアライン枠
-                boxShadow: const [],
-                border: Border.all(
-                  color: Colors.black.withOpacity(0.06),
-                  width: 0.5,
-                ),
-              ),
-              duration: const Duration(milliseconds: 180),
-              curve: Curves.easeOut,
-              child: ListTile(
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                leading: InkWell(
-                  customBorder: const CircleBorder(),
-                  onTap:
-                      completedView
-                          ? null
-                          : () {
-                            HapticFeedback.lightImpact();
-                            if (isLocal) {
-                              // まず演出を出してから、短い遅延で完了へ移動（見えやすさ優先）
-                              _playCheckPulse(questId);
-                              Future.delayed(
-                                const Duration(milliseconds: 380),
-                                () {
-                                  if (!mounted) return;
-                                  setState(() {
-                                    final idx = _localTodos.indexWhere(
-                                      (e) => e['id'] == questId,
-                                    );
-                                    if (idx != -1) {
-                                      _localTodos[idx]['completed'] = true;
-                                    }
-                                  });
-                                  _saveLocalTodos();
-                                },
-                              );
-                            } else {
-                              // Firestoreは確認の上で完了にする。演出は先に出す。
-                              _playCheckPulse(questId);
-                              _confirmAndSubmitTask(questId, taskData);
-                            }
-                          },
-                  child: SizedBox(
-                    width: 22,
-                    height: 22,
-                    child: Stack(
-                      alignment: Alignment.center,
-                      clipBehavior: Clip.none,
-                      children: [
-                        TweenAnimationBuilder<double>(
-                          duration: const Duration(milliseconds: 180),
-                          curve: Curves.easeOut,
-                          tween: Tween(begin: 0, end: completedView ? 1 : 0),
-                          builder: (context, t, child) {
-                            final bool checked = completedView;
-                            return Icon(
-                              checked
-                                  ? CupertinoIcons.check_mark_circled_solid
-                                  : CupertinoIcons.circle,
-                              color: checked ? _cPrimary : _cBlack,
-                              size: 22,
-                            );
-                          },
-                        ),
-                        // 完了演出: 小さな粒が四方に弾けるバースト
-                        if (_pulsingChecks.contains(questId))
-                          TweenAnimationBuilder<double>(
-                            key: ValueKey('burst-$questId'),
-                            tween: Tween(begin: 0.0, end: 1.0),
-                            duration: const Duration(milliseconds: 450),
-                            curve: Curves.easeOutCubic,
-                            builder: (context, t, _) {
-                              final int particleCount = 10;
-                              final double maxR = 14.0; // 半径
-                              final double r = maxR * t;
-                              final double opacity = (1 - t).clamp(0.0, 1.0);
-                              return Opacity(
-                                opacity: opacity,
-                                child: Stack(
-                                  clipBehavior: Clip.none,
-                                  children: List.generate(particleCount, (i) {
-                                    final double angle =
-                                        (2 * math.pi / particleCount) * i;
-                                    final double dx = math.cos(angle) * r;
-                                    final double dy = math.sin(angle) * r;
-                                    return Transform.translate(
-                                      offset: Offset(dx, dy),
-                                      child: Container(
-                                        width: 3,
-                                        height: 3,
-                                        decoration: BoxDecoration(
-                                          color: _cAccent,
-                                          shape: BoxShape.circle,
-                                        ),
-                                      ),
-                                    );
-                                  }),
-                                ),
-                              );
-                            },
-                          ),
-                        if (_pulsingChecks.contains(questId))
-                          TweenAnimationBuilder<double>(
-                            key: ValueKey('pulse-$questId'),
-                            tween: Tween(begin: 0.0, end: 1.0),
-                            duration: const Duration(milliseconds: 450),
-                            onEnd: () {
-                              if (mounted) {
-                                setState(() {
-                                  _pulsingChecks.remove(questId);
-                                });
-                              }
-                            },
-                            builder: (context, t, _) {
-                              final double size = 22 + 12 * t; // 22→34
-                              final double opacity = (1 - t).clamp(0.0, 1.0);
-                              return Opacity(
-                                opacity: opacity,
-                                child: Container(
-                                  width: size,
-                                  height: size,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                      color: _cAccent.withOpacity(opacity),
-                                      width: 2 - 1.2 * t, // 2→0.8
-                                    ),
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                      ],
-                    ),
-                  ),
-                ),
-                title: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        questName,
-                        style: TextStyle(
-                          color:
-                              (isExpired && !completedView)
-                                  ? Colors.red
-                                  : _cBlack,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    // 期日バッジ
-                    if (deadline != null)
-                      Semantics(
-                        // アクセシビリティ読み上げ
-                        label:
-                            (isExpired
-                                ? '期日 $badgeText, 期限切れ'
-                                : (isDueToday
-                                    ? '期日 $badgeText, 今日中'
-                                    : '期日 $badgeText')),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.black12,
-                            borderRadius: BorderRadius.circular(999),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                isExpired
-                                    ? Icons.warning_amber_rounded
-                                    : Icons.schedule,
-                                size: 14,
-                                color:
-                                    (isDueToday || isExpired)
-                                        ? Colors.red
-                                        : _cBlack,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                badgeText,
-                                style: TextStyle(
-                                  color:
-                                      (isDueToday || isExpired)
-                                          ? Colors.red
-                                          : _cBlack,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-                subtitle: Padding(
-                  padding: const EdgeInsets.only(top: 4),
-                  child: Text(
-                    description.isNotEmpty
-                        ? description
-                        : (taskData['taskType']?.toString() ?? ''),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: _cBlack, fontSize: 13),
-                  ),
-                ),
-                trailing:
-                    (completedView && isLocal)
-                        // 完了一覧のローカル項目限定で「未完了へ戻す」
-                        ? IconButton(
-                          tooltip: '未完了へ戻す',
-                          icon: const Icon(
-                            CupertinoIcons.arrow_uturn_left,
-                            size: 20,
-                            color: _cPrimary,
-                          ),
-                          onPressed: () {
-                            HapticFeedback.selectionClick();
-                            final idx = _localTodos.indexWhere(
-                              (e) => e['id'] == questId,
-                            );
-                            if (idx != -1) {
-                              setState(() {
-                                _localTodos[idx]['completed'] = false;
-                              });
-                              _saveLocalTodos();
-                            }
-                          },
-                        )
-                        : (!isLocal && !completedView)
-                        ? FutureBuilder<bool>(
-                          future: _isCurrentUserSupporting(questId),
-                          builder: (context, snapshot) {
-                            final bool isSupporting = snapshot.data ?? false;
-                            return IconButton(
-                              icon: Icon(
-                                isSupporting
-                                    ? CupertinoIcons.star_fill
-                                    : CupertinoIcons.star,
-                                color: _cMint,
-                              ),
-                              onPressed: () async {
-                                HapticFeedback.selectionClick();
-                                await _toggleTakoyakiSupport(
-                                  questId,
-                                  taskData['createdBy'] as String?,
-                                  taskData,
-                                );
-                                await _refreshQuests();
-                                if (mounted) setState(() {});
-                              },
-                            );
-                          },
-                        )
-                        : null,
-                onTap: () {
-                  if (completedView) return;
-                  if (isLocal) return; // ローカルは詳細画面なし
-                  _confirmAndSubmitTask(questId, taskData);
-                },
-                onLongPress: () {
-                  // 完了一覧のローカル項目は長押しでも未完了へ戻せる
-                  if (completedView && isLocal) {
-                    final idx = _localTodos.indexWhere(
-                      (e) => e['id'] == questId,
-                    );
-                    if (idx != -1) {
-                      setState(() {
-                        _localTodos[idx]['completed'] = false;
-                      });
-                      _saveLocalTodos();
-                    }
-                  }
-                },
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  String _buildRelativeDueText(DateTime? deadline) {
-    if (deadline == null) return '期限なし';
-    final now = DateTime.now();
-    final d = DateTime(deadline.year, deadline.month, deadline.day);
-    final t = DateTime(now.year, now.month, now.day);
-    // 今日なら時刻のみ、それ以外は日付+時刻
-    if (d == t) {
-      return DateFormat('HH:mm').format(deadline);
-    } else {
-      return DateFormat('MM/dd HH:mm').format(deadline);
-    }
-  }
+  
 
   Future<void> _confirmAndSubmitTask(
     String questId,
@@ -2350,18 +1763,14 @@ class _ParkPageState extends ConsumerState<ParkPage> {
                     future: _isCurrentUserSupporting(questId),
                     builder: (context, snapshot) {
                       final bool isSupporting = snapshot.data ?? false;
-                      return Container(
+                      return SizedBox(
                         width: screenWidth * 0.12,
                         height: screenWidth * 0.12,
-                        decoration: BoxDecoration(
-                          image: DecorationImage(
-                            image: AssetImage(
-                              isSupporting
-                                  ? 'assets/takoyaki.png'
-                                  : 'assets/takoyaki_off.png',
-                            ),
-                            fit: BoxFit.contain,
-                          ),
+                        child: Image.asset(
+                          isSupporting
+                              ? 'assets/takoyaki.png'
+                              : 'assets/takoyaki_off.png',
+                          fit: BoxFit.contain,
                         ),
                       );
                     },

@@ -1,9 +1,16 @@
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, TargetPlatform;
 
 // バックグラウンド通知ハンドラー
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  // Web/デスクトップでは処理しない（ローカル通知プラグインが未実装のため）
+  if (kIsWeb ||
+      (defaultTargetPlatform != TargetPlatform.android &&
+          defaultTargetPlatform != TargetPlatform.iOS)) {
+    return;
+  }
   // Firebase Coreの初期化が必要
   // await Firebase.initializeApp();
 
@@ -17,12 +24,12 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 
 // バックグラウンドでローカル通知を表示
 Future<void> _showBackgroundNotification(RemoteMessage message) async {
-  const AndroidNotificationChannel channel = AndroidNotificationChannel(
-    'high_importance_channel',
-    '高優先度通知',
-    description: 'クエストやたこ焼きの通知に使用されます',
-    importance: Importance.high,
-  );
+  if (kIsWeb ||
+      (defaultTargetPlatform != TargetPlatform.android &&
+          defaultTargetPlatform != TargetPlatform.iOS)) {
+    return;
+  }
+  // Android の通知チャネルはフロント側で作成済み（NotificationService.initialize）
 
   const AndroidNotificationDetails androidPlatformChannelSpecifics =
       AndroidNotificationDetails(

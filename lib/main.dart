@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -31,8 +32,15 @@ void main() async {
 
     await initializeDateFormatting('ja_JP', null);
 
-    // Google Mobile Ads 初期化
-    await MobileAds.instance.initialize();
+    // Google Mobile Ads 初期化（モバイルのみ）
+    final bool isMobile = !kIsWeb &&
+        (defaultTargetPlatform == TargetPlatform.android ||
+            defaultTargetPlatform == TargetPlatform.iOS);
+    if (isMobile) {
+      await MobileAds.instance.initialize();
+    } else {
+      debugPrint('Skipping MobileAds initialization on non-mobile platform');
+    }
     runApp(ProviderScope(child: const MyApp()));
   } catch (e) {
     print('Error initializing app: $e');
