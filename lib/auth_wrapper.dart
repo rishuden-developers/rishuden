@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'login_page.dart';
 import 'character_question_page.dart';
 import 'main_page.dart';
+import 'user_profile_page.dart';
 
 class AuthWrapper extends StatelessWidget {
   const AuthWrapper({super.key});
@@ -19,7 +20,7 @@ class AuthWrapper extends StatelessWidget {
         if (!snapshot.hasData) {
           return const LoginPage();
         }
-        return FutureBuilder<DocumentSnapshot>(
+  return FutureBuilder<DocumentSnapshot>(
           future:
               FirebaseFirestore.instance
                   .collection('users')
@@ -32,16 +33,30 @@ class AuthWrapper extends StatelessWidget {
             if (!userSnapshot.hasData) {
               return const LoginPage();
             }
-            final userData = userSnapshot.data!.data() as Map<String, dynamic>?;
-            if (userData == null || !userData.containsKey('character')) {
+            final doc = userSnapshot.data!;
+            // ユーザードキュメントが存在しない場合は診断へ（初回作成時に users/{uid} を作る）
+            if (!doc.exists) {
               return CharacterQuestionPage();
             }
-            // プロフィール未完了でも先にアプリ本体へ遷移させる（初回起動でToDoを見せるため）
-            // 旧仕様: 未完了なら UserProfilePage へ
-            // if (!userData.containsKey('profileCompleted') ||
-            //     userData['profileCompleted'] != true) {
-            //   return const UserProfilePage();
-            // }
+            final userData = doc.data() as Map<String, dynamic>? ?? <String, dynamic>{};
+            // タイプ診断（character）が未完了なら診断へ（null や 空文字も未完了扱い）
+            final dynamic charField = userData['character'];
+            final bool hasCharacter = charField is String && charField.trim().isNotEmpty;
+            if (!hasCharacter) {
+              return CharacterQuestionPage();
+            }
+
+            // プロフィール未完了ならプロフィール設定へ
+            final bool isNameMissing =
+                !userData.containsKey('name') ||
+                userData['name'] == null ||
+                (userData['name'] is String && (userData['name'] as String).trim().isEmpty);
+            final bool isGradeMissing = !userData.containsKey('grade') || userData['grade'] == null;
+            final bool isDepartmentMissing = !userData.containsKey('department') || userData['department'] == null;
+            final bool profileCompletedFlag = userData['profileCompleted'] == true;
+            if (isNameMissing || isGradeMissing || isDepartmentMissing || !profileCompletedFlag) {
+              return const UserProfilePage();
+            }
             // 大学タイプを取得（main or other）
             final universityType = userData['universityType'] ?? 'main';
             // MainPageに渡す（今後Provider化も検討）

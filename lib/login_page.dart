@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'character_question_page.dart';
 import 'register_page.dart';
-import 'main_page.dart';
 
 class LoginPage extends StatefulWidget {
   final String universityType;
@@ -60,23 +58,9 @@ class _LoginPageState extends State<LoginPage> {
         return;
       }
 
-      // 大学タイプに応じて遷移先を分岐
+      // ナビゲーションは AuthWrapper に任せる（未完了チェックを一元化）
       if (mounted) {
-        if (widget.universityType == 'other') {
-          // 他大学の場合は直接メインページへ（キャラクター診断はスキップ）
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) => MainPage(universityType: 'other'),
-            ),
-          );
-        } else {
-          // 大阪大学の場合はキャラクター診断ページへ
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => CharacterQuestionPage()),
-          );
-        }
+        Navigator.of(context).pop();
       }
     } catch (e) {
       String msg = e.toString();

@@ -7,6 +7,3 @@ library ui_flags;
 /// 新しい ToDo UI を使うかどうか
 const bool useSimpleUI = true;
 
-/// ToDo（未完了/完了）で「自分が作成したタスクのみ」を表示するか
-/// false の場合、履修関連の全タスク（他人作成も含む）を表示します。
-const bool showOnlyMyTasks = false;
