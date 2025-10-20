@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'character_question_page.dart';
+import 'pages/image_timetable_input_ui.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'dart:io' show Platform;
 
@@ -295,6 +296,31 @@ class _RegisterPageState extends State<RegisterPage> {
               ),
               style: const TextStyle(color: Colors.white),
               keyboardType: TextInputType.url,
+            ),
+            const SizedBox(height: 12),
+            // 画像から時間割を読み込むUIへの遷移ボタン
+            ElevatedButton.icon(
+              onPressed: () async {
+                // 画像入力UIへ遷移（戻り値で選択画像のパスが返ってくる想定）
+                final result = await Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const ImageTimetableInputUI()),
+                );
+                // 戻り値はここでは利用せずUIのみ実装する仕様
+                if (result == null) {
+                  // ユーザーが画像を選択せず戻った場合の処理（UI上で通知）
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('画像が選択されませんでした。')),
+                  );
+                } else {
+                  // 画像パスが返された場合はカレンダーURL欄にそのパスを仮入力する（任意）
+                  _calendarUrlController.text = result.toString();
+                }
+              },
+              icon: const Icon(Icons.image),
+              label: const Text('画像で時間割を入力'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF27AE60),
+              ),
             ),
             if (_error != null) ...[
               const SizedBox(height: 12),
