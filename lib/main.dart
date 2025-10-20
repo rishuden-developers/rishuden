@@ -10,9 +10,6 @@ import 'main_page.dart';
 import 'services/notification_service.dart';
 import 'services/background_message_handler.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
-import 'package:lottie/lottie.dart';
-import 'loading_page.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -57,12 +54,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(primarySwatch: Colors.blue),
       debugShowCheckedModeBanner: false,
       navigatorKey: navigatorKey,
-
-      // ✅ 起動時はローディングページ
-      home: const LoadingPage(),
-
-      // ✅ LoadingPage → '/home' へ遷移するので、その受け皿を用意
-      routes: {'/home': (_) => AuthWrapper()},
+      home: AuthWrapper(),
     );
   }
 }
@@ -117,58 +109,28 @@ class _CourseListPageState extends State<CourseListPage> {
       body: FutureBuilder<List<Map<String, dynamic>>>(
         future: _coursesFuture,
         builder: (context, snapshot) {
-          // ① ローディング中にLottieを表示
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(
-              child: SizedBox(
-                width: 120,
-                height: 120,
-                child: _LoadingLottie(), // ← ここに差し替え！
-              ),
-            );
+            return Center(child: CircularProgressIndicator());
           }
-
-          // ② エラー時の表示（追加推奨）
-          if (snapshot.hasError) {
-            return const Center(child: Text('読み込み中にエラーが発生しました'));
-          }
-
-          // ③ データが空のとき
           if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return const Center(child: Text('データがありません'));
+            return Center(child: Text('データがありません'));
           }
-
-          // ④ データ表示
           final courses = snapshot.data!;
           return ListView(
             children:
-                courses.map((course) {
-                  return ListTile(
-                    title: Text(course['name'] ?? ''),
-                    subtitle: Text(
-                      course['instructor'] ?? course['teacher'] ?? '',
-                    ),
-                  );
-                }).toList(),
+                courses
+                    .map(
+                      (course) => ListTile(
+                        title: Text(course['name'] ?? ''),
+                        subtitle: Text(
+                          course['instructor'] ?? course['teacher'] ?? '',
+                        ),
+                      ),
+                    )
+                    .toList(),
           );
         },
       ),
-    );
-  }
-}
-
-class _LoadingLottie extends StatelessWidget {
-  const _LoadingLottie();
-
-  @override
-  Widget build(BuildContext context) {
-    return Lottie.asset(
-      'assets/lottie/loading.json', // ①と同じパス
-      width: 120,
-      height: 120,
-      repeat: true,
-      animate: true,
-      fit: BoxFit.contain,
     );
   }
 }
