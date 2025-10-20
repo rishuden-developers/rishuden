@@ -245,6 +245,7 @@ class _RegisterPageState extends State<RegisterPage> {
               const SizedBox(height: 12),
               Container(
                 padding: const EdgeInsets.all(12),
+                
                 decoration: BoxDecoration(
                   color: Colors.red.withOpacity(0.08),
                   borderRadius: BorderRadius.circular(12),
