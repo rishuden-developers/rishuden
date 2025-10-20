@@ -1,15 +1,11 @@
+// current_semester_reviews_page.dart
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'credit_input_page.dart';
-import 'character_data.dart';
-import 'credit_review_page.dart';
-import 'components/course_card.dart';
-import 'common_bottom_navigation.dart'; // ボトムナビゲーション用
-import 'main_page.dart';
-import 'providers/current_page_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'providers/background_image_provider.dart';
+
+import 'credit_review_page.dart';
+import 'common_bottom_navigation.dart';
 
 class CurrentSemesterReviewsPage extends ConsumerStatefulWidget {
   const CurrentSemesterReviewsPage({super.key});
@@ -29,377 +25,359 @@ class _CurrentSemesterReviewsPageState
     _coursesFuture = _fetchCurrentSemesterCourses();
   }
 
+  Future<void> _reload() async {
+    setState(() {
+      _coursesFuture = _fetchCurrentSemesterCourses();
+    });
+    await _coursesFuture;
+  }
+
   Future<List<Map<String, dynamic>>> _fetchCurrentSemesterCourses() async {
     try {
       final user = FirebaseAuth.instance.currentUser;
-      if (user == null) {
-        print('User not logged in');
-        return [];
-      }
+      if (user == null) return [];
 
-      print('Fetching courses for user: ${user.uid}');
-
-      // ユーザーの時間割からcourseIdを取得
+      // ユーザーの時間割から courseId を取得
       final userCourses = <String>{};
       try {
-        final timetableNotesDoc =
+        final notes =
             await FirebaseFirestore.instance
                 .collection('users')
                 .doc(user.uid)
                 .collection('timetable')
                 .doc('notes')
                 .get();
-
-        print('Timetable notes doc exists: ${timetableNotesDoc.exists}');
-
-        if (timetableNotesDoc.exists) {
-          final data = timetableNotesDoc.data()!;
-          print('Timetable notes data keys: ${data.keys}');
-          final courseIds = data['courseIds'] as Map<String, dynamic>? ?? {};
-          print('Found ${courseIds.length} courseIds');
-
-          for (var entry in courseIds.entries) {
-            final courseId = entry.value as String?;
-            if (courseId != null && courseId.isNotEmpty) {
-              userCourses.add(courseId);
-              print('Added courseId: $courseId');
-            } else {
-              print('Entry ${entry.key} has no courseId or empty courseId');
-            }
-          }
-        } else {
-          print('Timetable notes document does not exist');
+        final courseIds =
+            (notes.data()?['courseIds'] as Map<String, dynamic>?) ?? {};
+        for (final e in courseIds.entries) {
+          final id = e.value as String?;
+          if (id != null && id.isNotEmpty) userCourses.add(id);
         }
-      } catch (e) {
-        print('Error fetching user timetable notes: $e');
-      }
+      } catch (_) {}
 
-      print('User courses from timetable: $userCourses');
-
-      // 各授業の情報とレビュー統計を取得
+      // 各授業のレビュー統計
       final List<Map<String, dynamic>> courses = [];
-
       for (final courseId in userCourses) {
         try {
-          // courseIdから講義名を抽出
-          final parts = courseId.split('|');
-          final lectureName = parts.isNotEmpty ? parts[0] : courseId;
-          final teacherName = '';
-
-          // その授業のレビューを取得（courseIdで検索）
-          final reviewsSnapshot =
+          final lectureName = courseId.split('|').first;
+          final reviewsSnap =
               await FirebaseFirestore.instance
                   .collection('reviews')
                   .where('courseId', isEqualTo: courseId)
                   .get();
 
-          final allReviews = <Map<String, dynamic>>[];
-          final Set<String> addedReviewIds = <String>{};
-
-          // courseIdで取得したレビューを追加
-          for (final doc in reviewsSnapshot.docs) {
-            final data = doc.data();
-            data['reviewId'] = doc.id; // reviewIdを追加
-            allReviews.add(data);
-            addedReviewIds.add(doc.id);
+          final all = <Map<String, dynamic>>[];
+          final added = <String>{};
+          for (final d in reviewsSnap.docs) {
+            final data = d.data();
+            data['reviewId'] = d.id;
+            all.add(data);
+            added.add(d.id);
           }
 
-          // ユーザーが投稿したレビューで、まだ追加されていないものを取得
-          // courseIdが設定されていない場合のフォールバック
-          final userReviewsSnapshot =
+          // フォールバック：ユーザー自身の lectureName 一致
+          final userSnap =
               await FirebaseFirestore.instance
                   .collection('reviews')
                   .where('userId', isEqualTo: user.uid)
                   .where('lectureName', isEqualTo: lectureName)
                   .get();
-
-          // 重複していないレビューのみを追加
-          for (final doc in userReviewsSnapshot.docs) {
-            if (!addedReviewIds.contains(doc.id)) {
-              final data = doc.data();
-              data['reviewId'] = doc.id; // reviewIdを追加
-              allReviews.add(data);
-              addedReviewIds.add(doc.id);
+          for (final d in userSnap.docs) {
+            if (!added.contains(d.id)) {
+              final data = d.data();
+              data['reviewId'] = d.id;
+              all.add(data);
+              added.add(d.id);
             }
           }
 
-          // レビュー統計を計算
-          double avgSatisfaction = 0.0;
-          double avgEasiness = 0.0;
-          int reviewCount = allReviews.length;
-          bool hasMyReview = false;
-
-          if (allReviews.isNotEmpty) {
-            double totalSatisfaction = 0.0;
-            double totalEasiness = 0.0;
-
-            for (final review in allReviews) {
-              final satisfaction =
-                  (review['overallSatisfaction'] ??
-                      review['satisfaction'] ??
-                      0.0) *
-                  1.0;
-              final easiness =
-                  (review['easiness'] ?? review['ease'] ?? 0.0) * 1.0;
-              totalSatisfaction += satisfaction;
-              totalEasiness += easiness;
-
-              // 自分のレビューがあるかチェック
-              if (review['userId'] == user.uid) {
-                hasMyReview = true;
-              }
-            }
-
-            avgSatisfaction = totalSatisfaction / allReviews.length;
-            avgEasiness = totalEasiness / allReviews.length;
+          double sat = 0, ease = 0;
+          var my = false;
+          for (final r in all) {
+            sat +=
+                (r['overallSatisfaction'] ?? r['satisfaction'] ?? 0).toDouble();
+            ease += (r['easiness'] ?? r['ease'] ?? 0).toDouble();
+            if (r['userId'] == user.uid) my = true;
           }
 
           courses.add({
             'courseId': courseId,
             'lectureName': lectureName,
-            'teacherName': teacherName,
-            'avgSatisfaction': avgSatisfaction,
-            'avgEasiness': avgEasiness,
-            'reviewCount': reviewCount,
-            'hasMyReview': hasMyReview,
+            'teacherName': '', // 必要なら Course コレクションから取得に拡張
+            'avgSatisfaction': all.isEmpty ? 0.0 : sat / all.length,
+            'avgEasiness': all.isEmpty ? 0.0 : ease / all.length,
+            'reviewCount': all.length,
+            'hasMyReview': my,
           });
-
-          print(
-            'Added course: $lectureName with $reviewCount reviews (unique)',
-          );
-        } catch (e) {
-          print('Error processing course $courseId: $e');
-        }
+        } catch (_) {}
       }
-
-      print('Processed ${courses.length} courses');
       return courses;
-    } catch (e) {
-      print('Error fetching current semester courses: $e');
+    } catch (_) {
       return [];
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final double topOffset =
-        kToolbarHeight + MediaQuery.of(context).padding.top;
-    return Stack(
-      children: [
-        Positioned.fill(
-          child: Image.asset(
-            ref.watch(backgroundImagePathProvider),
-            fit: BoxFit.cover,
-          ),
+    // カラーパレット（ホーム画像と同系）
+    const mainBlue = Color(0xFF2E6DB6);
+    final bg = Colors.grey[100];
+
+    return Scaffold(
+      backgroundColor: bg,
+      appBar: AppBar(
+        title: const Text('今学期の履修授業'),
+        centerTitle: true,
+        backgroundColor: mainBlue,
+        elevation: 0,
+      ),
+      body: RefreshIndicator(
+        onRefresh: _reload,
+        child: FutureBuilder<List<Map<String, dynamic>>>(
+          future: _coursesFuture,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            final courses = snapshot.data ?? [];
+            if (courses.isEmpty) {
+              return const _EmptyState();
+            }
+            return ListView.builder(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+              itemCount: courses.length,
+              itemBuilder: (_, i) => _CourseTileSimple(course: courses[i]),
+            );
+          },
         ),
-        Positioned.fill(child: Container(color: Colors.black.withOpacity(0.5))),
-        Material(
-          type: MaterialType.transparency,
-          child: Stack(
-            children: [
-              // AppBar
-              Positioned(
-                top: 0,
-                left: 0,
-                right: 0,
-                child: AppBar(
-                  title: const Text('今学期の履修授業'),
-                  backgroundColor: Colors.transparent,
-                  elevation: 0,
-                  foregroundColor: Colors.white,
+      ),
+      bottomNavigationBar: const CommonBottomNavigation(),
+    );
+  }
+}
+
+/// ====== シンプルUIのカード ======
+class _CourseTileSimple extends StatelessWidget {
+  final Map<String, dynamic> course;
+  const _CourseTileSimple({required this.course});
+
+  @override
+  Widget build(BuildContext context) {
+    final blue = const Color(0xFF2E6DB6);
+    final chipColor =
+        course['hasMyReview'] == true
+            ? Colors.green.shade100
+            : Colors.transparent;
+    final chipTextColor =
+        course['hasMyReview'] == true ? Colors.green : Colors.grey;
+
+    return InkWell(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder:
+                (_) => CreditReviewPage(
+                  lectureName: course['lectureName'],
+                  teacherName: course['teacherName'] ?? '',
+                  courseId: course['courseId'],
                 ),
-              ),
-              // ListView（AppBarの下から画面の一番下まで）
-              Positioned(
-                top: topOffset,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                child: FutureBuilder<List<Map<String, dynamic>>>(
-                  future: _coursesFuture,
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(
-                        child: CircularProgressIndicator(color: Colors.white),
-                      );
-                    }
-                    if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                      return const Center(
-                        child: Text(
-                          '今学期の履修授業がありません',
-                          style: TextStyle(color: Colors.white, fontSize: 18),
-                        ),
-                      );
-                    }
-                    final courses = snapshot.data!;
-                    return ListView.builder(
-                      physics: ClampingScrollPhysics(),
-                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 80),
-                      itemCount: courses.length,
-                      itemBuilder: (context, index) {
-                        return CourseCard(
-                          course: courses[index],
-                          onTeacherNameChanged: (newTeacherName) {
-                            // coursesリストの該当courseのteacherNameを更新
-                            courses[index]['teacherName'] = newTeacherName;
-                          },
-                        );
-                      },
-                    );
-                  },
-                ),
-              ),
-              // ボトムナビ
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: 0,
-                child: CommonBottomNavigation(),
-              ),
-            ],
           ),
+        );
+      },
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 8),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.06),
+              blurRadius: 10,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 上段：タイトル＋チップ
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    course['lectureName'] ?? '',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                if (course['hasMyReview'] == true)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: chipColor,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      '投稿済み',
+                      style: TextStyle(
+                        color: chipTextColor,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              course['teacherName']?.toString().isNotEmpty == true
+                  ? course['teacherName']
+                  : '担当未設定',
+              style: TextStyle(color: Colors.grey.shade700, fontSize: 13),
+            ),
+            const SizedBox(height: 12),
+
+            // 指標（満足度/楽単度/レビュー数）
+            Row(
+              children: [
+                _Metric(
+                  icon: Icons.star_rounded,
+                  color: Colors.amber,
+                  value: (course['avgSatisfaction'] as double).toStringAsFixed(
+                    1,
+                  ),
+                  label: '満足度',
+                ),
+                const SizedBox(width: 14),
+                _Metric(
+                  icon: Icons.sentiment_satisfied_alt_rounded,
+                  color: Colors.teal,
+                  value: (course['avgEasiness'] as double).toStringAsFixed(1),
+                  label: '楽単度',
+                ),
+                const Spacer(),
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.comment_rounded,
+                      size: 18,
+                      color: Colors.blueGrey,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      '${course['reviewCount']}件',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 12),
+
+            // 右下に矢印
+            Align(
+              alignment: Alignment.centerRight,
+              child: Icon(Icons.chevron_right_rounded, color: blue),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _Metric extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final String value;
+  final String label;
+
+  const _Metric({
+    required this.icon,
+    required this.color,
+    required this.value,
+    required this.label,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, size: 18, color: color),
+        const SizedBox(width: 6),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              value,
+              style: TextStyle(
+                color: color,
+                fontWeight: FontWeight.bold,
+                fontSize: 15,
+              ),
+            ),
+            Text(
+              label,
+              style: const TextStyle(fontSize: 11, color: Colors.grey),
+            ),
+          ],
         ),
       ],
     );
   }
 }
 
-class _CourseCard extends StatelessWidget {
-  final Map<String, dynamic> course;
-  final Function(String) onTeacherNameChanged;
-
-  const _CourseCard({required this.course, required this.onTeacherNameChanged});
+class _EmptyState extends StatelessWidget {
+  const _EmptyState();
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 8.0),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-      elevation: 5,
-      color: Colors.white,
-      child: InkWell(
-        onTap: () {
-          print('遷移時のcourseId: \\${course['courseId']}');
-          // 授業詳細画面に遷移
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder:
-                  (context) => CreditReviewPage(
-                    lectureName: course['lectureName'],
-                    teacherName: course['teacherName'],
-                    courseId: course['courseId'], // courseIdに統一
-                  ),
+    const blue = Color(0xFF2E6DB6);
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.info_outline_rounded,
+              size: 48,
+              color: Colors.grey,
             ),
-          );
-        },
-        borderRadius: BorderRadius.circular(15),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // 授業名と教員名
-              Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          course['lectureName'],
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          course['teacherName'],
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey[700],
-                          ),
-                        ),
-                      ],
-                    ),
+            const SizedBox(height: 12),
+            const Text(
+              '今学期の履修授業がありません',
+              style: TextStyle(fontSize: 16, color: Colors.black87),
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              height: 48,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: blue,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
                   ),
-                  // レビュー投稿済みバッジ
-                  if (course['hasMyReview'])
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.green[100],
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Text(
-                        '投稿済み',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.green,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                ],
+                ),
+                onPressed: () => Navigator.pop(context),
+                child: const Text('戻る', style: TextStyle(color: Colors.white)),
               ),
-              const SizedBox(height: 12),
-
-              // 評価統計
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _buildRatingItem(
-                    '満足度',
-                    course['avgSatisfaction'].toStringAsFixed(1),
-                    Icons.star,
-                    Colors.amber,
-                  ),
-                  _buildRatingItem(
-                    '楽単度',
-                    course['avgEasiness'].toStringAsFixed(1),
-                    Icons.sentiment_satisfied,
-                    Colors.green,
-                  ),
-                  _buildRatingItem(
-                    'レビュー数',
-                    '${course['reviewCount']}件',
-                    Icons.comment,
-                    Colors.blue,
-                  ),
-                ],
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
-    );
-  }
-
-  Widget _buildRatingItem(
-    String label,
-    String value,
-    IconData icon,
-    Color color,
-  ) {
-    return Column(
-      children: [
-        Icon(icon, color: color, size: 20),
-        const SizedBox(height: 4),
-        Text(
-          value,
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 16,
-            color: color,
-          ),
-        ),
-        Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
-      ],
     );
   }
 }

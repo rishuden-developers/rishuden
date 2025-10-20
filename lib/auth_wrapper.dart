@@ -5,6 +5,8 @@ import 'login_page.dart';
 import 'character_question_page.dart';
 import 'user_profile_page.dart';
 import 'main_page.dart';
+import 'package:lottie/lottie.dart';
+import 'loading_page.dart';
 
 class AuthWrapper extends StatelessWidget {
   const AuthWrapper({super.key});
@@ -15,7 +17,13 @@ class AuthWrapper extends StatelessWidget {
       stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
+          return Center(
+            child: SizedBox(
+              width: 120,
+              height: 120,
+              child: Lottie.asset('assets/animations/loading.json'),
+            ),
+          );
         }
         if (!snapshot.hasData) {
           return const LoginPage();

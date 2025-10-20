@@ -18,6 +18,7 @@ import 'current_semester_reviews_page.dart' show _CourseCard;
 import 'components/course_card.dart';
 import 'package:rishuden/providers/timetable_provider.dart';
 import 'package:rishuden/providers/background_image_provider.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 // 検索結果の各講義を表すデータモデル
 class LectureSearchResult {
@@ -212,49 +213,47 @@ class _CreditResultPageState extends ConsumerState<CreditResultPage> {
   Future<List<Map<String, dynamic>>> _loadAutumnWinterCourses() async {
     final List<Map<String, dynamic>> courses = [];
 
-    try {
-      // course_dataコレクションから秋冬学期の授業を取得
-      final snapshot =
-          await FirebaseFirestore.instance.collection('course_data').get();
+    // 各授業のレビュー情報を取得
+    for (int i = 0; i < courses.length; i++) {
+      final courseId = courses[i]['courseId'];
+      try {
+        final reviewsSnapshot =
+            await FirebaseFirestore.instance
+                .collection('reviews')
+                .where('courseId', isEqualTo: courseId)
+                .get();
 
-      for (final doc in snapshot.docs) {
-        final data = doc.data();
-        if (data.containsKey('data') &&
-            data['data'] is Map &&
-            data['data']['courses'] is List) {
-          final List<dynamic> courseList = (data['data'] as Map)['courses'];
-          for (final course in courseList) {
-            if (course is Map<String, dynamic>) {
-              final lectureName = course['lectureName'] ?? course['name'] ?? '';
-              final teacherName =
-                  course['teacherName'] ??
-                  course['instructor'] ??
-                  course['teacher'] ??
-                  '';
-              final classroom = course['classroom'] ?? course['room'] ?? '';
-              final category = course['category'] ?? '';
-              final semester = course['semester'] ?? '';
+        final reviews = reviewsSnapshot.docs;
+        if (reviews.isNotEmpty) {
+          double totalSatisfaction = 0.0;
+          double totalEasiness = 0.0;
+          bool hasMyReview = false;
+          final user = FirebaseAuth.instance.currentUser;
 
-              if (lectureName.isNotEmpty) {
-                courses.add({
-                  'courseId': '', // 秋冬学期はcourseIdを使用しない
-                  'lectureName': lectureName,
-                  'teacherName': teacherName,
-                  'classroom': classroom,
-                  'category': category,
-                  'semester': '後期', // 後期として設定
-                  'avgSatisfaction': 0.0,
-                  'avgEasiness': 0.0,
-                  'reviewCount': 0,
-                  'hasMyReview': false,
-                });
-              }
+          // ★この内側の for を次のように書く
+          for (final doc in reviews) {
+            final d = doc.data();
+            final s = (d['overallSatisfaction'] ?? d['satisfaction'] ?? 0);
+            final e = (d['easiness'] ?? d['ease'] ?? 0);
+            totalSatisfaction += (s is num ? s.toDouble() : 0.0);
+            totalEasiness += (e is num ? e.toDouble() : 0.0);
+
+            if (user != null && d['userId'] == user.uid) {
+              hasMyReview = true;
             }
           }
+
+          courses[i] = {
+            ...courses[i],
+            'avgSatisfaction': totalSatisfaction / reviews.length,
+            'avgEasiness': totalEasiness / reviews.length,
+            'reviewCount': reviews.length,
+            'hasMyReview': hasMyReview,
+          };
         }
+      } catch (e) {
+        print('Error fetching reviews for $courseId: $e');
       }
-    } catch (e) {
-      print('Error loading autumn/winter courses: $e');
     }
 
     return courses;
