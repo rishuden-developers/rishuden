@@ -17,79 +17,69 @@ class RegisterPage extends StatefulWidget {
 }
 
 class _RegisterPageState extends State<RegisterPage> {
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
-  final _calendarUrlController = TextEditingController();
+  final _email = TextEditingController();
+  final _pw = TextEditingController();
+  final _calendar = TextEditingController();
+
   String? _error;
-  bool _agreedToTerms = false; // 利用規約同意フラグ
+  bool _agree = false;
+  bool _loading = false;
+  bool _obscure = true;
+
+  static const mainBlue = Color(0xFF2E6DB6);
 
   Future<void> _register() async {
     setState(() {
       _error = null;
+      _loading = true;
     });
     try {
-      UserCredential userCredential = await FirebaseAuth.instance
-          .createUserWithEmailAndPassword(
-            email: _emailController.text.trim(),
-            password: _passwordController.text.trim(),
-          );
+      final cred = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        email: _email.text.trim(),
+        password: _pw.text.trim(),
+      );
 
-      if (userCredential.user != null) {
+      if (cred.user != null) {
         await FirebaseFirestore.instance
             .collection('users')
-            .doc(userCredential.user!.uid)
+            .doc(cred.user!.uid)
             .set({
               'universityType': 'main',
               'universityName': '大阪大学',
-              'calendarUrl': _calendarUrlController.text.trim(),
-              'profileCompleted': false, // 新規登録時はfalseに設定
+              'calendarUrl': _calendar.text.trim(),
+              'profileCompleted': false,
             }, SetOptions(merge: true));
-      }
 
-      await userCredential.user!.sendEmailVerification();
-      // メール送信後は認証を促す
-      if (mounted) {
-        // mounted checkを追加
-        showDialog(
+        await cred.user!.sendEmailVerification();
+
+        if (!mounted) return;
+        await showDialog(
           context: context,
           builder:
-              (context) => AlertDialog(
-                title: const Text(
-                  '仮登録完了',
-                  style: TextStyle(color: Colors.black),
-                ), // ダイアログタイトル色
-                content: const Text(
-                  '認証メールを送信しました。メール内のリンクをクリックして本登録を完了してください。',
-                  style: TextStyle(color: Colors.black87),
-                ), // ダイアログコンテンツ色
+              (_) => AlertDialog(
+                title: const Text('仮登録完了'),
+                content: const Text('認証メールを送信しました。リンクをクリックして本登録を完了してください。'),
                 actions: [
                   TextButton(
                     onPressed:
-                        () async =>
-                            await userCredential.user!.sendEmailVerification(),
-                    child: const Text(
-                      '再送信',
-                      style: TextStyle(color: Color(0xFF3498DB)),
-                    ), // ボタン色
+                        () async => await cred.user!.sendEmailVerification(),
+                    child: const Text('再送信', style: TextStyle(color: mainBlue)),
                   ),
                   TextButton(
                     onPressed: () async {
-                      await userCredential.user!.reload();
+                      await cred.user!.reload();
                       final user = FirebaseAuth.instance.currentUser;
                       if (user != null && user.emailVerified) {
-                        if (mounted) Navigator.of(context).pop(); // ダイアログを閉じる
-                        // 認証済みなら次の画面へ遷移
+                        if (mounted) Navigator.of(context).pop();
+                        if (Platform.isAndroid) {
+                          final android =
+                              FlutterLocalNotificationsPlugin()
+                                  .resolvePlatformSpecificImplementation<
+                                    AndroidFlutterLocalNotificationsPlugin
+                                  >();
+                          await android?.requestExactAlarmsPermission();
+                        }
                         if (mounted) {
-                          // Androidの場合のみ正確なアラーム権限を要求
-                          if (Platform.isAndroid) {
-                            final AndroidFlutterLocalNotificationsPlugin?
-                                androidImplementation =
-                                FlutterLocalNotificationsPlugin()
-                                    .resolvePlatformSpecificImplementation<
-                                        AndroidFlutterLocalNotificationsPlugin>();
-                            await androidImplementation
-                                ?.requestExactAlarmsPermission();
-                          }
                           Navigator.of(context).pushReplacement(
                             MaterialPageRoute(
                               builder: (_) => CharacterQuestionPage(),
@@ -104,198 +94,130 @@ class _RegisterPageState extends State<RegisterPage> {
                         }
                       }
                     },
-                    child: const Text(
-                      '次へ',
-                      style: TextStyle(color: Color(0xFF3498DB)),
-                    ), // ボタン色
+                    child: const Text('次へ', style: TextStyle(color: mainBlue)),
                   ),
                 ],
               ),
         );
       }
-    } catch (e) {
-      String msg = e.toString();
-      if (e is FirebaseAuthException && e.code == 'email-already-in-use') {
+    } on FirebaseAuthException catch (e) {
+      var msg = e.message ?? e.code;
+      if (e.code == 'email-already-in-use') {
         msg = 'このメールアドレスは既に登録されています';
       }
-      setState(() {
-        _error = msg;
-      });
+      setState(() => _error = msg);
+    } catch (e) {
+      setState(() => _error = e.toString());
+    } finally {
+      if (mounted) setState(() => _loading = false);
     }
   }
 
-  Future<void> _openKoan() async {
-    const String koanUrl =
-        'https://koan.osaka-u.ac.jp/campusweb/campusportal.do?page=main';
-
-    final Uri url = Uri.parse(koanUrl);
-    await launchUrl(url, mode: LaunchMode.externalApplication);
+  Future<void> _openUrl(String url) async {
+    final uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF2C3E50), // 暗い青色色調の背景
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text(
-          'アカウント作成',
-          style: TextStyle(color: Colors.white),
-        ), // タイトル色を白に
-        backgroundColor: const Color(0xFF2C3E50), // AppBarの背景色を合わせる
-        iconTheme: const IconThemeData(color: Colors.white), // 戻るボタンのアイコン色を白に
-        elevation: 0, // AppBarの影をなくす
+        backgroundColor: mainBlue,
+        centerTitle: true,
+        elevation: 0,
+        title: const Text('アカウント作成'),
       ),
-      body: SingleChildScrollView(
-        // スクロール可能にする
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.stretch, // 子要素を水平方向に伸ばす
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
           children: [
-            const SizedBox(height: 20), // 上部の余白
-            // Email入力フィールド
+            Text(
+              'メール認証後に本登録が完了します',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey[700]),
+            ),
+            const SizedBox(height: 20),
+
+            // 入力欄（シンプル）
             TextField(
-              controller: _emailController,
-              decoration: InputDecoration(
-                labelText: '大学のメールアドレスを入力', // ラベルテキストを簡潔に
-                labelStyle: const TextStyle(color: Colors.white70),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: const BorderSide(color: Colors.white54),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderSide: const BorderSide(color: Colors.blueAccent),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                fillColor: Colors.white.withOpacity(0.1),
-                filled: true,
-              ),
-              style: const TextStyle(color: Colors.white),
+              controller: _email,
               keyboardType: TextInputType.emailAddress,
+              decoration: _input('大学のメールアドレス', Icons.alternate_email),
             ),
-            const SizedBox(height: 16),
-            // Password入力フィールド
+            const SizedBox(height: 12),
             TextField(
-              controller: _passwordController,
-              decoration: InputDecoration(
-                labelText: 'パスワードを作成', // ラベルテキストを簡潔に
-                labelStyle: const TextStyle(color: Colors.white70),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: const BorderSide(color: Colors.white54),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderSide: const BorderSide(color: Colors.blueAccent),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                fillColor: Colors.white.withOpacity(0.1),
-                filled: true,
-              ),
-              style: const TextStyle(color: Colors.white),
-              obscureText: true,
-            ),
-            const SizedBox(height: 24),
-
-            // 利用規約リンク
-            Center(
-              child: GestureDetector(
-                child: const Text(
-                  '利用規約',
-                  style: TextStyle(
-                    color: Colors.blueAccent,
-                    decoration: TextDecoration.underline,
-                    decorationColor: Colors.blueAccent, // 下線を青色に
-                    fontSize: 16,
+              controller: _pw,
+              obscureText: _obscure,
+              decoration: _input(
+                'パスワード',
+                Icons.lock_outline,
+                suffix: IconButton(
+                  icon: Icon(
+                    _obscure ? Icons.visibility : Icons.visibility_off,
                   ),
+                  onPressed: () => setState(() => _obscure = !_obscure),
                 ),
               ),
             ),
+            const SizedBox(height: 20),
 
-            const SizedBox(height: 16),
-
-            // 利用規約同意チェックボックス
+            // 規約と同意
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Checkbox(
-                  value: _agreedToTerms,
-                  onChanged: (bool? value) {
-                    setState(() {
-                      _agreedToTerms = value ?? false;
-                    });
-                  },
-                  activeColor: const Color(0xFF3498DB),
-                  checkColor: Colors.white,
+                  value: _agree,
+                  activeColor: mainBlue,
+                  onChanged: (v) => setState(() => _agree = v ?? false),
                 ),
-                const Text(
-                  '利用規約に同意する',
-                  style: TextStyle(color: Colors.white, fontSize: 16),
+                const Text('利用規約に同意する'),
+                const SizedBox(width: 8),
+                TextButton(
+                  onPressed: () => _openUrl('https://example.com/terms'),
+                  child: const Text('利用規約を読む'),
                 ),
               ],
             ),
 
-            const SizedBox(height: 16),
+            const SizedBox(height: 8),
 
-            // KOANリンク
+            // KOANリンク（青テキスト）
             Center(
-              child: GestureDetector(
-                onTap: () async {
-                  final Uri url = Uri.parse('https://koan.osaka-u.ac.jp/');
-                  if (await canLaunchUrl(url)) {
-                    await launchUrl(url, mode: LaunchMode.externalApplication);
-                  }
-                },
-                child: const Text(
-                  'KOANにアクセス',
-                  style: TextStyle(
-                    color: Colors.blueAccent,
-                    decoration: TextDecoration.underline,
-                    decorationColor: Colors.blueAccent,
-                    fontSize: 16,
-                  ),
+              child: TextButton(
+                onPressed: () => _openUrl('https://koan.osaka-u.ac.jp/'),
+                child: const Text('KOANにアクセス'),
+              ),
+            ),
+
+            const SizedBox(height: 8),
+            // 説明＋画像
+            Column(
+              children: [
+                Image.asset(
+                  'assets/calender.png',
+                  width: 320,
+                  height: 150,
+                  fit: BoxFit.contain,
                 ),
-              ),
-            ),
-
-            const SizedBox(height: 16),
-
-            // カレンダー画像と説明
-            Center(
-              // 画像を中央に配置
-              child: Image.asset(
-                'assets/calender.png', // assetsフォルダに画像があることを前提
-                width: 320, // 280から320にさらに拡大
-                height: 150, // 120から150に拡大
-                fit: BoxFit.contain,
-              ),
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              'KOANの課題ページのURLをコピーして、下の入力欄に貼り付けてください。\n例: https://koan.osaka-u.ac.jp/...\n\n※ 新規発行のカレンダーURLは反映まで最大1日程度かかる場合があります。',
-              style: TextStyle(fontSize: 13, color: Colors.white70), // テキスト色を白に
-              textAlign: TextAlign.center,
+                const SizedBox(height: 8),
+                const Text(
+                  'KOANの課題ページのURLをコピーして下の入力欄に貼り付けてください。\n'
+                  '例: https://koan.osaka-u.ac.jp/... \n\n'
+                  '※ 新規発行のカレンダーURLは反映まで最大1日程度かかる場合があります。',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 13, color: Colors.black54),
+                ),
+              ],
             ),
             const SizedBox(height: 12),
 
-            // カレンダーURL入力フィールド
             TextField(
-              controller: _calendarUrlController,
-              decoration: InputDecoration(
-                labelText: 'カレンダーURL (.ics形式)',
-                labelStyle: const TextStyle(color: Colors.white70),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: const BorderSide(color: Colors.white54),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderSide: const BorderSide(color: Colors.blueAccent),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                fillColor: Colors.white.withOpacity(0.1),
-                filled: true,
-              ),
-              style: const TextStyle(color: Colors.white),
+              controller: _calendar,
               keyboardType: TextInputType.url,
+              decoration: _input('カレンダーURL (.ics)', Icons.link),
             ),
             const SizedBox(height: 12),
             // 画像から時間割を読み込むUIへの遷移ボタン
@@ -311,9 +233,6 @@ class _RegisterPageState extends State<RegisterPage> {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('画像が選択されませんでした。')),
                   );
-                } else {
-                  // 画像パスが返された場合はカレンダーURL欄にそのパスを仮入力する（任意）
-                  _calendarUrlController.text = result.toString();
                 }
               },
               icon: const Icon(Icons.image),
@@ -324,53 +243,80 @@ class _RegisterPageState extends State<RegisterPage> {
             ),
             if (_error != null) ...[
               const SizedBox(height: 12),
-              Text(
-                _error!,
-                style: const TextStyle(color: Colors.redAccent), // エラーテキスト色
-                textAlign: TextAlign.center,
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.red.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.red.withOpacity(0.3)),
+                ),
+                child: Text(_error!, style: const TextStyle(color: Colors.red)),
               ),
             ],
-            const SizedBox(height: 24),
 
-            // 同意して仮登録ボタン
-            ElevatedButton(
-              child: const Text(
-                'アカウントを作成する',
-                style: TextStyle(
-                  color: Colors.white, // 白いテキスト
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
+            const SizedBox(height: 20),
+            SizedBox(
+              height: 52,
+              child: ElevatedButton(
+                onPressed: _agree && !_loading ? _register : null,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: mainBlue,
+                  disabledBackgroundColor: mainBlue.withOpacity(0.4),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
                 ),
-                textAlign: TextAlign.center,
-              ),
-              onPressed: _agreedToTerms ? _register : null,
-              style: ElevatedButton.styleFrom(
-                backgroundColor:
-                    _agreedToTerms
-                        ? const Color(0xFF3498DB)
-                        : Colors.grey, // 青色基調
-                padding: const EdgeInsets.symmetric(
-                  vertical: 16,
-                  horizontal: 24,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                elevation: 2, // ボタンに少し影を追加
+                child:
+                    _loading
+                        ? const SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                        : const Text(
+                          'アカウントを作成する',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
               ),
             ),
-            const SizedBox(height: 20), // 下部の余白
+            const SizedBox(height: 20),
           ],
         ),
       ),
     );
   }
 
+  InputDecoration _input(String label, IconData icon, {Widget? suffix}) {
+    return InputDecoration(
+      labelText: label,
+      prefixIcon: Icon(icon),
+      suffixIcon: suffix,
+      filled: true,
+      fillColor: Colors.grey[50],
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: Colors.grey[300]!),
+      ),
+      focusedBorder: const OutlineInputBorder(
+        borderRadius: BorderRadius.all(Radius.circular(12)),
+        borderSide: BorderSide(color: mainBlue, width: 2),
+      ),
+    );
+  }
+
   @override
   void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
-    _calendarUrlController.dispose();
+    _email.dispose();
+    _pw.dispose();
+    _calendar.dispose();
     super.dispose();
   }
 }

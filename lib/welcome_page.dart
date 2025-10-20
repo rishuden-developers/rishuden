@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lottie/lottie.dart';
 import 'register_page.dart';
 import 'login_page.dart';
 import 'other_univ_register_page.dart';
@@ -16,80 +17,77 @@ class _WelcomePageState extends State<WelcomePage> {
   List<String> filteredUniversities = [];
   final TextEditingController _searchController = TextEditingController();
 
+  static const mainBlue = Color(0xFF2E6DB6);
+
   @override
   void initState() {
     super.initState();
     filteredUniversities = UniversityList.allUniversities;
   }
 
-  void _showUniversitySelectionDialog(BuildContext context) {
+  void _showUniversitySelectionDialog(bool isLogin) {
     showDialog(
       context: context,
-      builder: (BuildContext context) {
+      builder: (_) {
         return StatefulBuilder(
-          builder: (context, setState) {
+          builder: (context, setStateDialog) {
             return AlertDialog(
-              backgroundColor: const Color(0xFF2C3E50),
+              backgroundColor: Colors.white,
               title: const Text(
                 '大学を選択してください',
-                style: TextStyle(color: Colors.white, fontSize: 18),
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                ),
               ),
               content: SizedBox(
                 width: double.maxFinite,
                 height: 400,
                 child: Column(
                   children: [
-                    // 検索ボックス
                     TextField(
                       controller: _searchController,
-                      style: const TextStyle(color: Colors.white),
                       decoration: InputDecoration(
                         hintText: '大学名を検索...',
-                        hintStyle: const TextStyle(color: Colors.white70),
-                        prefixIcon: const Icon(
-                          Icons.search,
-                          color: Colors.white70,
+                        prefixIcon: const Icon(Icons.search),
+                        filled: true,
+                        fillColor: Colors.grey[50],
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 12,
                         ),
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: const BorderSide(color: Colors.white70),
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: Colors.grey[300]!),
                         ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: const BorderSide(color: Colors.white70),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: const BorderSide(color: Colors.blue),
+                        focusedBorder: const OutlineInputBorder(
+                          borderRadius: BorderRadius.all(Radius.circular(12)),
+                          borderSide: BorderSide(color: mainBlue, width: 2),
                         ),
                       ),
-                      onChanged: (value) {
-                        setState(() {
+                      onChanged: (v) {
+                        setStateDialog(() {
                           filteredUniversities =
-                              UniversityList.searchUniversities(value);
+                              UniversityList.searchUniversities(v);
                         });
                       },
                     ),
-                    const SizedBox(height: 16),
-                    // 大学リスト
+                    const SizedBox(height: 12),
                     Expanded(
                       child: ListView.builder(
                         itemCount: filteredUniversities.length,
                         itemBuilder: (context, index) {
-                          final university = filteredUniversities[index];
+                          final univ = filteredUniversities[index];
                           return ListTile(
-                            title: Text(
-                              university,
-                              style: const TextStyle(color: Colors.white),
-                            ),
+                            title: Text(univ),
+                            tileColor:
+                                univ == selectedUniversity
+                                    ? mainBlue.withOpacity(0.1)
+                                    : null,
                             onTap: () {
                               Navigator.pop(context);
-                              _onSelectUniversity(context, university);
+                              _onSelect(univ, isLogin);
                             },
-                            tileColor:
-                                university == selectedUniversity
-                                    ? Colors.blue.withOpacity(0.3)
-                                    : null,
                           );
                         },
                       ),
@@ -100,10 +98,7 @@ class _WelcomePageState extends State<WelcomePage> {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context),
-                  child: const Text(
-                    'キャンセル',
-                    style: TextStyle(color: Colors.white70),
-                  ),
+                  child: const Text('キャンセル'),
                 ),
               ],
             );
@@ -113,215 +108,121 @@ class _WelcomePageState extends State<WelcomePage> {
     );
   }
 
-  void _onSelectUniversity(BuildContext context, String universityName) {
-    setState(() {
-      selectedUniversity = universityName;
-    });
-
-    // 大学タイプを判定
-    String universityType =
+  void _onSelect(String universityName, bool isLogin) {
+    setState(() => selectedUniversity = universityName);
+    final type =
         UniversityList.isOsakaUniversity(universityName) ? 'main' : 'other';
-
-    if (universityType == 'main') {
+    if (isLogin) {
       Navigator.push(
         context,
-        MaterialPageRoute(
-          builder: (context) => RegisterPage(universityType: 'main'),
-        ),
+        MaterialPageRoute(builder: (_) => LoginPage(universityType: type)),
       );
     } else {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder:
-              (context) =>
-                  OtherUnivRegisterPage(selectedUniversity: universityName),
-        ),
-      );
-    }
-  }
-
-  void _showLoginSelectionDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              backgroundColor: const Color(0xFF2C3E50),
-              title: const Text(
-                '大学を選択してください',
-                style: TextStyle(color: Colors.white, fontSize: 18),
-              ),
-              content: SizedBox(
-                width: double.maxFinite,
-                height: 400,
-                child: Column(
-                  children: [
-                    // 検索ボックス
-                    TextField(
-                      controller: _searchController,
-                      style: const TextStyle(color: Colors.white),
-                      decoration: InputDecoration(
-                        hintText: '大学名を検索...',
-                        hintStyle: const TextStyle(color: Colors.white70),
-                        prefixIcon: const Icon(
-                          Icons.search,
-                          color: Colors.white70,
-                        ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: const BorderSide(color: Colors.white70),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: const BorderSide(color: Colors.white70),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: const BorderSide(color: Colors.blue),
-                        ),
-                      ),
-                      onChanged: (value) {
-                        setState(() {
-                          filteredUniversities =
-                              UniversityList.searchUniversities(value);
-                        });
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    // 大学リスト
-                    Expanded(
-                      child: ListView.builder(
-                        itemCount: filteredUniversities.length,
-                        itemBuilder: (context, index) {
-                          final university = filteredUniversities[index];
-                          return ListTile(
-                            title: Text(
-                              university,
-                              style: const TextStyle(color: Colors.white),
-                            ),
-                            onTap: () {
-                              Navigator.pop(context);
-                              // 大学タイプを判定
-                              String universityType =
-                                  UniversityList.isOsakaUniversity(university)
-                                      ? 'main'
-                                      : 'other';
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder:
-                                      (context) => LoginPage(
-                                        universityType: universityType,
-                                      ),
-                                ),
-                              );
-                            },
-                          );
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text(
-                    'キャンセル',
-                    style: TextStyle(color: Colors.white70),
-                  ),
-                ),
-              ],
-            );
-          },
+      if (type == 'main') {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const RegisterPage(universityType: 'main'),
+          ),
         );
-      },
-    );
+      } else {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder:
+                (_) =>
+                    OtherUnivRegisterPage(selectedUniversity: universityName),
+          ),
+        );
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF2C3E50),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        backgroundColor: mainBlue,
+        elevation: 0,
+        centerTitle: true,
+        title: const Text('履修伝説'),
+      ),
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
           children: [
-            // アプリ名
-            const Text(
-              '履修伝説',
-              style: TextStyle(
-                fontSize: 48,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-            const SizedBox(height: 8),
-            // サブタイトル
+            const SizedBox(height: 20),
             const Text(
               'さあ、冒険を始めよう。',
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.white70, fontSize: 18),
+              style: TextStyle(fontSize: 18, color: Colors.black54),
             ),
-            const SizedBox(height: 60),
+            const SizedBox(height: 40),
+
             // 大学選択ボタン
-            ElevatedButton(
-              onPressed: () => _showUniversitySelectionDialog(context),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF3498DB),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 32,
-                  vertical: 16,
+            SizedBox(
+              height: 52,
+              child: ElevatedButton(
+                onPressed: () => _showUniversitySelectionDialog(false),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: mainBlue,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
                 ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              child: Text(
-                selectedUniversity.isEmpty ? '大学を選択してください' : selectedUniversity,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
+                child: Text(
+                  selectedUniversity.isEmpty
+                      ? '大学を選択してください'
+                      : selectedUniversity,
+                  style: const TextStyle(fontSize: 16, color: Colors.black),
                 ),
               ),
             ),
             const SizedBox(height: 20),
-            // 選択された大学で登録ボタン
+
             if (selectedUniversity.isNotEmpty)
-              ElevatedButton(
-                onPressed:
-                    () => _onSelectUniversity(context, selectedUniversity),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 32,
-                    vertical: 16,
+              SizedBox(
+                height: 52,
+                child: ElevatedButton(
+                  onPressed: () => _onSelect(selectedUniversity, false),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
                   ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                child: const Text(
-                  'この大学で登録',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
+                  child: const Text(
+                    'この大学で登録',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
               ),
+
             const SizedBox(height: 40),
+
             // ログインリンク
-            TextButton(
-              onPressed: () {
-                _showLoginSelectionDialog(context);
-              },
-              child: const Text(
-                'すでにアカウントをお持ちの方はこちら (ログイン)',
-                style: TextStyle(color: Colors.white70),
+            Center(
+              child: TextButton(
+                onPressed: () => _showUniversitySelectionDialog(true),
+                child: const Text(
+                  'すでにアカウントをお持ちの方はこちら（ログイン）',
+                  style: TextStyle(color: Colors.black54),
+                ),
+              ),
+            ),
+            const SizedBox(height: 40), // ←ここで空白を減らしてアニメーションを追加
+            // ↓ここから追加
+            SizedBox(
+              height: 180,
+              child: Lottie.asset(
+                'assets/animation.json',
+                repeat: true,
+                fit: BoxFit.contain,
               ),
             ),
           ],
