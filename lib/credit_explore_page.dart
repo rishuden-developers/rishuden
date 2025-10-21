@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 // ↓あなたの既存のページ遷移先を適宜差し替えてください
 import 'spring_summer_course_card_list_page.dart';
-import 'autumn_winter_course_card_list_page.dart';
+import 'search_credits_page/autumn_winter_course_card_list_page.dart';
 import 'current_semester_reviews_page.dart';
 
 class CreditExplorePage extends ConsumerWidget {

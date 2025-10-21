@@ -3,10 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
-import 'common_bottom_navigation.dart';
-import 'main_page.dart';
-import 'providers/current_page_provider.dart';
-import 'providers/background_image_provider.dart';
+import '../common_bottom_navigation.dart';
+import '../main_page.dart';
+import '../providers/current_page_provider.dart';
+import '../providers/background_image_provider.dart';
 
 class AutumnWinterReviewInputPage extends ConsumerStatefulWidget {
   final String lectureName;

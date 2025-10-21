@@ -6,7 +6,6 @@ import 'character_question_page.dart';
 import 'user_profile_page.dart';
 import 'main_page.dart';
 import 'package:lottie/lottie.dart';
-import 'loading_page.dart';
 
 class AuthWrapper extends StatelessWidget {
   const AuthWrapper({super.key});

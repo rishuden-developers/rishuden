@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'credit_review_page.dart'; // レビュー詳細ページへの遷移用
-import 'autumn_winter_course_review_page.dart'; // 秋冬学期用レビュー一覧画面
+import 'search_credits_page/autumn_winter_course_review_page.dart'; // 秋冬学期用レビュー一覧画面
 import 'common_bottom_navigation.dart'; // 共通フッターウィジェット
 import 'park_page.dart';
 import 'time_schedule_page.dart';

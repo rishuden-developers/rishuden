@@ -3,10 +3,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-import 'providers/timetable_provider.dart';
-import 'common_bottom_navigation.dart';
+import '../providers/timetable_provider.dart';
+import '../common_bottom_navigation.dart';
 import 'autumn_winter_course_review_page.dart';
-import 'credit_input_page.dart' show tagOptions;
+import '../credit_input_page.dart' show tagOptions;
 
 class AutumnWinterCourseCardListPage extends ConsumerStatefulWidget {
   const AutumnWinterCourseCardListPage({super.key});

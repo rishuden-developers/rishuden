@@ -4,9 +4,8 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'firebase_options.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/services.dart';
-import 'main_page.dart';
+import 'auth_wrapper.dart';
 import 'services/notification_service.dart';
 import 'services/background_message_handler.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
@@ -59,78 +58,3 @@ class MyApp extends StatelessWidget {
   }
 }
 
-Future<List<Map<String, dynamic>>> fetchCoursesByCategory(
-  String category,
-) async {
-  final query =
-      await FirebaseFirestore.instance
-          .collection('courses')
-          .where('category', isEqualTo: category)
-          .get();
-
-  return query.docs.map((doc) => doc.data()).toList();
-}
-
-Future<List<Map<String, dynamic>>> fetchCoursesBySubcategory(
-  String category,
-  String subcategory,
-) async {
-  final query =
-      await FirebaseFirestore.instance
-          .collection('courses')
-          .where('category', isEqualTo: category)
-          .where('subcategory', isEqualTo: subcategory)
-          .get();
-
-  return query.docs.map((doc) => doc.data()).toList();
-}
-
-class CourseListPage extends StatefulWidget {
-  final String category;
-  CourseListPage({required this.category});
-
-  @override
-  _CourseListPageState createState() => _CourseListPageState();
-}
-
-class _CourseListPageState extends State<CourseListPage> {
-  late Future<List<Map<String, dynamic>>> _coursesFuture;
-
-  @override
-  void initState() {
-    super.initState();
-    _coursesFuture = fetchCoursesByCategory(widget.category);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text(widget.category)),
-      body: FutureBuilder<List<Map<String, dynamic>>>(
-        future: _coursesFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(child: CircularProgressIndicator());
-          }
-          if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return Center(child: Text('データがありません'));
-          }
-          final courses = snapshot.data!;
-          return ListView(
-            children:
-                courses
-                    .map(
-                      (course) => ListTile(
-                        title: Text(course['name'] ?? ''),
-                        subtitle: Text(
-                          course['instructor'] ?? course['teacher'] ?? '',
-                        ),
-                      ),
-                    )
-                    .toList(),
-          );
-        },
-      ),
-    );
-  }
-}

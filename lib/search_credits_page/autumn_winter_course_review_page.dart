@@ -3,16 +3,16 @@ import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'common_bottom_navigation.dart';
-import 'main_page.dart';
-import 'providers/current_page_provider.dart';
+import '../common_bottom_navigation.dart';
+import '../main_page.dart';
+import '../providers/current_page_provider.dart';
 import 'autumn_winter_review_input_page.dart';
-import 'character_data.dart';
+import '../character_data.dart';
 import 'package:intl/intl.dart';
 import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'providers/timetable_provider.dart';
-import 'providers/background_image_provider.dart';
+import '../providers/timetable_provider.dart';
+import '../providers/background_image_provider.dart';
 
 class AutumnWinterCourseReviewPage extends ConsumerStatefulWidget {
   final String lectureName;

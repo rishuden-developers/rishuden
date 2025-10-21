@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'credit_input_page.dart';
+import '../credit_input_page.dart';
 import 'autumn_winter_course_detail_page.dart';
 
 class AutumnWinterCourseListPage extends StatefulWidget {

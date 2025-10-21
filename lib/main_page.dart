@@ -1,8 +1,5 @@
 import "package:flutter/material.dart";
 import 'package:firebase_auth/firebase_auth.dart';
-
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'welcome_page.dart';
 import 'mail_page.dart';
 import 'park_page.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -14,8 +11,7 @@ import 'providers/current_page_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'credit_explore_page.dart';
 import 'setting_page/setting_page.dart';
-import 'character_question_page.dart';
-import 'user_profile_page.dart';
+// Removed unused: character_question_page.dart and user_profile_page.dart
 
 import 'services/notification_service.dart';
 import 'providers/background_image_provider.dart';
@@ -423,78 +419,4 @@ class _MainPageState extends ConsumerState<MainPage> {
   }
 }
 
-class AuthWrapper extends StatelessWidget {
-  const AuthWrapper({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return StreamBuilder<User?>(
-      stream: FirebaseAuth.instance.authStateChanges(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
-        }
-
-        if (!snapshot.hasData) {
-          return const WelcomePage();
-        }
-
-        return FutureBuilder<DocumentSnapshot>(
-          future:
-              FirebaseFirestore.instance
-                  .collection('users')
-                  .doc(snapshot.data!.uid)
-                  .get(),
-          builder: (context, userSnapshot) {
-            if (userSnapshot.connectionState == ConnectionState.waiting) {
-              return const Scaffold(
-                body: Center(child: CircularProgressIndicator()),
-              );
-            }
-
-            if (!userSnapshot.hasData) {
-              return const WelcomePage();
-            }
-
-            final userData = userSnapshot.data!.data() as Map<String, dynamic>?;
-
-            // デバッグ用ログ
-            print('=== AuthWrapper Debug ===');
-            print('User ID: ${snapshot.data!.uid}');
-            print('User data exists: ${userData != null}');
-            if (userData != null) {
-              print('User data keys: ${userData.keys.toList()}');
-              print('Character: ${userData['character']}');
-              print('Name: ${userData['name']}');
-              print('Profile completed: ${userData['profileCompleted']}');
-            }
-
-            // ユーザーデータが存在しない場合は診断画面へ
-            if (userData == null) {
-              print('Redirecting to CharacterQuestionPage - no user data');
-              return CharacterQuestionPage();
-            }
-
-            // キャラクターが設定されていない場合は診断画面へ
-            if (!userData.containsKey('character') ||
-                userData['character'] == null) {
-              print('Redirecting to CharacterQuestionPage - character not set');
-              return CharacterQuestionPage();
-            }
-
-            // 名前が設定されていない場合はプロフィール設定画面へ
-            if (!userData.containsKey('name') || userData['name'] == null) {
-              print('Redirecting to UserProfilePage - name not set');
-              return const UserProfilePage();
-            }
-
-            print('Redirecting to MainPage - all conditions met');
-            return MainPage();
-          },
-        );
-      },
-    );
-  }
-}
+// AuthWrapper は auth_wrapper.dart に集約しました
