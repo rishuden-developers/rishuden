@@ -3755,6 +3755,19 @@ class _TimeSchedulePageState extends ConsumerState<TimeSchedulePage> {
           });
         } else {
           print('DEBUG: Firestoreに予定データが存在しません');
+          // 予定が1件も保存されていない場合でもロードを完了させる（空状態を表示）
+          if (mounted) {
+            setState(() {
+              _isEventsLoading = false;
+            });
+          }
+        }
+      } else {
+        // 未ログイン時もローディングを終了して空状態を表示
+        if (mounted) {
+          setState(() {
+            _isEventsLoading = false;
+          });
         }
       }
     } catch (e) {
