@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'mail_page.dart';
 import 'setting_page/setting_page.dart';
 import 'player_log_page.dart'; // Add this import
@@ -7,7 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'providers/background_image_provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
-import 'player_log_page.dart';
 import 'dart:io';
 
 class MenuPage extends ConsumerWidget {
