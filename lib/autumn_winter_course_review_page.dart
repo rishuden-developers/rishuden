@@ -4,15 +4,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'common_bottom_navigation.dart';
-import 'main_page.dart';
-import 'providers/current_page_provider.dart';
 import 'autumn_winter_review_input_page.dart';
 import 'character_data.dart';
 import 'package:intl/intl.dart';
 import 'dart:async';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'providers/timetable_provider.dart';
 import 'providers/background_image_provider.dart';
+import 'widgets/takoyaki_button.dart'; // 追加
 
 class AutumnWinterCourseReviewPage extends ConsumerStatefulWidget {
   final String lectureName;
@@ -507,7 +504,7 @@ class _AutumnWinterCourseReviewPageState
                             .toList(),
                   ),
                   const SizedBox(height: 12),
-                  _TakoyakiButton(
+                  TakoyakiButton( // ← _TakoyakiButton から置換
                     userId: review['userId'],
                     reviewId: review['reviewId'],
                   ),
@@ -553,105 +550,8 @@ class _AutumnWinterCourseReviewPageState
 }
 
 // --- たこ焼きボタンWidget ---
-class _TakoyakiButton extends StatefulWidget {
-  final String? userId;
-  final String reviewId;
-  const _TakoyakiButton({this.userId, required this.reviewId});
-
-  @override
-  State<_TakoyakiButton> createState() => _TakoyakiButtonState();
-}
-
-class _TakoyakiButtonState extends State<_TakoyakiButton> {
-  bool _sent = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _checkIfSent();
-  }
-
-  Future<void> _checkIfSent() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      _sent =
-          prefs.getBool('takoyaki_sent_${widget.reviewId}_${user.uid}') ??
-          false;
-    });
-  }
-
-  Future<void> _sendTakoyaki() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null || widget.userId == null) return;
-
-    // Firestoreで投稿者にたこ焼きを1つ加算
-    await FirebaseFirestore.instance
-        .collection('users')
-        .doc(widget.userId)
-        .update({'takoyakiCount': FieldValue.increment(1)});
-
-    // レビュー作成者のユーザー名を取得
-    final reviewCreatorDoc = await FirebaseFirestore.instance.collection('users').doc(widget.userId).get();
-    final reviewCreatorName = reviewCreatorDoc.data()?['userName'] ?? '名無し';
-
-    // 通知をFirestoreに直接追加
-    await FirebaseFirestore.instance
-        .collection('users')
-        .doc(widget.userId)
-        .collection('notifications')
-        .add({
-          'type': 'takoyaki_received',
-          'senderId': user.uid,
-          'reason': 'あなたのレビュー',
-          'reviewId': widget.reviewId,
-          'createdAt': FieldValue.serverTimestamp(),
-          'isRead': false,
-        });
-
-    // ローカルで送信済みフラグを保存
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('takoyaki_sent_${widget.reviewId}_${user.uid}', true);
-    setState(() {
-      _sent = true;
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text(
-          'たこ焼きを送りました！',
-          style: TextStyle(color: Colors.white),
-        ),
-        backgroundColor: Colors.black87,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        ElevatedButton.icon(
-          onPressed: _sent ? null : _sendTakoyaki,
-          icon: Image.asset('assets/takoyaki.png', width: 24, height: 24),
-          label: Text(
-            _sent ? '送信済み' : '有益！たこ焼き',
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: _sent ? Colors.grey : Colors.orange,
-            foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          ),
-        ),
-      ],
-    );
-  }
-}
+// class _TakoyakiButton extends StatefulWidget { ... }
+// class _TakoyakiButtonState extends State<_TakoyakiButton> { ... }
 
 extension FirstWhereOrNullExtension<E> on Iterable<E> {
   E? firstWhereOrNull(bool Function(E) test) {
